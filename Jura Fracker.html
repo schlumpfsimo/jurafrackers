@@ -1,0 +1,1483 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>JURA FRACKERS</title>
+  <style>
+    html,body{height:100%;margin:0;background:#e7f6ff;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;color:#0b1b2b;}
+    .wrap{display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px;}
+    .hud{
+      width:min(1100px,96vw);
+      display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;
+      background:#fff;border:4px solid #8fb8d6;border-radius:12px;
+      box-shadow:0 10px 0 #00000022;padding:10px 12px;
+    }
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+    .hint{color:#35536b;font-size:12px;line-height:1.35}
+    .badge{padding:2px 8px;border:2px solid #8fb8d6;border-radius:999px;background:#f4fbff;font-size:12px;color:#35536b;}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border:2px solid #8fb8d6;border-radius:999px;background:#f4fbff;}
+    button{
+      cursor:pointer;font:inherit;padding:8px 10px;border-radius:10px;border:3px solid #8fb8d6;background:#f2fbff;
+      box-shadow:0 6px 0 #00000022;
+    }
+    button:active{transform:translateY(2px);box-shadow:0 4px 0 #00000022;}
+    canvas{
+      image-rendering: pixelated; image-rendering: crisp-edges;
+      border:6px solid #8fb8d6;border-radius:14px;box-shadow:0 14px 0 #00000022;
+      width:min(1100px,96vw);height:auto;max-height:78vh;background:#bfe9ff;
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hud">
+    <div class="row" style="width:100%;justify-content:space-between">
+      <div class="row">
+        <div><b>JURA FRACKERS</b> <span class="badge" id="mode">READY</span></div>
+        <div class="hint">
+          Move in air/tunnels: <b>← → ↑ ↓</b> (↑ only in tunnels) • Pump: <b>Space</b> • Outreach: <b>O</b> • Pause: <b>P</b> • Start/Restart: <b>Enter</b><br/>
+          <b>Drilling is only possible via Programs (cannot be aborted).</b> Select distance <b>1/2/3</b> (=3/10/100) • Aim with <b>← → ↓</b> • Press <b>Enter</b> to commit.
+        </div>
+      </div>
+      <button id="restart">Restart</button>
+    </div>
+
+    <div class="row">
+      <div class="chip">Cash: <b id="cash">0</b></div>
+      <div class="chip">Score: <b id="score">0</b></div>
+      <div class="chip">Depth: <b id="depth">0</b> m</div>
+      <div class="chip">Pumping: <b id="pump">OFF</b></div>
+      <div class="chip">Outreach: <b id="outreach">OFF</b></div>
+      <div class="chip">Plants: <b id="plants">0</b></div>
+      <div class="chip">Seismic: <b id="seis">0%</b></div>
+      <div class="chip">Protest: <b id="prot">0%</b></div>
+      <div class="chip">Contam.: <b id="contam">NO</b></div>
+      <div class="chip">Doublet: <b id="dblt">0/2 • 0</b></div>
+      <div class="chip">Last strike: <b id="strike">—</b></div>
+      <div class="chip">Program: <b id="program">—</b></div>
+      <div class="chip">Best: <b id="best">0</b></div>
+    </div>
+
+    <div class="hint" style="width:100%">
+      Hot water plants deplete very fast. HDR (Hot Dry Rock) doublets are strongest when deep, and deplete slower the deeper they are.
+      Seismicity increases <b>only</b> when drilling unstable cracked rock. Contamination (hot + cold connected) drives protest fastest.
+      If protest reaches <b>100%</b>, protesters burn the rig and the operation ends.
+    </div>
+  </div>
+
+  <canvas id="game" width="384" height="216"></canvas>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d", { alpha:false });
+  const W = canvas.width, H = canvas.height;
+
+  const ui = {
+    mode: document.getElementById("mode"),
+    cash: document.getElementById("cash"),
+    score: document.getElementById("score"),
+    depth: document.getElementById("depth"),
+    pump: document.getElementById("pump"),
+    outreach: document.getElementById("outreach"),
+    plants: document.getElementById("plants"),
+    seis: document.getElementById("seis"),
+    prot: document.getElementById("prot"),
+    contam: document.getElementById("contam"),
+    dblt: document.getElementById("dblt"),
+    strike: document.getElementById("strike"),
+    program: document.getElementById("program"),
+    best: document.getElementById("best"),
+    restart: document.getElementById("restart")
+  };
+
+  const P = {
+    CELL: 4,
+    SURFACE_Y_PX: 64,
+    WORLD_W_PX: 1200,
+    WALL_MARGIN_PX: 24,
+
+    MOVE_EMPTY: 140,
+
+    // drilling speeds
+    DRILL_RATE_SOLID: 3.8,
+    DRILL_RATE_HARD: 1.60,
+    DRILL_RATE_UNSTABLE: 2.25,
+    DRILL_RATE_WATER: 3.20,
+    DRILL_RATE_HDR: 2.25,
+
+    // drilling costs
+    DRILL_COST_BASE: 0.74,
+    DRILL_COST_HARD_MULT: 3.25,
+    DRILL_COST_UNSTABLE_MULT: 1.70,
+    DRILL_COST_WATER_MULT: 1.15,
+    DRILL_COST_HDR_MULT: 1.65,
+
+    // program drilling: longer is cheaper (commitment risk)
+    PROG_DISCOUNT_3: 0.00,
+    PROG_DISCOUNT_10: 0.16,
+    PROG_DISCOUNT_100: 0.34,
+    PROG_SPEED_MULT: 1.18,
+
+    START_CASH: 260,
+
+    SEIS_MAX: 100,
+    PROT_MAX: 100,
+
+    // seismic: ONLY from unstable drilling/break
+    SEIS_UNSTABLE_PER_SEC: 10.5,
+    SEIS_UNSTABLE_SPIKE_ON_BREAK: 8.0,
+
+    Q_MINOR: 82,
+    Q_MAJOR: 95,
+    Q_COOLDOWN: 7.0,
+
+    // protest dynamics
+    PROT_BASE_PER_SEC: 0.04,
+    PROT_ON_COLD_WATER_HIT: 6.5,
+    PROT_ON_HOT_WATER_HIT: 3.5,
+    PROT_PER_PLANT_PER_SEC: 0.08,
+
+    // contamination is the fastest driver
+    CONTAM_PROT_PER_SEC: 1.60,
+    CONTAM_PROT_PER_SEC_PUMP: 4.20,
+
+    // calming
+    PROT_CALM_PER_SEC_IDLE: 0.30,
+    PROT_CALM_PER_SEC_OUTREACH: 1.35,
+    OUTREACH_COST_PER_SEC: 2.3,
+
+    // plants
+    PLANT_MAX: 14,
+
+    HDR_DOUBLET_MIN_EXPOSURE: 22,
+    HDR_ADJ_BONUS_DIV: 3,
+
+    // HDR: deeper => much hotter + slower depletion
+    HDR_POWER_BASE: 4.8,
+    HDR_POWER_DEPTH_SCALE: 0.017,        // steeper than before
+    HDR_DECAY_BASE: 0.0044,              // base decay at shallow
+    HDR_DECAY_MIN: 0.0018,               // deep HDR decays slower (lower K)
+
+    // hot water: fast depletion
+    HOTW_POWER_BASE: 2.7,
+    HOTW_POWER_DEPTH_SCALE: 0.0085,
+    HOTW_DECAY_K: 0.030,                 // very fast
+
+    // fog/visibility
+    DRILL_WINDOW_CELLS: 3,
+    TUNNEL_REVEAL_CELLS: 1,
+
+    CAM_LERP_Y: 0.10,
+    CAM_LERP_X: 0.05,
+    CAM_TARGET_Y_FRAC: 0.58,
+
+    HIT_FLASH_SEC: 0.26,
+    HIT_SHIMMER_SEC: 1.05,
+
+    CROWD_MAX: 18
+  };
+
+  const PAL = {
+    sky1:"#61c7ff", sky2:"#8bdbff", sky3:"#c6f3ff",
+    sun:"#ffe06a",
+    hillFar:"#6fdc86", hillMid:"#41cc70", hillNear:"#1fb45a",
+    grass1:"#1a8f43", grass2:"#0f6e32",
+    chalet:"#8b5a3c", roof:"#d64545", snow:"#f7fbff",
+
+    unk1:"#111427", unk2:"#0b0f1f",
+    tun1:"#080b14", tun2:"#0c1020",
+
+    rock1:"#b8794b", rock2:"#a66c41",
+    hard1:"#5c6472", hard2:"#424b59",
+
+    unst1:"#8b4a41", unst2:"#602f2a", crack:"#1b0b0b",
+
+    hdr1:"#2a2a33", hdr2:"#181821",
+    hdrGlow:"#ff9b3d",
+
+    cold1:"#194a8a", cold2:"#0f2f5a",
+    hot1:"#2a7bd6", hot2:"#1f5ca3",
+    waterHi:"#7fc4ff",
+
+    warn:"#c73a3a"
+  };
+
+  // ---------- RNG / noise ----------
+  let runSeed = (Date.now() ^ (Math.random()*1e9|0)) >>> 0;
+
+  function mulberry32(seed){
+    let a = seed >>> 0;
+    return function(){
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  let rng = mulberry32(runSeed);
+
+  function hash2(x,y){
+    let h = x * 374761393 + y * 668265263;
+    h = (h ^ (h >>> 13)) * 1274126177;
+    return (h ^ (h >>> 16)) >>> 0;
+  }
+  function randAt(ix,iy){
+    const s = (runSeed ^ hash2(ix,iy)) >>> 0;
+    let t = (s + 0x6D2B79F5) | 0;
+    t = Math.imul(t ^ (t >>> 15), 1 | t);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  function lerp(a,b,t){ return a + (b-a)*t; }
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function smoothstep(t){ return t*t*(3-2*t); }
+  function valueNoise2D(x,y,scale){
+    const fx = x/scale, fy = y/scale;
+    const x0 = Math.floor(fx), y0 = Math.floor(fy);
+    const x1 = x0+1, y1 = y0+1;
+    const sx = smoothstep(fx-x0), sy = smoothstep(fy-y0);
+    const n00 = randAt(x0,y0), n10 = randAt(x1,y0), n01 = randAt(x0,y1), n11 = randAt(x1,y1);
+    const ix0 = lerp(n00,n10,sx), ix1 = lerp(n01,n11,sx);
+    return lerp(ix0,ix1,sy);
+  }
+  function fbm(x,y,s1,s2,w2=0.55){
+    const a = valueNoise2D(x,y,s1);
+    const b = valueNoise2D(x,y,s2);
+    return a*(1-w2) + b*w2;
+  }
+  function ridge01(x){
+    const d = Math.abs(x-0.5)*2;
+    return 1 - d;
+  }
+
+  // ---------- world ----------
+  const TYPE = { AIR:0, ROCK:1, HARD:2, UNSTABLE:3, HDR:4, COLD:5, HOT:6, BEDROCK:7 };
+
+  const cellType = new Map();
+  const carved = new Set();
+  const prog = new Map();
+
+  function key(cx,cy){ return `${cx},${cy}`; }
+  function wToC(px){ return Math.floor(px / P.CELL); }
+  function cToW(c){ return c * P.CELL; }
+  function inWorldX(px){ return px >= P.WALL_MARGIN_PX && px <= (P.WORLD_W_PX - P.WALL_MARGIN_PX); }
+
+  function getCellType(cx,cy){
+    if (cy < wToC(P.SURFACE_Y_PX)) return TYPE.AIR;
+    const k = key(cx,cy);
+    const cached = cellType.get(k);
+    if (cached !== undefined) return cached;
+    const t = generateCell(cx,cy);
+    cellType.set(k,t);
+    return t;
+  }
+
+  // Vast groundwater veins + deep big HDR clusters
+  function generateCell(cx,cy){
+    const worldX = cToW(cx);
+    if (worldX < P.WALL_MARGIN_PX || worldX > (P.WORLD_W_PX - P.WALL_MARGIN_PX)) return TYPE.BEDROCK;
+
+    const surfaceCy = wToC(P.SURFACE_Y_PX);
+    const dcy = cy - surfaceCy;
+    const depthM = Math.max(0, (dcy * P.CELL) * 0.6);
+
+    let t = TYPE.ROCK;
+
+    // hard blobs
+    const hardField = fbm(cx,cy, 26, 60, 0.45);
+    const hardChance = 0.10 + Math.min(0.20, depthM * 0.00055);
+    if (hardField > 1-hardChance) t = TYPE.HARD;
+
+    // unstable crack zones (large-scale, fewer)
+    const faultBig = valueNoise2D(cx + (cy*0.15|0), cy - (cx*0.12|0), 92);
+    const faultFine = valueNoise2D(cx + (cy*0.35|0), cy - (cx*0.20|0), 30);
+    const faultScore = faultBig*0.70 + faultFine*0.30;
+    const faultChance = 0.050 + Math.min(0.085, depthM * 0.00030);
+    if (faultScore < faultChance) t = TYPE.UNSTABLE;
+
+    // groundwater veins (make them vast)
+    const vA = ridge01((Math.sin((cx*0.09) + (cy*0.07) + (runSeed&255)*0.01) + 1) * 0.5);
+    const vB = ridge01((Math.sin((cx*0.06) - (cy*0.10) + ((runSeed>>>8)&255)*0.012) + 1) * 0.5);
+    const vein = vA*0.55 + vB*0.45;
+
+    // big pockets too
+    const coldBlob = fbm(cx+700, cy-900, 110, 190, 0.55);
+    const hotBlob  = fbm(cx-900, cy+500, 120, 200, 0.55);
+
+    // more continuous veins
+    const coldVeinBoost = (vein > 0.82) ? 0.40 : 0.0;
+    const hotVeinBoost  = (vein > 0.85) ? 0.42 : 0.0;
+
+    // both appear broadly; hot rises with depth
+    const coldBase = 0.16 + 0.06*Math.exp(-Math.pow((depthM-24)/50,2));
+    const hotBase  = 0.12 + 0.18*clamp((depthM-10)/90, 0, 1);
+
+    const coldScore = coldBlob + coldVeinBoost;
+    const hotScore  = hotBlob  + hotVeinBoost;
+
+    // HDR clusters (very deep, very large)
+    const hdrBlob = fbm(cx,cy, 170, 260, 0.52);
+    const hdrBlob2 = valueNoise2D(cx+777, cy-555, 210);
+    const hdrField = hdrBlob*0.72 + hdrBlob2*0.28;
+
+    // depth gate: essentially none above ~80m, ramps to strong at ~135m
+    const gate = clamp((depthM - 80) / 55, 0, 1);
+    const gateS = gate*gate*(3-2*gate);
+
+    // threshold: only reachable when deep (gateS) and field is high
+    const hdrThresh = 1 - (0.02 + 0.28*gateS);
+
+    if (gateS > 0.02 && hdrField > hdrThresh) t = TYPE.HDR;
+
+    // protect deep HDR from being overwritten by water
+    const hdrProtect = (t===TYPE.HDR) ? (0.22 + 0.25*gateS) : 0.0;
+
+    if (hotScore > (1 - hotBase + hdrProtect)) t = TYPE.HOT;
+    else if (coldScore > (1 - coldBase + hdrProtect)) t = TYPE.COLD;
+
+    if (depthM > 165 && randAt(cx,cy+5000) < 0.004) t = TYPE.BEDROCK;
+    return t;
+  }
+
+  function isCarved(cx,cy){ return carved.has(key(cx,cy)); }
+
+  // ---------- game state ----------
+  const state = {
+    running:false, paused:false, over:false,
+
+    cash:P.START_CASH, score:0,
+    seismic:0, protest:0,
+
+    pumping:false,
+    outreach:false,
+    contam:false,
+
+    overlayText:"", overlayT:0,
+
+    lastT:performance.now(),
+    quakeCooldown:0,
+
+    shake:0, shakeX:0, shakeY:0,
+    camX:0, camY:0,
+
+    lastStrike:"—",
+    hitFlashT:0,
+    shimmerT:0,
+    shimmerCX:0,
+    shimmerCY:0,
+    hitFlashKind:"",
+
+    // program drilling (only drilling method)
+    aimDX:0, aimDY:1,
+    progLen:0,
+    progDiscount:0.0,
+    programActive:false,
+    programRemain:0,
+    programTotal:0
+  };
+
+  const player = { x: P.WORLD_W_PX/2, y: P.SURFACE_Y_PX - 14, w: 10, h: 16 };
+  const plants = []; // {kind:"HOTW"|"HDR", name, power0, decayK, pumpedS, componentId?, strikeCX?, strikeCY?}
+
+  let compInfo = [];
+  let compCellToId = new Map();
+  let connTimer = 0;
+
+  let best = Number(localStorage.getItem("jura_frackers_best_v7") || "0");
+  ui.best.textContent = String(best);
+
+  // ---------- input ----------
+  const keys = new Set();
+
+  function setAimFromArrow(k){
+    if (k === "ArrowLeft"){ state.aimDX = -1; state.aimDY = 0; }
+    if (k === "ArrowRight"){ state.aimDX =  1; state.aimDY = 0; }
+    if (k === "ArrowDown"){ state.aimDX = 0; state.aimDY = 1; }
+  }
+
+  window.addEventListener("keydown", (e) => {
+    const k = e.key;
+    const block = ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Enter","p","P"," ","o","O","1","2","3"].includes(k);
+    if (block) e.preventDefault();
+
+    // select program length
+    if (k === "1"){ state.progLen = 3; state.progDiscount = P.PROG_DISCOUNT_3; overlay("PROGRAM LENGTH: 3", 0.6); return; }
+    if (k === "2"){ state.progLen = 10; state.progDiscount = P.PROG_DISCOUNT_10; overlay("PROGRAM LENGTH: 10", 0.6); return; }
+    if (k === "3"){ state.progLen = 100; state.progDiscount = P.PROG_DISCOUNT_100; overlay("PROGRAM LENGTH: 100", 0.6); return; }
+
+    if (k === "Enter"){
+      if (!state.running || state.over){ restart(); return; }
+
+      if (!state.paused && !state.programActive && state.progLen > 0){
+        if (state.aimDY < 0) return; // no up
+        state.programActive = true;
+        state.programRemain = state.progLen;
+        state.programTotal = state.progLen;
+        overlay(`PROGRAM COMMITTED (${state.progLen})`, 1.0);
+      }
+      return;
+    }
+
+    if (k === "p" || k === "P"){
+      if (!state.running || state.over) return;
+      state.paused = !state.paused;
+      ui.mode.textContent = state.paused ? "PAUSE" : "RUN";
+      return;
+    }
+
+    if (k === " "){
+      if (!state.running || state.over || state.paused) return;
+      state.pumping = !state.pumping;
+      overlay(state.pumping ? "PUMPING ON" : "PUMPING OFF", 1.0);
+      return;
+    }
+
+    if (k === "o" || k === "O"){
+      if (!state.running || state.over || state.paused) return;
+      state.outreach = !state.outreach;
+      overlay(state.outreach ? "OUTREACH ON" : "OUTREACH OFF", 1.0);
+      return;
+    }
+
+    // aim selection (even during program, aim changes only for next program; current cannot be aborted)
+    if (k==="ArrowLeft"||k==="ArrowRight"||k==="ArrowDown") setAimFromArrow(k);
+
+    keys.add(k);
+  });
+
+  window.addEventListener("keyup", (e) => keys.delete(e.key));
+  ui.restart.addEventListener("click", () => restart());
+
+  // ---------- helpers ----------
+  function overlay(text, seconds){ state.overlayText = text; state.overlayT = seconds; }
+  function clamp01(x){ return clamp(x,0,1); }
+
+  function setStrike(text, cx, cy, flashKind){
+    state.lastStrike = text;
+    state.hitFlashT = P.HIT_FLASH_SEC;
+    state.shimmerT = P.HIT_SHIMMER_SEC;
+    state.shimmerCX = cx;
+    state.shimmerCY = cy;
+    state.hitFlashKind = flashKind || "";
+  }
+
+  function cellDrillParams(t){
+    if (t === TYPE.BEDROCK) return {rate:0, costMult:1e9};
+    if (t === TYPE.HARD)    return {rate:P.DRILL_RATE_HARD, costMult:P.DRILL_COST_HARD_MULT};
+    if (t === TYPE.UNSTABLE)return {rate:P.DRILL_RATE_UNSTABLE, costMult:P.DRILL_COST_UNSTABLE_MULT};
+    if (t === TYPE.COLD)    return {rate:P.DRILL_RATE_WATER, costMult:P.DRILL_COST_WATER_MULT};
+    if (t === TYPE.HOT)     return {rate:P.DRILL_RATE_WATER, costMult:P.DRILL_COST_WATER_MULT};
+    if (t === TYPE.HDR)     return {rate:P.DRILL_RATE_HDR, costMult:P.DRILL_COST_HDR_MULT};
+    return {rate:P.DRILL_RATE_SOLID, costMult:1.0};
+  }
+
+  function canStand(px,py){
+    if (!inWorldX(px)) return false;
+    const cx = wToC(px);
+    const cy = wToC(py);
+    if (py < P.SURFACE_Y_PX) return true;
+    return isCarved(cx,cy);
+  }
+
+  function isMouthCell(cx,cy){
+    if (!isCarved(cx,cy)) return false;
+    return getCellType(cx, cy-1) === TYPE.AIR;
+  }
+
+  function maybeCreateHotWaterPlantImmediate(cx,cy){
+    if (plants.length >= P.PLANT_MAX) return;
+    for (const pl of plants){
+      if (pl.kind==="HOTW" && pl.strikeCX===cx && pl.strikeCY===cy) return;
+    }
+    const depthM = Math.max(0, Math.floor((cToW(cy) - P.SURFACE_Y_PX) * 0.6));
+    const power0 = P.HOTW_POWER_BASE + depthM * P.HOTW_POWER_DEPTH_SCALE;
+    plants.push({ kind:"HOTW", name:"Hot Water Plant", power0, decayK:P.HOTW_DECAY_K, pumpedS:0, componentId: undefined, strikeCX:cx, strikeCY:cy });
+    overlay("HOT WATER PLANT ONLINE", 1.1);
+  }
+
+  // ---------- drilling (program only) ----------
+  function drillAtCell(cx,cy, dt, costDiscount){
+    const t = getCellType(cx,cy);
+    const p = cellDrillParams(t);
+    if (p.rate <= 0) return {drilled:false, carvedNow:false, blocked:true};
+
+    const k = key(cx,cy);
+    const cur = prog.get(k) || 0;
+
+    const dp = p.rate * P.PROG_SPEED_MULT * dt;
+    const next = cur + dp;
+
+    const costPerCell = P.DRILL_COST_BASE * p.costMult * (1 - (costDiscount||0));
+    const cost = costPerCell * dp;
+
+    if (state.cash <= 0) return {drilled:false, carvedNow:false, blocked:false};
+
+    if (state.cash < cost){
+      const frac = state.cash / cost;
+      prog.set(k, cur + dp * frac);
+      state.cash = 0;
+      if (t === TYPE.UNSTABLE) state.seismic += P.SEIS_UNSTABLE_PER_SEC * dt * frac;
+      return {drilled:true, carvedNow:false, blocked:false};
+    }
+
+    state.cash -= cost;
+    prog.set(k, next);
+
+    if (t === TYPE.UNSTABLE){
+      state.seismic += P.SEIS_UNSTABLE_PER_SEC * dt;
+    }
+
+    if (next >= 1.0){
+      carved.add(k);
+      prog.delete(k);
+
+      if (t === TYPE.COLD){
+        state.protest += P.PROT_ON_COLD_WATER_HIT;
+        overlay("COLD GROUNDWATER STRIKE!", 1.2);
+        setStrike("COLD WATER", cx, cy, "cold");
+      } else if (t === TYPE.HOT){
+        state.protest += P.PROT_ON_HOT_WATER_HIT;
+        overlay("HOT WATER STRIKE!", 1.2);
+        setStrike("HOT WATER", cx, cy, "hot");
+        maybeCreateHotWaterPlantImmediate(cx,cy);
+      } else if (t === TYPE.HDR){
+        setStrike("HDR", cx, cy, "hdr");
+      } else if (t === TYPE.UNSTABLE){
+        state.seismic += P.SEIS_UNSTABLE_SPIKE_ON_BREAK;
+        overlay("UNSTABLE ROCK", 0.9);
+        setStrike("UNSTABLE", cx, cy, "unstable");
+      } else if (t === TYPE.HARD){
+        setStrike("HARD ROCK", cx, cy, "hard");
+      } else {
+        setStrike("ROCK", cx, cy, "");
+      }
+
+      return {drilled:true, carvedNow:true, blocked:false};
+    }
+
+    return {drilled:true, carvedNow:false, blocked:false};
+  }
+
+  function canMoveIntoCell(cx,cy){
+    const wx = cToW(cx) + P.CELL*0.5;
+    if (!inWorldX(wx)) return false;
+    const wy = cToW(cy) + P.CELL*0.5;
+    if (wy < P.SURFACE_Y_PX) return true;
+    return isCarved(cx,cy);
+  }
+
+  function moveToward(tx, ty, speed, dt){
+    const dx = tx - player.x;
+    const dy = ty - player.y;
+    const dist = Math.hypot(dx,dy);
+    if (dist < 0.001) return;
+    const step = Math.min(dist, speed*dt);
+    const nx = player.x + (dx/dist)*step;
+    const ny = player.y + (dy/dist)*step;
+    if (canStand(nx, player.y)) player.x = nx;
+    if (canStand(player.x, ny)) player.y = ny;
+  }
+
+  // Program cannot be aborted once committed.
+  function updateProgram(dt){
+    if (!state.programActive) return;
+
+    const dx = state.aimDX, dy = state.aimDY;
+    if ((dx===0 && dy===0) || dy < 0){
+      // invalid aim: treat as blocked
+      state.programActive = false;
+      state.programRemain = 0;
+      overlay("PROGRAM FAILED", 1.1);
+      return;
+    }
+
+    const cx = wToC(player.x);
+    const cy = wToC(player.y);
+    const nx = cx + dx;
+    const ny = cy + dy;
+
+    // Move through carved freely (fast)
+    if (canMoveIntoCell(nx, ny)){
+      const targetWX = cToW(nx) + P.CELL*0.5;
+      const targetWY = cToW(ny) + P.CELL*0.5;
+      moveToward(targetWX, targetWY, P.MOVE_EMPTY * 1.55, dt);
+
+      if (wToC(player.x) === nx && wToC(player.y) === ny){
+        state.programRemain -= 1;
+        if (state.programRemain <= 0){
+          state.programActive = false;
+          overlay("PROGRAM COMPLETE", 0.9);
+        }
+      }
+      return;
+    }
+
+    // Drill next cell (discounted by chosen length)
+    if (ny >= wToC(P.SURFACE_Y_PX) && !isCarved(nx, ny)){
+      const res = drillAtCell(nx, ny, dt, state.progDiscount);
+      if (res.blocked){
+        state.programActive = false;
+        state.programRemain = 0;
+        overlay("PROGRAM BLOCKED", 1.1);
+        return;
+      }
+      if (res.carvedNow){
+        const targetWX = cToW(nx) + P.CELL*0.5;
+        const targetWY = cToW(ny) + P.CELL*0.5;
+        moveToward(targetWX, targetWY, P.MOVE_EMPTY * 1.10, dt);
+
+        if (wToC(player.x) === nx && wToC(player.y) === ny){
+          state.programRemain -= 1;
+          if (state.programRemain <= 0){
+            state.programActive = false;
+            overlay("PROGRAM COMPLETE", 0.9);
+          }
+        }
+      }
+      return;
+    }
+
+    // If somehow blocked by world boundary
+    state.programActive = false;
+    state.programRemain = 0;
+    overlay("PROGRAM BLOCKED", 1.1);
+  }
+
+  // ---------- movement (no drilling) ----------
+  function updateMovementFree(dt){
+    const dx = (keys.has("ArrowRight")?1:0) - (keys.has("ArrowLeft")?1:0);
+    const dy = (keys.has("ArrowDown")?1:0) - (keys.has("ArrowUp")?1:0);
+
+    if (dx === 0 && dy === 0) return;
+
+    const speed = P.MOVE_EMPTY;
+
+    const inTunnel = (player.y >= P.SURFACE_Y_PX) && isCarved(wToC(player.x), wToC(player.y));
+    const dyAllowed = (dy < 0 && !inTunnel) ? 0 : dy;
+
+    const nx = player.x + dx * speed * dt;
+    const ny = player.y + dyAllowed * speed * dt;
+
+    if (canStand(nx, player.y)) player.x = nx;
+    if (canStand(player.x, ny)) player.y = ny;
+  }
+
+  // ---------- components / contamination / HDR doublets ----------
+  function rebuildComponentsAndMaps(){
+    compInfo = [];
+    compCellToId = new Map();
+
+    const visited = new Set();
+    let id = 0;
+
+    for (const k0 of carved){
+      if (visited.has(k0)) continue;
+      const q = [k0];
+      visited.add(k0);
+
+      const comp = { id, mouths:0, touchesHot:false, touchesCold:false, hdrCarved:0, hdrAdj:0, hasHdrPlant:false };
+      while (q.length){
+        const cur = q.pop();
+        compCellToId.set(cur, id);
+
+        const comma = cur.indexOf(",");
+        const cx = Number(cur.slice(0,comma));
+        const cy = Number(cur.slice(comma+1));
+
+        if (isMouthCell(cx,cy)) comp.mouths++;
+
+        const tHere = getCellType(cx,cy);
+        if (tHere === TYPE.HDR) comp.hdrCarved++;
+
+        for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+          const nx = cx+dx, ny = cy+dy;
+          const nk = key(nx,ny);
+          if (carved.has(nk)){
+            if (!visited.has(nk)){ visited.add(nk); q.push(nk); }
+          } else {
+            const nt = getCellType(nx,ny);
+            if (nt === TYPE.HOT) comp.touchesHot = true;
+            if (nt === TYPE.COLD) comp.touchesCold = true;
+            if (nt === TYPE.HDR) comp.hdrAdj++;
+          }
+        }
+      }
+
+      compInfo.push(comp);
+      id++;
+    }
+
+    // mark existing HDR plants
+    for (const pl of plants){
+      if (pl.kind === "HDR" && pl.componentId !== undefined){
+        const c = compInfo.find(x => x.id === pl.componentId);
+        if (c) c.hasHdrPlant = true;
+      }
+    }
+
+    // attach HOTW plants to component
+    for (const pl of plants){
+      if (pl.kind === "HOTW" && pl.componentId === undefined){
+        const kid = compCellToId.get(key(pl.strikeCX, pl.strikeCY));
+        if (kid !== undefined) pl.componentId = kid;
+      }
+    }
+
+    // contamination: any connected component touches both hot and cold
+    state.contam = compInfo.some(c => c.touchesHot && c.touchesCold);
+  }
+
+  function maybeCreateHdrPlantForComponent(comp){
+    if (plants.length >= P.PLANT_MAX) return;
+    if (comp.mouths < 2) return;
+    if (comp.hasHdrPlant) return;
+
+    const exposure = comp.hdrCarved + Math.floor(comp.hdrAdj / P.HDR_ADJ_BONUS_DIV);
+    if (exposure < P.HDR_DOUBLET_MIN_EXPOSURE) return;
+
+    // depth at commissioning
+    const depthM = Math.max(0, Math.floor((player.y - P.SURFACE_Y_PX) * 0.6));
+
+    const power0 = P.HDR_POWER_BASE + depthM * P.HDR_POWER_DEPTH_SCALE;
+
+    // deeper => lower decayK (slower depletion)
+    const deep01 = clamp01(depthM / 200);
+    const decayK = lerp(P.HDR_DECAY_BASE, P.HDR_DECAY_MIN, deep01);
+
+    plants.push({ kind:"HDR", name:"HDR Doublet", power0, decayK, pumpedS:0, componentId: comp.id });
+    comp.hasHdrPlant = true;
+    overlay("HDR DOUBLET COMMISSIONED", 1.3);
+  }
+
+  // ---------- systems ----------
+  function triggerQuake(kind){
+    if (kind==="minor"){
+      overlay("MINOR EARTHQUAKE", 1.0);
+      state.shake = 8;
+      state.protest += 2.5;
+      state.score += 25;
+    } else {
+      overlay("MAJOR EARTHQUAKE", 1.1);
+      state.shake = 16;
+      state.protest += 6.5;
+      state.score += 50;
+    }
+    state.quakeCooldown = P.Q_COOLDOWN;
+  }
+
+  function endRun(reason){
+    state.running = false;
+    state.over = true;
+    state.paused = false;
+    state.programActive = false;
+    state.programRemain = 0;
+
+    ui.mode.textContent = "GAME OVER";
+
+    if (reason === "FIRE") overlay("PROTESTERS BURN THE RIG", 3.2);
+    else if (reason === "BANKRUPT") overlay("OPERATION BANKRUPT", 3.0);
+    else if (reason === "COLLAPSE") overlay("CATASTROPHIC COLLAPSE", 3.0);
+    else overlay("OPERATION SHUT DOWN", 3.0);
+
+    if (state.score > best){
+      best = Math.floor(state.score);
+      localStorage.setItem("jura_frackers_best_v7", String(best));
+      ui.best.textContent = String(best);
+    }
+  }
+
+  function updateSystems(dt){
+    state.protest += P.PROT_BASE_PER_SEC * dt;
+
+    if (!state.pumping && !state.contam){
+      state.protest -= P.PROT_CALM_PER_SEC_IDLE * dt;
+    }
+
+    if (state.outreach){
+      const cost = P.OUTREACH_COST_PER_SEC * dt;
+      if (state.cash >= cost){
+        state.cash -= cost;
+        state.protest -= P.PROT_CALM_PER_SEC_OUTREACH * dt;
+      } else {
+        state.outreach = false;
+        overlay("OUTREACH STOPPED (NO CASH)", 1.2);
+      }
+    }
+
+    if (state.pumping && plants.length){
+      for (const pl of plants){
+        pl.pumpedS += dt;
+        const power = pl.power0 * Math.exp(-pl.decayK * pl.pumpedS);
+        const eff = Math.max(0, power);
+        state.cash += eff * dt;
+        state.score += (eff * 0.65) * dt;
+        state.protest += P.PROT_PER_PLANT_PER_SEC * dt;
+      }
+    }
+
+    if (state.contam){
+      state.protest += (state.pumping ? P.CONTAM_PROT_PER_SEC_PUMP : P.CONTAM_PROT_PER_SEC) * dt;
+    }
+
+    // quake logic only from unstable drilling seismic
+    state.quakeCooldown = Math.max(0, state.quakeCooldown - dt);
+    if (state.quakeCooldown <= 0){
+      if (state.seismic >= P.Q_MAJOR && state.seismic < P.SEIS_MAX) triggerQuake("major");
+      else if (state.seismic >= P.Q_MINOR && state.seismic < P.Q_MAJOR) triggerQuake("minor");
+    }
+
+    state.seismic = clamp(state.seismic, 0, P.SEIS_MAX + 10);
+    state.protest = clamp(state.protest, 0, P.PROT_MAX + 10);
+
+    const totalPowerNow = state.pumping ? plants.reduce((s,pl)=>s + (pl.power0*Math.exp(-pl.decayK*pl.pumpedS)), 0) : 0;
+    if (state.cash <= 0 && totalPowerNow <= 0.05) endRun("BANKRUPT");
+    if (state.seismic >= P.SEIS_MAX) endRun("COLLAPSE");
+
+    // fire at 100% protest
+    if (state.protest >= P.PROT_MAX) endRun("FIRE");
+  }
+
+  // ---------- camera ----------
+  function updateCamera(){
+    const targetY = player.y - H * P.CAM_TARGET_Y_FRAC;
+    const targetX = player.x - W * 0.5;
+    state.camY = lerp(state.camY, targetY, P.CAM_LERP_Y);
+    state.camX = lerp(state.camX, targetX, P.CAM_LERP_X);
+    state.camX = clamp(state.camX, 0, P.WORLD_W_PX - W);
+    state.camY = Math.max(-40, state.camY);
+  }
+  function w2sX(wx){ return Math.floor(wx - state.camX); }
+  function w2sY(wy){ return Math.floor(wy - state.camY); }
+
+  // ---------- render ----------
+  function drawTitle(){
+    const title = "Jura Frackers";
+    const x = W/2;
+    const y = 20;
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.fillRect(0, 0, W, 28);
+
+    ctx.font = "bold 20px Impact, Haettenschweiler, 'Arial Black', sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    ctx.fillStyle = "#000";
+    ctx.fillText(title, x+2, y+2);
+    ctx.fillText(title, x-2, y+2);
+    ctx.fillText(title, x+2, y-2);
+    ctx.fillText(title, x-2, y-2);
+
+    const grad = ctx.createLinearGradient(0, y-10, 0, y+10);
+    grad.addColorStop(0, "#ffef9a");
+    grad.addColorStop(0.45, "#ffb14a");
+    grad.addColorStop(1, "#d34b2a");
+    ctx.fillStyle = grad;
+    ctx.fillText(title, x, y);
+
+    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.fillText(title, x, y-1);
+
+    ctx.textAlign = "start";
+  }
+
+  function drawSurface(){
+    for (let y=0; y<H; y++){
+      const c = y < 45 ? PAL.sky1 : (y < 95 ? PAL.sky2 : PAL.sky3);
+      ctx.fillStyle = c; ctx.fillRect(0,y,W,1);
+    }
+    ctx.fillStyle = PAL.sun;
+    ctx.fillRect(W-62, 10, 16, 16);
+    ctx.fillRect(W-60, 8, 12, 2);
+    ctx.fillRect(W-60, 26, 12, 2);
+
+    const surfY = w2sY(P.SURFACE_Y_PX);
+    const topY = clamp(surfY, -40, H+40);
+
+    ctx.fillStyle = PAL.hillFar;
+    for (let x=0; x<W; x+=2){
+      const yy = (topY - 30) + ((Math.sin((x + state.camX*0.02)*0.05)+1)*3|0);
+      ctx.fillRect(x, yy, 2, topY-yy);
+    }
+    ctx.fillStyle = PAL.hillMid;
+    for (let x=0; x<W; x+=2){
+      const yy = (topY - 18) + ((Math.sin((x + 40 + state.camX*0.03)*0.065)+1)*4|0);
+      ctx.fillRect(x, yy, 2, topY-yy);
+    }
+    ctx.fillStyle = PAL.hillNear;
+    for (let x=0; x<W; x+=2){
+      const yy = (topY - 10) + ((Math.sin((x + 10 + state.camX*0.04)*0.085)+1)*3|0);
+      ctx.fillRect(x, yy, 2, topY-yy);
+    }
+
+    ctx.fillStyle = PAL.grass1; ctx.fillRect(0, topY, W, 2);
+    ctx.fillStyle = PAL.grass2; ctx.fillRect(0, topY+2, W, 1);
+
+    // chalet
+    ctx.fillStyle = PAL.chalet;
+    ctx.fillRect(26, topY-10, 14, 10);
+    ctx.fillStyle = PAL.roof;
+    ctx.fillRect(24, topY-12, 18, 3);
+
+    drawRigPanel(topY);
+    drawProtesters(topY);
+  }
+
+  function drawRigPanel(topY){
+    const rigWX = P.WORLD_W_PX/2;
+    const x = w2sX(rigWX);
+    const baseY = topY - 1;
+
+    // rig
+    ctx.fillStyle = "#2b313c";
+    ctx.fillRect(x+3, baseY-26, 2, 26);
+    ctx.fillRect(x+6, baseY-20, 2, 20);
+    ctx.fillStyle = "#ffd166";
+    ctx.fillRect(x+2, baseY-28, 8, 2);
+    ctx.fillStyle = "#444c5a";
+    ctx.fillRect(x-7, baseY-7, 24, 7);
+    ctx.fillStyle = "#ffd166";
+    ctx.fillRect(x-2, baseY-10, 3, 3);
+
+    // plant panel at rig (your choice 3B)
+    const panelX = x - 34;
+    const panelY = baseY - 34;
+    ctx.fillStyle = "rgba(255,255,255,0.70)";
+    ctx.fillRect(panelX, panelY, 68, 20);
+    ctx.fillStyle = "#8fb8d6";
+    ctx.fillRect(panelX, panelY, 68, 2);
+
+    let ox = panelX + 4;
+    const maxShow = 10;
+    for (let i=0; i<Math.min(maxShow, plants.length); i++){
+      const pl = plants[i];
+      ctx.fillStyle = (pl.kind==="HDR") ? PAL.hdrGlow : PAL.waterHi;
+      ctx.fillRect(ox, panelY+6, 4, 4);
+      ctx.fillStyle = "#0b0f1f";
+      ctx.fillRect(ox+1, panelY+7, 2, 2);
+      ox += 6;
+    }
+
+    ctx.fillStyle = "#0b1b2b";
+    ctx.font = "10px ui-monospace, monospace";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    const label = plants.length ? (plants.some(p=>p.kind==="HDR") ? "PLANTS: HDR + HOTW" : "PLANTS: HOTW") : "PLANTS: NONE";
+    ctx.fillText(label, panelX+4, panelY+12);
+
+    // If fire ending, draw flames on rig
+    if (state.over && state.overlayText.includes("BURN")){
+      ctx.fillStyle = "#ff7a00";
+      ctx.fillRect(x-2, baseY-16, 4, 6);
+      ctx.fillStyle = "#ffd166";
+      ctx.fillRect(x-1, baseY-18, 2, 2);
+      ctx.fillStyle = "#c73a3a";
+      ctx.fillRect(x+2, baseY-14, 2, 4);
+    }
+  }
+
+  function drawProtesters(topY){
+    const protest01 = clamp(state.protest / 100, 0, 1);
+    const count = clamp(Math.floor(protest01 * P.CROWD_MAX), 0, P.CROWD_MAX);
+    if (count <= 0) return;
+
+    const rigX = w2sX(P.WORLD_W_PX/2);
+    const groundY = topY - 1;
+
+    for (let i=0; i<count; i++){
+      const spread = 70 + (i%3)*10;
+      const side = (i%2===0) ? -1 : 1;
+      const jitter = ((i*17) % 11) - 5;
+      const x = clamp(rigX + side*(12 + (i*6)%spread) + jitter, 10, W-16);
+      const y = groundY - (i%3);
+      drawProtesterSprite(x, y, state.outreach, state.pumping, state.contam);
+    }
+  }
+
+  function drawProtesterSprite(x, groundY, outreach, pumping, contam){
+    const angry = contam || pumping;
+    const calm = outreach && !angry;
+
+    ctx.fillStyle = "#2b313c";
+    ctx.fillRect(x, groundY-2, 1, 2);
+    ctx.fillRect(x+2, groundY-2, 1, 2);
+
+    ctx.fillStyle = calm ? "#64c86b" : (angry ? "#d34b2a" : "#ffd166");
+    ctx.fillRect(x, groundY-5, 3, 3);
+
+    ctx.fillStyle = "#f2d2b6";
+    ctx.fillRect(x, groundY-7, 3, 2);
+
+    ctx.fillStyle = "#8b5a3c";
+    ctx.fillRect(x+3, groundY-8, 1, 6);
+
+    ctx.fillStyle = calm ? "#c6f3ff" : "#ffffff";
+    ctx.fillRect(x+4, groundY-9, 5, 4);
+    ctx.fillStyle = "#0b1b2b";
+    ctx.fillRect(x+5, groundY-8, 3, 1);
+    ctx.fillRect(x+5, groundY-6, 4, 1);
+
+    if (calm){
+      ctx.fillStyle = "#d64545";
+      ctx.fillRect(x+7, groundY-7, 1, 1);
+      ctx.fillRect(x+6, groundY-8, 1, 1);
+      ctx.fillRect(x+8, groundY-8, 1, 1);
+    } else if (angry){
+      ctx.fillStyle = PAL.warn;
+      ctx.fillRect(x+7, groundY-8, 1, 2);
+      ctx.fillRect(x+6, groundY-7, 3, 1);
+    }
+  }
+
+  function cellColor(t, cx, cy){
+    const parity = (cx + cy) & 1;
+    switch(t){
+      case TYPE.ROCK:    return parity ? PAL.rock2 : PAL.rock1;
+      case TYPE.HARD:    return parity ? PAL.hard2 : PAL.hard1;
+      case TYPE.UNSTABLE:return parity ? PAL.unst2 : PAL.unst1;
+      case TYPE.HDR:     return parity ? PAL.hdr2 : PAL.hdr1;
+      case TYPE.COLD:    return parity ? PAL.cold2 : PAL.cold1;
+      case TYPE.HOT:     return parity ? PAL.hot2  : PAL.hot1;
+      case TYPE.BEDROCK: return "#050712";
+      default:           return parity ? PAL.unk2 : PAL.unk1;
+    }
+  }
+
+  function shouldRevealSolid(cx,cy, bcx,bcy){
+    if (Math.abs(cx-bcx) <= P.DRILL_WINDOW_CELLS && Math.abs(cy-bcy) <= P.DRILL_WINDOW_CELLS) return true;
+    const r = P.TUNNEL_REVEAL_CELLS;
+    for (let dy=-r; dy<=r; dy++){
+      for (let dx=-r; dx<=r; dx++){
+        if (carved.has(key(cx+dx, cy+dy))) return true;
+      }
+    }
+    return false;
+  }
+
+  function drawUnstableCracks(sx,sy,cx,cy){
+    ctx.fillStyle = PAL.crack;
+    const h = hash2(cx,cy);
+    const m = h & 7;
+    if (m & 1){
+      ctx.fillRect(sx+0, sy+1, 4, 1);
+      ctx.fillRect(sx+1, sy+2, 3, 1);
+      ctx.fillRect(sx+2, sy+3, 2, 1);
+    } else {
+      ctx.fillRect(sx+0, sy+2, 4, 1);
+      ctx.fillRect(sx+0, sy+3, 3, 1);
+    }
+    if (m & 2){
+      ctx.fillRect(sx+1, sy+0, 1, 4);
+    } else {
+      ctx.fillRect(sx+3, sy+0, 1, 4);
+    }
+    if (m & 4){
+      ctx.fillRect(sx+0, sy+0, 2, 1);
+      ctx.fillRect(sx+2, sy+1, 2, 1);
+    }
+  }
+
+  function drawUnderground(){
+    const surfY = w2sY(P.SURFACE_Y_PX);
+    if (surfY < H){
+      ctx.fillStyle = PAL.unk1;
+      ctx.fillRect(0, Math.max(0,surfY), W, H - Math.max(0,surfY));
+    }
+
+    const leftWX = state.camX, rightWX = state.camX + W;
+    const topWY = state.camY, botWY = state.camY + H;
+
+    const cLeft = wToC(leftWX) - 2, cRight = wToC(rightWX) + 2;
+    const cTop = wToC(topWY) - 2, cBot = wToC(botWY) + 2;
+
+    const headX = player.x;
+    const headY = player.y + (player.h * 0.35);
+    const bcx = wToC(headX), bcy = wToC(headY);
+
+    for (let cy=cTop; cy<=cBot; cy++){
+      const wy = cToW(cy);
+      const sy = w2sY(wy);
+      if (sy > H || sy+P.CELL < 0) continue;
+
+      for (let cx=cLeft; cx<=cRight; cx++){
+        const wx = cToW(cx);
+        const sx = w2sX(wx);
+        if (sx > W || sx+P.CELL < 0) continue;
+        if (wy < P.SURFACE_Y_PX) continue;
+
+        const k0 = key(cx,cy);
+
+        if (carved.has(k0)){
+          ctx.fillStyle = ((cx+cy)&1) ? PAL.tun2 : PAL.tun1;
+          ctx.fillRect(sx, sy, P.CELL, P.CELL);
+          if (isMouthCell(cx,cy)){
+            ctx.fillStyle = "rgba(255,255,255,0.22)";
+            ctx.fillRect(sx, sy, P.CELL, 1);
+          }
+          continue;
+        }
+
+        if (shouldRevealSolid(cx,cy,bcx,bcy)){
+          const t = getCellType(cx,cy);
+          ctx.fillStyle = cellColor(t,cx,cy);
+          ctx.fillRect(sx, sy, P.CELL, P.CELL);
+
+          if (t === TYPE.HDR && ((cx*7 + cy*11)&7)===0){
+            ctx.fillStyle = PAL.hdrGlow;
+            ctx.fillRect(sx+1, sy+1, 1, 1);
+          }
+          if ((t === TYPE.HOT || t === TYPE.COLD) && ((cx*5 + cy*9)&7)===0){
+            ctx.fillStyle = PAL.waterHi;
+            ctx.fillRect(sx+1, sy+2, 1, 1);
+          }
+          if (t === TYPE.UNSTABLE){
+            drawUnstableCracks(sx,sy,cx,cy);
+          }
+
+          const pv = prog.get(k0);
+          if (pv !== undefined){
+            ctx.fillStyle = "rgba(0,0,0,0.35)";
+            const w = Math.max(1, Math.floor(clamp(pv,0,1) * P.CELL));
+            ctx.fillRect(sx, sy + P.CELL - 1, w, 1);
+          }
+        }
+      }
+    }
+
+    if (state.shimmerT > 0){
+      const alpha = clamp(state.shimmerT / P.HIT_SHIMMER_SEC, 0, 1);
+      const cx0 = state.shimmerCX, cy0 = state.shimmerCY;
+      for (let dy=-3; dy<=3; dy++){
+        for (let dx=-3; dx<=3; dx++){
+          const cx = cx0+dx, cy = cy0+dy;
+          const wx = cToW(cx), wy = cToW(cy);
+          const sx = w2sX(wx), sy = w2sY(wy);
+          if (sx < -10 || sy < -10 || sx > W+10 || sy > H+10) continue;
+          const t = getCellType(cx,cy);
+          if (t === TYPE.HOT || t === TYPE.COLD){
+            ctx.fillStyle = `rgba(127,196,255,${0.14*alpha})`;
+            ctx.fillRect(sx, sy, P.CELL, P.CELL);
+          }
+        }
+      }
+    }
+  }
+
+  function drawDrill(){
+    if (state.shake > 0){
+      state.shake *= 0.88;
+      state.shakeX = ((rng()*2-1) * state.shake) | 0;
+      state.shakeY = ((rng()*2-1) * state.shake) | 0;
+    } else {
+      state.shakeX = 0; state.shakeY = 0;
+    }
+
+    const x = w2sX(player.x) + state.shakeX;
+    const y = w2sY(player.y) + state.shakeY;
+
+    // pipe tail
+    ctx.fillStyle = "#3a3f4a";
+    ctx.fillRect(x-2, y-18, 4, 10);
+    ctx.fillStyle = "#2b313c";
+    ctx.fillRect(x-1, y-17, 2, 8);
+
+    // body
+    ctx.fillStyle = "#8b5a3c";
+    ctx.fillRect(x-6, y-8, 12, 14);
+    ctx.fillStyle = "#e0a93a";
+    ctx.fillRect(x-5, y-7, 10, 12);
+    ctx.fillStyle = "#ffcc55";
+    ctx.fillRect(x-4, y-6, 8, 10);
+
+    // braces
+    ctx.fillStyle = "#2b313c";
+    ctx.fillRect(x-7, y-4, 1, 6);
+    ctx.fillRect(x+6, y-4, 1, 6);
+
+    // bit
+    ctx.fillStyle = "#e6e6e6";
+    ctx.fillRect(x-3, y+6, 6, 2);
+    ctx.fillStyle = "#cfcfcf";
+    ctx.fillRect(x-2, y+8, 4, 1);
+    ctx.fillStyle = "#9aa0aa";
+    ctx.fillRect(x-1, y+9, 2, 1);
+
+    // program indicator
+    if (state.programActive){
+      ctx.fillStyle = "#64c86b";
+      ctx.fillRect(x+6, y-8, 2, 2);
+    }
+  }
+
+  function drawOverlay(){
+    if (state.overlayT > 0){
+      ctx.fillStyle = "rgba(255,255,255,0.74)";
+      ctx.fillRect(0, 30, W, 22);
+      ctx.fillStyle = PAL.warn;
+      ctx.font = "bold 12px ui-monospace, monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(state.overlayText, W/2, 41);
+      ctx.textAlign = "start";
+    }
+
+    if (!state.running && !state.over){
+      ctx.fillStyle = "rgba(255,255,255,0.72)";
+      ctx.fillRect(0, 52, W, H-52);
+      ctx.fillStyle = "#0b1b2b";
+      ctx.font = "bold 16px ui-monospace, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("Press Enter to start", W/2, H/2 - 6);
+      ctx.font = "10px ui-monospace, monospace";
+      ctx.fillText("Commit drilling programs. Longer programs are cheaper, but you cannot abort.", W/2, H/2 + 12);
+      ctx.textAlign = "start";
+    }
+
+    if (state.paused && state.running){
+      ctx.fillStyle = "rgba(255,255,255,0.72)";
+      ctx.fillRect(0, 52, W, H-52);
+      ctx.fillStyle = "#0b1b2b";
+      ctx.font = "bold 18px ui-monospace, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("PAUSED", W/2, H/2);
+      ctx.textAlign = "start";
+    }
+
+    if (state.over){
+      ctx.fillStyle = "rgba(255,255,255,0.82)";
+      ctx.fillRect(0, 52, W, H-52);
+      ctx.fillStyle = PAL.warn;
+      ctx.font = "bold 16px ui-monospace, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("OPERATION TERMINATED", W/2, H/2 - 6);
+      ctx.fillStyle = "#0b1b2b";
+      ctx.font = "10px ui-monospace, monospace";
+      ctx.fillText("Press Enter to restart", W/2, H/2 + 14);
+      ctx.textAlign = "start";
+    }
+
+    if (state.hitFlashT > 0){
+      const a = clamp(state.hitFlashT / P.HIT_FLASH_SEC, 0, 1);
+      let col = `rgba(255,255,255,${0.18*a})`;
+      if (state.hitFlashKind === "hot") col = `rgba(127,196,255,${0.24*a})`;
+      if (state.hitFlashKind === "cold") col = `rgba(25,74,138,${0.22*a})`;
+      if (state.hitFlashKind === "hdr") col = `rgba(255,155,61,${0.20*a})`;
+      if (state.hitFlashKind === "unstable") col = `rgba(199,58,58,${0.16*a})`;
+      ctx.fillStyle = col;
+      ctx.fillRect(0,0,W,H);
+    }
+  }
+
+  function render(){
+    ctx.clearRect(0,0,W,H);
+    drawSurface();
+    drawUnderground();
+    drawDrill();
+    drawTitle();
+    drawOverlay();
+  }
+
+  // ---------- UI sync ----------
+  function syncUI(){
+    ui.cash.textContent = String(Math.max(0, Math.floor(state.cash)));
+    ui.score.textContent = String(Math.floor(state.score));
+    const depthM = Math.max(0, Math.floor((player.y - P.SURFACE_Y_PX) * 0.6));
+    ui.depth.textContent = String(depthM);
+    ui.pump.textContent = state.pumping ? "ON" : "OFF";
+    ui.outreach.textContent = state.outreach ? "ON" : "OFF";
+    ui.plants.textContent = String(plants.length);
+    ui.seis.textContent = `${Math.floor(clamp(state.seismic,0,100))}%`;
+    ui.prot.textContent = `${Math.floor(clamp(state.protest,0,100))}%`;
+    ui.contam.textContent = state.contam ? "YES" : "NO";
+    ui.strike.textContent = state.lastStrike;
+
+    let bestMouths = 0;
+    let bestExposure = 0;
+    for (const c of compInfo){
+      const exp = c.hdrCarved + Math.floor(c.hdrAdj / P.HDR_ADJ_BONUS_DIV);
+      if (c.mouths > bestMouths || (c.mouths === bestMouths && exp > bestExposure)){
+        bestMouths = c.mouths;
+        bestExposure = exp;
+      }
+    }
+    ui.dblt.textContent = `${Math.min(2,bestMouths)}/2 • ${bestExposure}`;
+
+    if (state.programActive){
+      ui.program.textContent = `${state.programRemain}/${state.programTotal} (-${Math.round(state.progDiscount*100)}%)`;
+    } else if (state.progLen > 0){
+      const dir = state.aimDY>0 ? "↓" : (state.aimDX<0 ? "←" : "→");
+      ui.program.textContent = `${state.progLen}${dir} (-${Math.round(state.progDiscount*100)}%)`;
+    } else {
+      ui.program.textContent = "—";
+    }
+  }
+
+  // ---------- main loop ----------
+  function tick(now){
+    const dt = Math.min(0.033, (now - state.lastT) / 1000);
+    state.lastT = now;
+
+    if (state.overlayT > 0) state.overlayT = Math.max(0, state.overlayT - dt);
+    if (state.hitFlashT > 0) state.hitFlashT = Math.max(0, state.hitFlashT - dt);
+    if (state.shimmerT > 0) state.shimmerT = Math.max(0, state.shimmerT - dt);
+
+    if (state.running && !state.paused && !state.over){
+      // move always (even during program you are "busy" but can still drift inside tunnels minimally)
+      if (!state.programActive) updateMovementFree(dt);
+
+      if (state.programActive) updateProgram(dt);
+
+      connTimer -= dt;
+      if (connTimer <= 0){
+        connTimer = 0.25;
+        rebuildComponentsAndMaps();
+        for (const c of compInfo) maybeCreateHdrPlantForComponent(c);
+      }
+
+      updateSystems(dt);
+      updateCamera();
+    }
+
+    syncUI();
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  // ---------- restart / boot ----------
+  function restart(){
+    runSeed = (Date.now() ^ (Math.random()*1e9|0)) >>> 0;
+    rng = mulberry32(runSeed);
+
+    state.running = true;
+    state.paused = false;
+    state.over = false;
+
+    state.cash = P.START_CASH;
+    state.score = 0;
+    state.seismic = 0;
+    state.protest = 0;
+
+    state.pumping = false;
+    state.outreach = false;
+    state.contam = false;
+
+    state.overlayText = "";
+    state.overlayT = 0;
+    state.quakeCooldown = 0;
+
+    state.shake = 0;
+    state.shakeX = 0;
+    state.shakeY = 0;
+
+    state.lastStrike = "—";
+    state.hitFlashT = 0;
+    state.shimmerT = 0;
+    state.hitFlashKind = "";
+
+    state.programActive = false;
+    state.programRemain = 0;
+    state.programTotal = 0;
+    if (state.aimDX===0 && state.aimDY===0){ state.aimDX = 0; state.aimDY = 1; }
+
+    cellType.clear();
+    carved.clear();
+    prog.clear();
+    plants.length = 0;
+    compInfo = [];
+    compCellToId = new Map();
+    connTimer = 0;
+
+    player.x = P.WORLD_W_PX/2;
+    player.y = P.SURFACE_Y_PX - 14;
+
+    state.camX = clamp(player.x - W/2, 0, P.WORLD_W_PX - W);
+    state.camY = player.y - H * P.CAM_TARGET_Y_FRAC;
+
+    ui.mode.textContent = "RUN";
+    overlay("COMMIT YOUR FIRST PROGRAM", 1.1);
+  }
+
+  function boot(){
+    ui.mode.textContent = "READY";
+    state.running = false;
+    state.paused = false;
+    state.over = false;
+
+    player.x = P.WORLD_W_PX/2;
+    player.y = P.SURFACE_Y_PX - 14;
+
+    state.camX = clamp(player.x - W/2, 0, P.WORLD_W_PX - W);
+    state.camY = player.y - H * P.CAM_TARGET_Y_FRAC;
+
+    syncUI();
+    requestAnimationFrame(tick);
+  }
+
+  // ---------- components rebuild ----------
+  function rebuildComponentsAndMaps(){
+    compInfo = [];
+    compCellToId = new Map();
+
+    const visited = new Set();
+    let id = 0;
+
+    for (const k0 of carved){
+      if (visited.has(k0)) continue;
+      const q = [k0];
+      visited.add(k0);
+
+      const comp = { id, mouths:0, touchesHot:false, touchesCold:false, hdrCarved:0, hdrAdj:0, hasHdrPlant:false };
+      while (q.length){
+        const cur = q.pop();
+        compCellToId.set(cur, id);
+
+        const comma = cur.indexOf(",");
+        const cx = Number(cur.slice(0,comma));
+        const cy = Number(cur.slice(comma+1));
+
+        if (isMouthCell(cx,cy)) comp.mouths++;
+
+        const tHere = getCellType(cx,cy);
+        if (tHere === TYPE.HDR) comp.hdrCarved++;
+
+        for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+          const nx = cx+dx, ny = cy+dy;
+          const nk = key(nx,ny);
+          if (carved.has(nk)){
+            if (!visited.has(nk)){ visited.add(nk); q.push(nk); }
+          } else {
+            const nt = getCellType(nx,ny);
+            if (nt === TYPE.HOT) comp.touchesHot = true;
+            if (nt === TYPE.COLD) comp.touchesCold = true;
+            if (nt === TYPE.HDR) comp.hdrAdj++;
+          }
+        }
+      }
+
+      compInfo.push(comp);
+      id++;
+    }
+
+    for (const pl of plants){
+      if (pl.kind === "HDR" && pl.componentId !== undefined){
+        const c = compInfo.find(x => x.id === pl.componentId);
+        if (c) c.hasHdrPlant = true;
+      }
+    }
+    for (const pl of plants){
+      if (pl.kind === "HOTW" && pl.componentId === undefined){
+        const kid = compCellToId.get(key(pl.strikeCX, pl.strikeCY));
+        if (kid !== undefined) pl.componentId = kid;
+      }
+    }
+
+    state.contam = compInfo.some(c => c.touchesHot && c.touchesCold);
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
