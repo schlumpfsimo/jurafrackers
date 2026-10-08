@@ -198,8 +198,8 @@ const DEF = {
   deep:{g:'Drill',n:'Deep rig',cost:1800,up:500,build:2,need:'deep',h:'Mobilisation CHF 1.8 M; CHF 40k a day while drilling, CHF 500k a month standing idle. Reaches 5,000 m, into the granite.'},
   dir:{g:'Drill',n:'Directional rig',cost:1800,up:500,build:2,need:'dir',hide:1,h:'As the deep rig, and the well may bend up to 30 degrees from vertical.'},   // kept for old saves; research now upgrades every rig
   quiet:{g:'Drill',n:'Quiet upgrade',cost:300,need:'noise',h:'Click a rig. Halves its noise.'},
-  station:{g:'Drill',n:'Heat station',cost:4000,up:40,build:4,h:'Heat exchanger and heat pumps. Build it anywhere, any time; link a production well and an injection well in the Muschelkalk aquifer, then pipe the heat to a village. If the wells give little water, it earns little.'},
-  plant:{g:'Drill',n:'Power plant',cost:25000,up:150,build:8,h:'An ORC turbine, about the size of Haute-Sorne’s. Build it anywhere, any time; link two deep wells in granite above 100 °C, stimulate the rock, then connect a power line.'},
+  station:{g:'Drill',n:'Heat station',cost:4000,up:40,build:6,h:'Heat exchanger and heat pumps. Build it anywhere, any time; link a production well and an injection well in the Muschelkalk aquifer, then pipe the heat to a village. If the wells give little water, it earns little.'},
+  plant:{g:'Drill',n:'Power plant',cost:25000,up:150,build:12,h:'An ORC turbine, about the size of Haute-Sorne’s. Build it anywhere, any time; link two deep wells in granite above 100 °C, stimulate the rock, then connect a power line.'},
   pipe:{g:'Connect',n:'Heat pipe',c:'CHF 1.5 M per km',h:'Click a heat station or plant, then a village. The pipe follows the road, or cuts across the fields when that is shorter.'},
   pline:{g:'Connect',n:'Power line',c:'CHF 300k per km',h:'Click a power plant. The line runs to the grid at the east end of the valley.'},
   fence:{g:'Connect',n:'Fence',cost:50,build:1,h:'Click a rig or plant. Protesters need twice as long to get at it.'},
@@ -423,6 +423,7 @@ function place(type, x, y){
         if (onRoad(x, py)){ no.onRoad = true; news(DEF[type].n + ' on the road near ' + nearestVillage(x, py).name + '. Traffic stops; the village is cut off a little every month (mood −0.5).'); }
         if (z === 2){ S.cash -= 500; acct('Fines and compensation', -500); bump(sv, 'Rig in a water protection zone', -5); no.halt = S.t + 1; news('The canton fines the Company ' + fmt(500) + ' for building in the protection zone of the ' + sv.name + ' spring, and stops work there for a month. Mood −5.'); }
         else if (z === 3) news(DEF[type].n + ' inside the outer protection zone (S3) of the ' + sv.name + ' spring: any spill here goes straight to the drinking water.'); }
+      if (type === 'station' || type === 'plant') news('Public consultation for the ' + DEF[type].n.toLowerCase() + ' near ' + nearestVillage(x, py).name + ': ' + (3 + ((hash(no.id, 2, 2, S.seed)*40)|0)) + ' objections filed. Building takes ' + DEF[type].build + ' months including the procedure.');
       if (type === 'lobby' && S.obj.filter(c => c.type === 'lobby').length > 1) news('A second lobby outpost opens. Locals call it the embassy.');
       return 'ok';
     }
@@ -472,6 +473,7 @@ function research(k){ if (S.res[k] !== undefined) return 'Already ' + (resDone(k
   if (!canPay(cost)) return RES[k].n + ' costs ' + fmt(cost) + '.'; S.cash -= cost; acct('Research', -cost); S.res[k] = S.t + RES[k].t; return 'ok'; }
 function withdraw(o){
   if (o.type === 'police' || o.type === 'riot'){ const v = nearestVillage(o.x, o.y); v.rel += v.stored; v.relRate = v.rel/3; v.stored = 0; }
+  if (RIG[o.type] && o.well && o.well.length){ S.cash -= 500; acct('Plugging wells (required by law)', -500); news('The well near ' + nearestVillage(o.x, o.y).name + ' is filled with cement, as the law requires: ' + fmt(500) + '.'); }
   if (SITE[o.type]){ S.pipes = S.pipes.filter(p => p.from !== o.id); S.plines = S.plines.filter(l => l.from !== o.id); S.obj.filter(b => b.target === o.id).forEach(rm); S.assets = Math.max(0, S.assets - ((DEF[o.type] || {}).cost || 0)*0.5); }
   spawnLeave(o); rm(o);
 }
@@ -663,7 +665,7 @@ const DRILL = {
   dayRate:{light:20, deep:40, dir:40},                              // the rig and its crew, per day while drilling
   perM:[45, 60, 70, 45, 110, 70, 90, 130, 80, 80, 90],              // bits, mud, cuttings disposal per 100 m, by rock
   casing:110, cbl:150, squeeze:200, cleanMud:180, saltMud:150, lcm:80, plug:250, kill:400, flare:60, fish:300, sidetrack:700, flowTest:400, tracer:60, pad:120,
-  subsidy:0.5                                                       // federal exploration contribution: half of what the well cost, paid when it is finished
+  subsidy:0.6                                                       // federal exploration contribution: half of what the well cost, paid when it is finished
 };
 const DPM = 30.4;
 function maxBend(o){ return o.type === 'dir' || resDone('dir') ? 30 : 0; }
@@ -720,8 +722,9 @@ function stepDrill(o, dm){
     if (drillEvent(o, pt, dr)) return;
     if (dr.f >= 0.999){ o.well.push({x:to.x, d:to.d, c:to.d <= (o.shoe || 0)}); dr.seg++; dr.f = 0; }
   }
-  if (dr.seg >= dr.pts.length){ o.drilling = null; const back = Math.round(o.spent*DRILL.subsidy); S.cash += back; acct('Federal exploration contribution', back);
-    news('Well finished near ' + nearestVillage(o.x, o.y).name + ' at ' + M(tip(o).d) + ', about ' + tempAt(o.line, tip(o).x, tip(o).d) + ' °C at the bottom. It cost ' + fmt(o.spent) + '; the Confederation refunds ' + fmt(back) + '.'); o.spent = 0; }
+  if (dr.seg >= dr.pts.length){ o.drilling = null; const tb = tip(o), wT = openIn(o, ROCK.WARM) ? aqT(o.line, tb.x, wellPts(o).find(p => rockL(o.line, p.x, p.d) === ROCK.WARM).d) : tempAt(o.line, tb.x, tb.d), ok = wT >= 60, back = ok ? Math.round(o.spent*DRILL.subsidy) : 0;
+    S.cash += back; if (back) acct('Federal exploration contribution', back); o.cost = (o.cost || 0) + o.spent;
+    news('Well finished near ' + nearestVillage(o.x, o.y).name + ' at ' + M(tb.d) + ', water or rock at about ' + wT + ' °C. It cost ' + fmt(o.spent) + '. ' + (ok ? 'The Confederation refunds 60%: ' + fmt(back) + '.' : 'The federal energy office refunds nothing: water below 60 °C needs heat pumps, and heat-pump projects are not eligible. A motion to change that is in parliament.')); o.spent = 0; }
 }
 /* surprises at the bit: the odds are never shown; the facts and the costs of each answer are */
 function drillEvent(o, t, dr){
@@ -748,7 +751,7 @@ function drillEvent(o, t, dr){
   return false; }
 const faultNear = (o, d) => faultsFor(o.line).some(f => Math.abs(sx(o.x) - (f.x + d*f.s)) < 40);
 function onHit(o, t, d){ const v = nearestVillage(o.x, o.y), T = tempAt(o.line, sx(o.x), d);
-  if (t === ROCK.WARM){ news('The mud logger near ' + v.name + ' reports porous Muschelkalk limestone at ' + M(d) + ', about ' + T + ' °C. Only a flow test will tell how much water it gives.'); offerInvest('warm'); }
+  if (t === ROCK.WARM){ news('The mud logger near ' + v.name + ' reports porous Muschelkalk limestone at ' + M(d) + ', water at about ' + aqT(o.line, sx(o.x), d) + ' °C. Only a flow test will tell how much water it gives.'); offerInvest('warm'); }
   if (t === ROCK.GRANITE){ news('Crystalline basement under ' + v.name + ' at ' + M(d) + ', about ' + T + ' °C.'); if (T >= 100) offerInvest('plant'); }
   if (t === ROCK.COAL) news('Coal fragments in the cuttings near ' + v.name + ' at ' + M(d) + '. The mud logger watches the gas readings.');
   if (t === ROCK.WATER) news('Karst water near ' + v.name + ' at ' + M(d) + '. Above the casing shoe this is the drinking water.'); }
@@ -764,6 +767,7 @@ function stimulate(pl, i){ if (!pl.on || pl.stim >= 0) return 'Not now.'; const 
   if (hash(pl.id, S.month, i, S.seed) < risk) doQuake(w || pl, (i === 0 ? 'The large injection' : 'One stage of the stimulation') + ' near ' + nearestVillage(pl.x, pl.y).name + ' sets off a felt earthquake. "Within the expected envelope," says the operator.', pos);
   else news('Stimulation ' + (i === 0 ? 'done' : 'under way') + ' near ' + nearestVillage(pl.x, pl.y).name + '. The seismometers record tiny tremors; nobody feels them.'); return 'ok'; }
 function offerInvest(k){ if (S.invest[k] || S.offer) return; S.offer = k; S.paused = true; showOffer(k); }
+const aqT = (li, x, d) => tempAt(li, x, d) + 14;   // Muschelkalk water comes up warmer than the rock around it (Schlattingen, Riehen)
 const tempAt = (li, x, d) => Math.round(11 + d*0.315 + 6*(vn(x/140, d/60 + li, 12, S.seed) - 0.5));   // about 31.5 °C per km, as measured at Haute-Sorne
 function coreLog(o){ // the exploration well's log: cuttings and wireline
   const X = sx(o.x), lines = []; let cur = -1, start = 0;
@@ -780,7 +784,7 @@ function doublet(o){
   if (!nP) return {why:'The production well has no open hole in ' + (plant ? 'the granite' : 'the Muschelkalk aquifer') + '.', dry:true};
   if (!nI) return {why:'The injection well has no open hole in ' + (plant ? 'the granite' : 'the Muschelkalk aquifer') + ' to take the water back.', dry:true};
   if (plant && (o.stim < 0 || S.t < (o.stimUntil || 0))) return {why:o.stim < 0 ? 'The granite has to be stimulated first.' : 'Stimulation under way.'};
-  const bp = tip(P), bi = tip(I), T = plant ? tempAt(P.line, bp.x, bp.d) : tempAt(P.line, bp.x, wellPts(P).find(p => rockL(P.line, p.x, p.d) === ROCK.WARM).d);
+  const bp = tip(P), bi = tip(I), T = plant ? tempAt(P.line, bp.x, bp.d) : aqT(P.line, bp.x, wellPts(P).find(p => rockL(P.line, p.x, p.d) === ROCK.WARM).d);
   const perm = permAt(P.line, bp.x, bp.d), injOk = Math.min(1, 0.3 + permAt(I.line, bi.x, bi.d)), open = Math.min(1, nP/(plant ? 40 : 12));
   const flow = plant ? (10 + 80*perm*STIM[o.stim].out)*injOk*open : (4 + 40*perm)*injOk*open;
   const gap = Math.hypot((bp.x - bi.x)*15.6, (P.line - I.line)*CFG.LINE_DY*CFG.MPX), decline = Math.pow(gap < 400 ? 0.985 : 0.997, o.age || 0);
@@ -1453,7 +1457,10 @@ function renderWire(){ const el = $('#wire');
 function newPlan(o){ return {rig:o.id, pts:[], shoe:o.shoe || 60, bit:'tricone', mud:'normal', top:'polymer', cbl:false, saltMud:false, err:''}; }
 /* a flow test pumps the well for two weeks and measures what comes up */
 function flowTest(o){ const aq = openIn(o, ROCK.WARM), gr = openIn(o, ROCK.GRANITE), tp = tip(o);
-  if (aq){ const p = wellPts(o).find(q => q.d > (o.shoe || 0) && rockL(o.line, q.x, q.d) === ROCK.WARM), perm = permAt(o.line, tp.x, tp.d), fl = (4 + 40*perm)*Math.min(1, aq/12); return Math.round(fl) + ' L/s of ' + tempAt(o.line, p.x, p.d) + ' °C water from the Muschelkalk.'; }
+  if (!aq && !gr && o.cost && !o.guarantee){ o.guarantee = Math.round(o.cost*0.5); S.cash += o.guarantee; acct('Federal risk guarantee', o.guarantee); return 'Almost nothing flows: the open hole crosses no water-bearing layer. The federal risk guarantee pays ' + fmt(o.guarantee) + ' for the failed well.'; }
+  if (aq){ const p = wellPts(o).find(q => q.d > (o.shoe || 0) && rockL(o.line, q.x, q.d) === ROCK.WARM), perm = permAt(o.line, tp.x, tp.d), fl = (4 + 40*perm)*Math.min(1, aq/12); let g = '';
+    if (fl < 8 && !o.guarantee && o.cost){ o.guarantee = Math.round(o.cost*0.5); S.cash += o.guarantee; acct('Federal risk guarantee', o.guarantee); g = ' The well counts as a partial failure: the federal risk guarantee pays ' + fmt(o.guarantee) + '.'; }
+    return Math.round(fl) + ' L/s of ' + aqT(o.line, p.x, p.d) + ' °C water from the Muschelkalk.' + g; }
   if (gr) return 'Barely any water from the granite, ' + tempAt(o.line, tp.x, tp.d) + ' °C at the bottom. Only stimulation would open it up.';
   return 'Almost nothing flows: the open hole crosses no water-bearing layer.'; }
 function renderCard(){
@@ -1550,7 +1557,7 @@ function planBar(){
     + '<span class="grp">Bit ' + tg('pbit', 'tricone', plan.bit, 'Tricone') + tg('pbit', 'pdc', plan.bit, 'PDC') + '</span><span class="grp">Mud weight ' + tg('pmud', 'light', plan.mud, 'Light') + tg('pmud', 'normal', plan.mud, 'Normal') + tg('pmud', 'heavy', plan.mud, 'Heavy') + '</span></div>';
   h += '<div class="sub">' + (first ? 'Above the shoe the hole is cased and cemented to surface; below it stays open: that is where water flows in, and where things can leak out. Karst groundwater sits in the top 400–550 m. ' : '') + 'PDC bits cut faster and wear more; tricone bits are slower and steady. Light mud drills faster but holds gas back less; heavy mud holds gas but pushes mud into fractures.</div>';
   if (plan.pts.length){ const end = plan.pts[plan.pts.length - 1];
-    h += '<div class="pl"><b>' + M(e.len) + '</b> of hole, bottom at <b>' + M(end.d) + '</b> · estimate <b>' + fmt(e.total) + '</b> (' + fmt(e.upfront) + ' now for casing and extras, the rest as it is drilled) · about <b>' + (e.days/DPM).toFixed(1) + ' months</b> if nothing goes wrong · half refunded by the Confederation when finished.</div>';
+    h += '<div class="pl"><b>' + M(e.len) + '</b> of hole, bottom at <b>' + M(end.d) + '</b> · estimate <b>' + fmt(e.total) + '</b> (' + fmt(e.upfront) + ' now for casing and extras, the rest as it is drilled) · about <b>' + (e.days/DPM).toFixed(1) + ' months</b> if nothing goes wrong · the Confederation refunds 60% when finished, if the water is at least 60 °C.</div>';
     h += '<div class="strata">' + rd.slice(0, 14).map(r => r.rock !== undefined ? '<span class="k">' + M(r.from) + '–' + M(r.to) + ' ' + RNAME[r.rock] + '</span>' : r.brk ? '<span class="b">broken reflections ' + M(r.from) + '–' + M(r.to) + '</span>' : '<span class="g">' + (r.strong ? 'strong ' : '') + 'reflector at ' + M(r.at) + '</span>').join('') + (e.blind ? '<span class="u">' + M(e.blind) + ' unsurveyed</span>' : '') + '</div>';
     h += '<div>Regional gradient about 31.5 °C per km: roughly ' + Math.round(11 + end.d*0.315) + ' °C at the bottom. The Muschelkalk aquifer lies at about 1.0–1.2 km here, granite from about 1.8–2.6 km.</div>';
     if (first && plan.shoe < 45) h += '<div class="neg">The shoe at ' + M(plan.shoe) + ' is above the usual base of the karst (400–550 m).</div>'; }
@@ -1655,7 +1662,7 @@ function act(a, v){
   if (a === 'talk'){ if (o.talking === undefined && !o.talked){ if (!canPay(20)){ toast('Talking costs ' + fmt(20) + '.'); return; } S.cash -= 20; acct('Liaison officers', -20); o.talking = S.t; sfx('click'); } return; }
   if (a === 'stim'){ const r = stimulate(o, Number(v)); if (r !== 'ok') toast(r); return; }
   if (a === 'link'){ linking = {st:o.id, role:v}; tool = null; toast('Click a rig to use it as the ' + (v === 'prod' ? 'production' : 'injection') + ' well.'); return; }
-  if (a === 'onoff'){ o.off = !o.off; news(DEF[o.type].n + ' near ' + nearestVillage(o.x, o.y).name + ' switched ' + (o.off ? 'off' : 'on') + '.'); return; }
+  if (a === 'onoff'){ o.off = !o.off; if (o.off && (o.type === 'station' || o.type === 'plant')){ const W = [byId(o.prod), byId(o.inj)].find(w => w && openIn(w, ROCK.FAULT)); if (W && hash(o.id, S.month, 61, S.seed) < 0.2) doQuake(W, 'The pumps at the ' + DEF[o.type].n.toLowerCase() + ' near ' + nearestVillage(o.x, o.y).name + ' stop; the pressure in the fault shifts. A felt tremor.', tip(W)); } news(DEF[o.type].n + ' near ' + nearestVillage(o.x, o.y).name + ' switched ' + (o.off ? 'off' : 'on') + '.'); return; }
   if (a === 'pad'){ if (!canPay(DRILL.pad)) return toast('Sealing the pad costs ' + fmt(DRILL.pad) + '.'); S.cash -= DRILL.pad; acct('Casing, cement and extras', -DRILL.pad); o.pad = true; return; }
   if (a === 'release'){ o.released = true; spawnLeave(o); news('The rig near ' + nearestVillage(o.x, o.y).name + ' is driven away. A capped wellhead stays.'); return; }
   if (a === 'rerig'){ const c = DEF[o.type].cost; if (!canPay(c)) return toast('Mobilisation costs ' + fmt(c) + '.'); S.cash -= c; acct(DEF[o.type].n, -c); o.released = false; o.arrived = true; spawnArrival(o); return; }
