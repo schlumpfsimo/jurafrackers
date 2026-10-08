@@ -797,6 +797,7 @@ function contaminate(o, sev, why){ const hit = S.vil.filter(v => linked(o, v)).s
   if (!hit.length) return; hit.forEach((v, i) => spoil(v, Math.max(1, sev - (i ? 1 : 0)), why));
   if (hit.length > 1 && !S.absinthe){ S.absinthe = 1; news('Hydrogeologists are not surprised it reached ' + hit[hit.length - 1].name + ': in 1901 absinthe from the burning Pernod works in Pontarlier poured into a sinkhole and came out of the Loue spring two days later.'); } }
 function spoil(v, sev, why){ const sp = v.spring, before = sp.lvl || 0; if (before === 3) return; let lvl = Math.max(before, sev); if (before >= 2 && sev >= 2) lvl = 3; sp.lvl = Math.min(3, lvl);
+  if (sp.lvl === before){ sp.until = Math.max(sp.until || 0, S.month + (before === 1 ? 3 : 18)); return; }
   if (sp.lvl === 1) sp.until = S.month + 3; if (sp.lvl === 2) sp.until = S.month + 18;
   const hitM = [0, -2, -8, -12][sp.lvl] - (before ? [0, -2, -8, -12][before] : 0); if (hitM) bump(v, ['', 'Turbid spring', 'Boil-water notice', 'Polluted spring'][sp.lvl], hitM);
   news(['', 'The fountain of ' + v.name + ' runs cloudy after ' + why + '. It should clear in a few months.', 'Boil-water notice in ' + v.name + ' after ' + why + '. The Company pays for bottled water, ' + fmt(30) + ' a month, until the spring is clean or treated.', 'The spring of ' + v.name + ' is polluted for good after ' + why + '. The canton fines the Company ' + fmt(500) + '.'][sp.lvl] + (hitM ? ' Mood −' + Math.abs(hitM) + '.' : ''));
@@ -1387,8 +1388,8 @@ function hud(){
   const fc = forecast(); $('#fc').textContent = fc.toFixed(1) + '%'; $('#fcfill').style.width = fc + '%'; $('#fcfill').style.background = fc >= 50.1 ? 'var(--ok)' : 'var(--warn)';
   $('#sp0').setAttribute('aria-pressed', S.paused); $('#sp1').setAttribute('aria-pressed', !S.paused && S.speed === 1); $('#sp05').setAttribute('aria-pressed', !S.paused && S.speed === 0.5); $('#sp4').setAttribute('aria-pressed', !S.paused && S.speed === 4); $('#mute').textContent = S.muted ? '♪̸' : '♪';
   document.querySelectorAll('#pal .it').forEach(b => { const tk = b.dataset.t, r = b.dataset.r;
-    if (tk){ const d = DEF[tk], locked = !!(d.need && !resDone(d.need)), el = b.querySelector('small'); b.classList.toggle('off', locked || (d.cost || 0) > S.cash);
-      const base = d.c || (d.cost ? fmt(d.cost) : '') + (d.up && d.cost ? ' + ' + fmt(d.up).replace('CHF ', '') + '/mo' : ''); const txt = locked ? base + ' \u00b7 needs research' : base; if (el.textContent !== txt){ el.textContent = txt; el.className = locked ? 'lock' : ''; }
+    if (tk){ const d = DEF[tk], locked = !!(d.need && !resDone(d.need)), noUni = tk === 'pass2' && !S.obj.some(c => c.type === 'chair' && c.on), el = b.querySelector('small'); b.classList.toggle('off', locked || noUni || (d.cost || 0) > S.cash);
+      const base = d.c || (d.cost ? fmt(d.cost) : '') + (d.up && d.cost ? ' + ' + fmt(d.up).replace('CHF ', '') + '/mo' : ''); const txt = locked ? base + ' \u00b7 needs research' : noUni ? base + ' \u00b7 needs a university' : base; if (el.textContent !== txt){ el.textContent = txt; el.className = locked || noUni ? 'lock' : ''; }
       b.setAttribute('aria-pressed', tool === tk); } });
   const vb = $('#viewbar'); vb.hidden = view !== 'section'; if (view === 'section'){ const l = S.lines[line]; $('#linename').textContent = 'Line ' + l.name + (l.legacy ? '' : ' (no 1970s data)'); $('#togglebtn').textContent = showPaper ? 'Show survey' : '1970s paper'; $('#togglebtn').disabled = !l.legacy && !showPaper; }
   $('#zoombar').hidden = !(view === 'map' && S.started && !S.over);
@@ -1499,7 +1500,7 @@ function renderCard(){
       if (RIG[o.type]){ const tp = tip(o), role = S.obj.find(st => st.prod === o.id || st.inj === o.id);
         if (o.drilling){ const dr = o.drilling, here = rockL(o.line, dr.pos.x, dr.pos.d), goal = dr.pts[dr.pts.length - 1], rest = planEst(Object.assign({}, o, {well:[{x:dr.pos.x, d:dr.pos.d}]}), Object.assign({}, dr, {pts:dr.pts.slice(dr.seg)}));
           s += 'Drilling at <b>' + M(dr.pos.d) + '</b> in ' + RNAME[here] + '. Day rate ' + fmt(DRILL.dayRate[o.type] || 20) + '; spent on this well so far ' + fmt(o.spent || 0) + '. ' + M(Math.max(0, goal.d - dr.pos.d)) + ' to go, about ' + (rest.days/DPM).toFixed(1) + ' months if nothing happens.<div class="meter"><i style="width:' + clamp(dr.pos.d/Math.max(1, goal.d)*100, 0, 100) + '%"></i></div>'; }
-        else if (o.well.length) s += 'Well <b>' + M(tp.d) + '</b> deep, about ' + tempAt(o.line, tp.x, tp.d) + ' °C at the bottom. Casing to ' + M(o.shoe || 0) + ', cement ' + (o.cbl ? 'checked by bond log' : 'not logged') + '.';
+        else if (o.well.length) s += 'Well <b>' + M(tp.d) + '</b> deep, about ' + tempAt(o.line, tp.x, tp.d) + ' °C at the bottom. Casing to ' + M(o.shoe || 0) + ', cement ' + (o.cbl ? 'checked by bond log' : 'not logged') + '.' + (openIn(o, ROCK.WATER) ? ' <span class="neg">The open hole crosses the karst groundwater: while the well flows, deep water can leak into the springs.</span>' : '');
         else s += (o.released ? 'A capped wellhead, no rig.' : 'No well yet. This rig reaches ' + M(maxDepth(o)) + (maxBend(o) ? ' and may bend 30°.' : ', straight down.'));
         const seen = Object.keys(o.hit || {}).map(Number).filter(t => t !== ROCK.SOIL).map(t => RNAME[t]); if (seen.length && !o.drilling) s += '<div class="sub">Cuttings showed: ' + seen.join(', ') + '.</div>';
         if (o.test) s += '<div><b>Flow test:</b> ' + o.test + '</div>';
