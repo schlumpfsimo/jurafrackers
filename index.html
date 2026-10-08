@@ -1790,7 +1790,7 @@ function renderCard(){
         if (o.on) acts += '<button class="btn" data-a="onoff">' + (o.off ? 'Switch on' : 'Switch off' ) + '</button>'; }
       if (view === 'map' && o.line !== undefined) acts += '<button class="btn" data-a="open">Open section</button>';
       if (!o.drilling) acts += '<button class="btn" data-a="rm">Dismantle (' + (DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0) < 1 ? Math.round((DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0))*4.3) + ' weeks' : (DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0)) + ' months') + ')</button>';
-    } else { s = DEF[o.type].h; if (o.type !== 'congress') acts += '<button class="btn" data-a="rm">' + (o.type === 'police' || o.type === 'riot' ? 'Withdraw' : 'Remove') + '</button>'; }
+    } else if (!SITE[o.type]){ s = DEF[o.type].h; if (o.type !== 'congress') acts += '<button class="btn" data-a="rm">' + (o.type === 'police' || o.type === 'riot' ? 'Withdraw' : 'Remove') + '</button>'; }
     if (o.burnt) acts = '<button class="btn" data-a="rm">Clear the ruin</button>';
     if (o.dismantling){ const left = o.dismantling - S.t; s = '<span class="neg">Being dismantled: gone in about ' + (left < 1 ? Math.max(1, Math.round(left*4.3)) + ' week' + (Math.round(left*4.3) > 1 ? 's' : '') : left.toFixed(1) + ' months') + '.</span> ' + s; acts = ''; }
     h += '<div>' + s + '</div>' + (acts ? '<div class="acts">' + acts + '</div>' : '');
