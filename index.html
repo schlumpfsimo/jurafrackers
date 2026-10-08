@@ -537,7 +537,7 @@ function campaign(k, vid){ S.camp = S.camp || {done:{}, run:[]}; const d = CAMP[
   if (!campOpen()) return 'The campaign starts six months before the vote.'; if (!has('lobby')) return 'Campaigning needs the Bureau de lobbying.'; if (S.camp.done[key]) return 'Already done.'; if (!canPay(d.c)) return d.n + ' costs ' + fmt(d.c) + '.';
   S.cash -= d.c; acct('Campaign', -d.c); S.camp.done[key] = 1; S.camp.run.push({k, vid, at:S.month + d.mo}); sfx('coin'); return 'ok'; }
 function campaignTick(){
-  if (S.month === CFG.END - 6){ news('Six months to the vote. The campaign opens: posters, ads, a debate, doors to knock on. See Campaign at the top.'); for (const p of ['#polls', '#wire', '#ledger']) $(p).hidden = true; for (const p of ['#polls', '#wire', '#ledger']) $(p).hidden = true; $('#camp').hidden = false; renderCampaign(); }
+  if (S.month === CFG.END - 6){ news('Six months to the vote. The campaign opens: posters, ads, a debate, doors to knock on. See Campaign at the top.'); for (const p of ['#polls', '#wire', '#ledger']) $(p).hidden = true; $('#camp').hidden = false; renderCampaign(); }
   if (!S.camp) return;
   for (const r of S.camp.run.slice()){ if (r.at > S.month) continue; S.camp.run.splice(S.camp.run.indexOf(r), 1); const town = S.vil[0];
     if (r.k === 'posters'){ S.camp.posters = S.month; news('Posters go up in every village: a smiling family in front of a rig. Someone draws a moustache on the rig.'); }
@@ -1092,7 +1092,7 @@ function committee(){ const recs = ['publish the micro-seismic data within 24 ho
   const ai = (hash(S.month, 5, 5, S.seed)*recs.length)|0, b = recs[(ai + 1 + ((hash(S.month, 6, 6, S.seed)*(recs.length - 1))|0)) % recs.length];
   news('Annual report of the Comité de patronage: "globally positive". It recommends to ' + recs[ai] + ' and to ' + b + '.'); }
 /* ------------------------------------------------------------------ the valley erupts (never announced, never hinted) */
-function startSecret(){ S.secret = {t:0, stage:0, fires:[], booms:[]}; S.paused = true; plan = null; tool = null; sel = null; $('#card').hidden = true; for (const p of ['#polls', '#wire', '#camp', '#ledger']) $(p).hidden = true;
+function startSecret(){ S.secret = {t:0, stage:0, fires:[], booms:[]}; S.paused = true; plan = null; tool = null; linking = null; sel = null; $('#card').hidden = true; for (const p of ['#polls', '#wire', '#camp', '#ledger']) $(p).hidden = true;
   const pub = S.obj.filter(o => ['school','lobby','office','experts','engineers','prhut','waterlab','chair','congress','stand','suit'].includes(o.type));
   for (const o of pub){ o.burnt = S.t; o.on = false; S.secret.fires.push([o.x, o.y]); }
   for (const v of S.vil){ S.secret.fires.push([v.x - v.w/4, v.y]); if (v.town) S.secret.fires.push([v.x + v.w/4, v.y - 4]); }
@@ -1754,6 +1754,7 @@ function renderCard(){
     else if (opp) s = {banner:'Lowers the mood nearby until the village warms up.', oppstand:'Cancels one of your suits or your stand here.', rumour:'Going round the village. It fades after a few months, or a man in a suit nearby ends it.', march:'A month of bad press in town.', activists:'Double the pace of the opposition. They leave three months after the last police unit.', counterfest:'Cancels your second fest.'}[o.type];
     if (o.type === 'rumour'){ s = (o.text ? '<q>' + o.text + '</q> ' : '') + s; if (has('prhut')) acts += '<button class="btn" data-a="correct">Publish a correction (' + fmt(15) + ')</button>'; else s += '<div class="sub">The Cabane d’information could answer it.</div>'; }
     if (SITE[o.type] && !o.on && !o.burnt && !o.restart && !o.dismantling) acts += '<button class="btn" data-a="rm">Cancel the site</button>';
+    if (o.restart && !o.on && !o.burnt) acts += '<button class="btn" data-a="stoprehire">Stop rehiring</button>';
     if (SITE[o.type] && o.on && !o.burnt && !o.waitRoad){
       if (isBlocked(o)) s = '<span class="neg">Blocked by protesters.</span> ';
       { const camp = S.obj.find(c => c.type === 'camp' && c.target === o.id); if (camp){ const left = camp.t0 + (o.fenced ? 6 : 3) - S.t; s += '<span class="neg"><b>Threatened:</b> the camp will set it on fire in about ' + (left >= 1 ? Math.ceil(left) + ' month' + (Math.ceil(left) > 1 ? 's' : '') : Math.max(1, Math.ceil(left*4.3)) + ' week' + (Math.ceil(left*4.3) > 1 ? 's' : '')) + '. Talk to them, send public-order police, or, last resort, the helicopter.</span> '; } }
@@ -1790,7 +1791,7 @@ function renderCard(){
         if (o.on) acts += '<button class="btn" data-a="onoff">' + (o.off ? 'Switch on' : 'Switch off' ) + '</button>'; }
       if (view === 'map' && o.line !== undefined) acts += '<button class="btn" data-a="open">Open section</button>';
       if (!o.drilling) acts += '<button class="btn" data-a="rm">Dismantle (' + (DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0) < 1 ? Math.round((DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0))*4.3) + ' weeks' : (DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0)) + ' months') + ')</button>';
-    } else if (!opp && !SITE[o.type] && DEF[o.type]){ s = DEF[o.type].h; if (o.type !== 'congress') acts += '<button class="btn" data-a="rm">' + (o.type === 'police' || o.type === 'riot' ? 'Withdraw' : 'Remove') + '</button>'; }
+    } else if (!opp && !SITE[o.type] && DEF[o.type] && !o.burnt){ if (!s) s = DEF[o.type].h; if (o.type !== 'congress') acts += '<button class="btn" data-a="rm">' + (o.type === 'police' || o.type === 'riot' ? 'Withdraw' : 'Remove') + '</button>'; }
     if (o.burnt) acts = '<button class="btn" data-a="rm">Clear the ruin</button>';
     if (o.dismantling){ const left = o.dismantling - S.t; s = '<span class="neg">Being dismantled: gone in about ' + (left < 1 ? Math.max(1, Math.round(left*4.3)) + ' week' + (Math.round(left*4.3) > 1 ? 's' : '') : left.toFixed(1) + ' months') + '.</span> ' + s; acts = ''; }
     h += '<div>' + s + '</div>' + (acts ? '<div class="acts">' + acts + '</div>' : '');
@@ -1919,7 +1920,7 @@ function act(a, v){
   if (a === 'zin'){ if (view === 'section') secZoom(cam.z*1.5); else zoomStep(1.5); return; } if (a === 'zout'){ if (view === 'section') secZoom(cam.z/1.5); else zoomStep(1/1.5); return; }
   if (a === 'map'){ closeSection(); return; } if (a === 'toggle'){ showPaper = !showPaper; return; }
   if (a === 'start'){ S.started = true; S.paused = false; $('#overlay').hidden = true; audio(); return; }
-  if (a === 'continue'){ try { const d = JSON.parse(localStorage.getItem('jf3_save')); if (d && d.v === 5){ S = d; GEO.clear(); KN.clear(); CANV.clear(); DIRTY.clear(); for (const [k,arr] of (S.KN || [])) KN.set(k, Uint8Array.from(arr)); delete S.KN; baseMap = null; } } catch (e) {} S.paused = false; S.started = true; $('#overlay').hidden = true; if (S.offer){ S.paused = true; showOffer(S.offer); } else if (S.event){ S.paused = true; showEvent(); } return; }
+  if (a === 'continue'){ try { const d = JSON.parse(localStorage.getItem('jf3_save')); if (d && d.v === 5){ S = d; for (const o of S.obj) if (o.on || o.restart) o.everOn = true; GEO.clear(); KN.clear(); CANV.clear(); DIRTY.clear(); for (const [k,arr] of (S.KN || [])) KN.set(k, Uint8Array.from(arr)); delete S.KN; baseMap = null; } } catch (e) {} S.paused = false; S.started = true; $('#overlay').hidden = true; if (S.offer){ S.paused = true; showOffer(S.offer); } else if (S.event){ S.paused = true; showEvent(); } return; }
   if (a === 'again'){ boot(true); return; }
   if (a === 'accept'){ const d = S.offerData; S.cash += d.c; acct('Investor money', d.c); S.invest[S.offer] = true; for (const vv of S.vil) bump(vv, 'Out-of-canton money', d.m); news('Investors from outside the canton take a stake. The logo on the rig changes overnight.'); S.offer = null; S.paused = false; $('#overlay').hidden = true; sfx('coin'); return; }
   if (a === 'decline'){ S.invest[S.offer] = true; news('The Company declines outside money. "We remain Jurassien," says the press release, printed in another canton.'); S.offer = null; S.paused = false; $('#overlay').hidden = true; return; }
@@ -1935,6 +1936,7 @@ function act(a, v){
   if (a === 'link'){ linking = {st:o.id, role:v}; tool = null; sel = null; $('#card').hidden = true; return; }
   if (a === 'autolink'){ const r = autoLink(o); if (r !== 'ok') toast(r); renderCard(); return; }
   if (a === 'linkto'){ const [sid, role] = String(v).split(':'), st = byId(Number(sid)); if (st){ linkWell(st, role, o); renderCard(); } return; }
+  if (a === 'stoprehire'){ o.restart = false; o.on = true; o.off = true; news(DEF[o.type].n + ': rehiring stopped. It stays switched off.'); renderCard(); return; }
   if (a === 'onoff' && DEF[o.type].bld){ const d = DEF[o.type];
     if (!o.off){ o.off = true; const dark = Object.keys(DEF).filter(k => (DEF[k].req || []).includes(o.type)).map(k => DEF[k].n.toLowerCase()); news(d.n + ' switched off. The staff are let go' + (dark.length ? '; no more ' + dark.join(', ') + ' until it runs again' : '') + '.'); }
     else { o.off = false; o.on = false; o.t0 = S.t; o.ready = S.t + (d.build || 0)*bf(); o.restart = true; news(d.n + ': rehiring and re-equipping. Back in about ' + ((d.build || 0) < 1 ? Math.round((d.build || 0)*4.3) + ' weeks' : d.build + ' months') + '.'); }
