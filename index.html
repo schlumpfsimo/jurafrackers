@@ -1,1482 +1,1122 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>JURA FRACKERS</title>
-  <style>
-    html,body{height:100%;margin:0;background:#e7f6ff;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;color:#0b1b2b;}
-    .wrap{display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px;}
-    .hud{
-      width:min(1100px,96vw);
-      display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;
-      background:#fff;border:4px solid #8fb8d6;border-radius:12px;
-      box-shadow:0 10px 0 #00000022;padding:10px 12px;
-    }
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
-    .hint{color:#35536b;font-size:12px;line-height:1.35}
-    .badge{padding:2px 8px;border:2px solid #8fb8d6;border-radius:999px;background:#f4fbff;font-size:12px;color:#35536b;}
-    .chip{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border:2px solid #8fb8d6;border-radius:999px;background:#f4fbff;}
-    button{
-      cursor:pointer;font:inherit;padding:8px 10px;border-radius:10px;border:3px solid #8fb8d6;background:#f2fbff;
-      box-shadow:0 6px 0 #00000022;
-    }
-    button:active{transform:translateY(2px);box-shadow:0 4px 0 #00000022;}
-    canvas{
-      image-rendering: pixelated; image-rendering: crisp-edges;
-      border:6px solid #8fb8d6;border-radius:14px;box-shadow:0 14px 0 #00000022;
-      width:min(1100px,96vw);height:auto;max-height:78vh;background:#bfe9ff;
-    }
-  </style>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<title>Jura Frackers: Bore Again</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap">
+<style>
+/* Layout: flat light chrome in the spirit of a 1990s office application: square panels, one-pixel bevels,
+   Helvetica. The isometric block floats on a light stage. Pixel font only on the canvases. */
+:root{
+  color-scheme:light;
+  --bg:#dfe3e8; --panel:#f2f3f5; --ink:#15181c; --muted:#5b6670; --line:#8a9099; --hi:#ffffff; --lo:#6b7279; --lo2:#3b4046;
+  --accent:#1f5fa8; --warn:#b3261e; --ok:#1f7a3f; --paper:#f1e6c8; --stage:#eef0f2;
+  --px:"Pixelify Sans","Courier New",monospace; --ui:"Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:13px/1.35 var(--ui)}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#app{height:100%;box-sizing:border-box;display:grid;grid-template:auto minmax(0,1fr) auto / 214px minmax(0,1fr);gap:8px;padding-block:8px;padding-inline:16px}
+.box{background:var(--panel);border:1px solid var(--lo2);box-shadow:inset 1px 1px 0 var(--hi),inset -1px -1px 0 var(--lo)}
+#top{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:6px 10px}
+.title{font-weight:700;font-size:18px;line-height:1;letter-spacing:.01em;padding-right:8px}
+.title small{display:block;font-size:9.5px;letter-spacing:.22em;color:var(--muted);margin-top:3px;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border:1px solid var(--lo);background:#fff;box-shadow:inset 1px 1px 0 #cfd4d9;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip b{font-size:14px}
+.chip.neg b,.neg{color:var(--warn)} .pos{color:var(--ok)}
+.chip button,.sp button,.btn,.it{border:1px solid var(--lo2);background:var(--panel);box-shadow:inset 1px 1px 0 var(--hi),inset -1px -1px 0 var(--lo);border-radius:0}
+.chip button{padding:0 7px;line-height:17px;font-size:12px}
+.sp{display:flex;gap:3px}
+.sp button{padding:3px 9px;font-weight:700;min-width:30px}
+.sp button[aria-pressed="true"],.it[aria-pressed="true"],.btn[aria-pressed="true"]{box-shadow:inset 1px 1px 0 var(--lo),inset -1px -1px 0 var(--hi);background:#e2e5e9}
+.btn{padding:4px 10px;font-weight:600}
+.btn:active,.sp button:active{box-shadow:inset 1px 1px 0 var(--lo),inset -1px -1px 0 var(--hi)}
+.btn.main{background:var(--ink);color:#fff;border-color:#000;box-shadow:none}
+.btn:disabled{opacity:.45;cursor:default}
+.vote{display:flex;flex-direction:column;flex:1 1 180px;min-width:160px;gap:2px}
+.vote label{font-size:10.5px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.vote label b{color:var(--ink);font-size:14px}
+.bar{position:relative;height:12px;border:1px solid var(--lo2);background:#e9d8d4;box-shadow:inset 1px 1px 0 #c9bcb8}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--ok)}
+.bar u{position:absolute;left:50.1%;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+#pal{overflow:auto;padding:6px;min-height:0;display:flex;flex-direction:column;gap:2px}
+#pal h3{margin:7px 2px 2px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+#pal h3:first-child{margin-top:0}
+.it{display:flex;align-items:center;gap:7px;width:100%;text-align:left;padding:2px 4px}
+.it canvas{width:30px;height:30px;image-rendering:pixelated;flex:none;background:#dfe6ea;border:1px solid var(--lo)}
+.it span{display:flex;flex-direction:column;min-width:0;line-height:1.15}
+.it b{font-size:12px}
+.it small{color:var(--muted);font-size:10.5px}
+.it.off{opacity:.5}
+.it .lock{color:var(--warn)}
+#stage{position:relative;min-width:0;min-height:0;overflow:hidden;background:linear-gradient(#f6f8fa,#dbe1e7);display:flex;align-items:center;justify-content:center}
+#game{image-rendering:pixelated;image-rendering:crisp-edges;display:block;cursor:crosshair;touch-action:none}
+.pane{position:absolute;box-sizing:border-box;padding:9px 11px;background:var(--panel);border:1px solid var(--lo2);box-shadow:inset 1px 1px 0 var(--hi),inset -1px -1px 0 var(--lo),3px 3px 0 rgba(0,0,0,.15);max-height:calc(100% - 20px);overflow:auto}
+.pane h4{margin:0 22px 2px 0;font-size:14px;padding-bottom:3px;border-bottom:1px solid var(--line)}
+#card{top:10px;right:10px;width:300px;max-width:calc(100% - 20px)}
+#card .sub,.sub{color:var(--muted);font-size:11.5px;margin-bottom:6px}
+.x{position:absolute;top:3px;right:4px;border:1px solid var(--lo2);background:var(--panel);box-shadow:inset 1px 1px 0 var(--hi),inset -1px -1px 0 var(--lo);font-size:13px;line-height:14px;padding:0 5px;font-weight:700}
+#card ul{list-style:none;margin:6px 0;padding:0}
+#card li{padding:2px 0;border-top:1px dotted var(--line)}
+.acts{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.meter{height:9px;border:1px solid var(--lo2);background:#e9d8d4;position:relative;overflow:hidden}
+.meter i{position:absolute;inset:0 auto 0 0;background:var(--ok)}
+#hint{position:absolute;left:10px;bottom:10px;max-width:min(62%,620px);box-sizing:border-box;padding:5px 10px;background:rgba(242,243,245,.96);border:1px solid var(--lo2);box-shadow:inset 1px 1px 0 var(--hi),inset -1px -1px 0 var(--lo);font-size:12.5px}
+#toast{position:absolute;top:10px;left:50%;transform:translateX(-50%);max-width:calc(100% - 20px);box-sizing:border-box;padding:5px 12px;background:#fff;border:1px solid var(--warn);color:var(--warn);font-weight:700;text-align:center}
+#viewbar{position:absolute;top:10px;left:10px;display:flex;gap:6px;align-items:center}
+#viewbar span{font-weight:700;padding:0 4px}
+#loans{top:10px;left:10px;width:330px;max-width:calc(100% - 20px);z-index:2}
+#loans table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;margin:6px 0}
+#loans td,#loans th{padding:2px 4px;border-top:1px dotted var(--line);text-align:right;font-weight:400}
+#loans td:first-child,#loans th:first-child{text-align:left}
+#research{top:10px;left:10px;width:330px;max-width:calc(100% - 20px);z-index:2}
+#research .row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-top:1px dotted var(--line)}
+#steps{position:absolute;top:10px;left:10px;width:230px;padding:8px 10px;font-size:12px}
+#steps ol{margin:4px 0 0;padding-left:18px}
+#steps li{margin:2px 0}
+#steps li.done{color:var(--muted);text-decoration:line-through}
+#steps li.now{font-weight:700}
+#overlay{position:absolute;inset:0;background:rgba(40,45,52,.55);display:flex;align-items:flex-start;justify-content:center;padding:12px;overflow:auto;z-index:3;box-sizing:border-box}
+.contract{margin:auto;background:var(--paper);color:#2b2318;border:1px solid #5a4a2a;max-width:560px;padding:16px 22px;font-size:13.5px;line-height:1.4;position:relative;box-shadow:4px 4px 0 rgba(0,0,0,.25)}
+.contract:before{content:"";position:absolute;inset:5px;border:1px solid #8a7a55;pointer-events:none}
+.contract h1{font-size:19px;margin:0 0 4px;letter-spacing:.04em;text-transform:uppercase;text-align:center}
+.contract .sub{text-align:center;font-size:12px;color:#5a4a2a;margin-bottom:12px}
+.contract p{margin:0 0 8px;max-width:62ch}
+.contract ol{margin:0 0 10px;padding-left:22px}
+.contract li{margin-bottom:4px}
+.contract .stamp{display:inline-block;border:3px double #a33;color:#a33;padding:2px 8px;transform:rotate(-6deg);font-weight:700;letter-spacing:.1em;margin:4px 0 8px}
+.contract .fig{display:flex;gap:18px;flex-wrap:wrap;border-top:1px solid #8a7a55;border-bottom:1px solid #8a7a55;padding:8px 0;margin:8px 0}
+.contract .fig div{display:flex;flex-direction:column}
+.contract .fig b{font-size:20px;font-variant-numeric:tabular-nums}
+.contract .fig span{font-size:11px;color:#5a4a2a;text-transform:uppercase;letter-spacing:.08em}
+.contract .btn{background:#fffdf7;border-color:#5a4a2a;color:#2b2318;box-shadow:none}
+.contract .btn.main{background:#2b2318;color:#fffdf7}
+#news{grid-column:1/-1;padding:5px 10px;display:flex;gap:10px;min-width:0;align-items:baseline}
+#news b{color:var(--warn);letter-spacing:.14em;font-size:10.5px;flex:none}
+#news span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#readout{position:absolute;right:10px;bottom:10px;width:300px;max-width:calc(100% - 20px);background:var(--paper);color:#2b2318;border:1px solid #5a4a2a;padding:8px 10px;box-sizing:border-box;font:11.5px/1.4 "Courier New",monospace;max-height:40%;overflow:auto;white-space:pre-wrap}
+@media (max-width:820px){ #app{grid-template:auto minmax(0,1fr) auto auto / minmax(0,1fr)} #top{grid-row:1} #stage{grid-row:2} #pal{grid-row:3;flex-direction:row;overflow-x:auto} #news{grid-row:4} #pal h3{writing-mode:vertical-rl;transform:rotate(180deg);margin:0 2px;flex:none} .it{flex:none;width:auto;flex-direction:column;min-width:64px;text-align:center;padding:2px} .it span{align-items:center} #steps{display:none} }
+</style>
 </head>
 <body>
-<div class="wrap">
-  <div class="hud">
-    <div class="row" style="width:100%;justify-content:space-between">
-      <div class="row">
-        <div><b>JURA FRACKERS</b> <span class="badge" id="mode">READY</span></div>
-        <div class="hint">
-          Move in air/tunnels: <b>← → ↑ ↓</b> (↑ only in tunnels) • Pump: <b>Space</b> • Outreach: <b>O</b> • Pause: <b>P</b> • Start/Restart: <b>Enter</b><br/>
-          <b>Drilling is only possible via Programs (cannot be aborted).</b> Select distance <b>1/2/3</b> (=3/10/100) • Aim with <b>← → ↓</b> • Press <b>Enter</b> to commit.
-        </div>
-      </div>
-      <button id="restart">Restart</button>
-    </div>
-
-    <div class="row">
-      <div class="chip">Cash: <b id="cash">0</b></div>
-      <div class="chip">Score: <b id="score">0</b></div>
-      <div class="chip">Depth: <b id="depth">0</b> m</div>
-      <div class="chip">Pumping: <b id="pump">OFF</b></div>
-      <div class="chip">Outreach: <b id="outreach">OFF</b></div>
-      <div class="chip">Plants: <b id="plants">0</b></div>
-      <div class="chip">Seismic: <b id="seis">0%</b></div>
-      <div class="chip">Protest: <b id="prot">0%</b></div>
-      <div class="chip">Contam.: <b id="contam">NO</b></div>
-      <div class="chip">Doublet: <b id="dblt">0/2 • 0</b></div>
-      <div class="chip">Last strike: <b id="strike">—</b></div>
-      <div class="chip">Program: <b id="program">—</b></div>
-      <div class="chip">Best: <b id="best">0</b></div>
-    </div>
-
-    <div class="hint" style="width:100%">
-      Hot water plants deplete very fast. HDR (Hot Dry Rock) doublets are strongest when deep, and deplete slower the deeper they are.
-      Seismicity increases <b>only</b> when drilling unstable cracked rock. Contamination (hot + cold connected) drives protest fastest.
-      If protest reaches <b>100%</b>, protesters burn the rig and the operation ends.
-    </div>
-  </div>
-
-  <canvas id="game" width="384" height="216"></canvas>
+<div id="app">
+  <header id="top" class="box">
+    <div class="title">Jura Frackers<small>BORE AGAIN</small></div>
+    <div class="chip" id="cashc">Cash <b id="cash">400k</b></div>
+    <div class="chip">Credit <b id="debt">0k</b><button id="loanbtn" title="Open the loan book">Loan book</button></div><div class="chip"><button id="resbtn" title="Research">Research</button></div>
+    <div class="chip">Month <b id="net">&nbsp;</b></div>
+    <div class="chip"><b id="date">Jan, year 1</b><small id="left"></small></div>
+    <div class="sp" role="group" aria-label="Speed"><button id="sp0" title="Pause (space)">II</button><button id="sp1">&#9654;</button><button id="sp4">&#9654;&#9654;</button><button id="mute" title="Sound">&#9834;</button></div>
+    <div class="vote"><label>Vote forecast <b id="fc">40.0%</b> yes &middot; needs 50.1%</label><div class="bar"><i id="fcfill"></i><u></u></div></div>
+  </header>
+  <nav id="pal" class="box" aria-label="Objects"></nav>
+  <main id="stage" class="box">
+    <canvas id="game" width="480" height="270"></canvas>
+    <div id="viewbar" hidden><button class="btn" data-a="map">&larr; Block</button><span id="linename"></span><button class="btn" data-a="toggle" id="togglebtn">1970s paper</button></div>
+    <aside id="card" class="pane" hidden></aside>
+    <aside id="loans" class="pane" hidden></aside>
+    <aside id="research" class="pane" hidden></aside>
+    <aside id="steps" class="pane" hidden></aside>
+    <pre id="readout" hidden></pre>
+    <div id="hint" hidden></div>
+    <div id="toast" hidden></div>
+    <div id="overlay"></div>
+  </main>
+  <footer id="news" class="box"><b>WIRE</b><span id="newsline">The canton signs. The valley has not been asked.</span></footer>
 </div>
-
 <script>
 (() => {
-  const canvas = document.getElementById("game");
-  const ctx = canvas.getContext("2d", { alpha:false });
-  const W = canvas.width, H = canvas.height;
-
-  const ui = {
-    mode: document.getElementById("mode"),
-    cash: document.getElementById("cash"),
-    score: document.getElementById("score"),
-    depth: document.getElementById("depth"),
-    pump: document.getElementById("pump"),
-    outreach: document.getElementById("outreach"),
-    plants: document.getElementById("plants"),
-    seis: document.getElementById("seis"),
-    prot: document.getElementById("prot"),
-    contam: document.getElementById("contam"),
-    dblt: document.getElementById("dblt"),
-    strike: document.getElementById("strike"),
-    program: document.getElementById("program"),
-    best: document.getElementById("best"),
-    restart: document.getElementById("restart")
-  };
-
-  const P = {
-    CELL: 4,
-    SURFACE_Y_PX: 64,
-    WORLD_W_PX: 1200,
-    WALL_MARGIN_PX: 24,
-
-    MOVE_EMPTY: 140,
-
-    // drilling speeds
-    DRILL_RATE_SOLID: 3.8,
-    DRILL_RATE_HARD: 1.60,
-    DRILL_RATE_UNSTABLE: 2.25,
-    DRILL_RATE_WATER: 3.20,
-    DRILL_RATE_HDR: 2.25,
-
-    // drilling costs
-    DRILL_COST_BASE: 0.74,
-    DRILL_COST_HARD_MULT: 3.25,
-    DRILL_COST_UNSTABLE_MULT: 1.70,
-    DRILL_COST_WATER_MULT: 1.15,
-    DRILL_COST_HDR_MULT: 1.65,
-
-    // program drilling: longer is cheaper (commitment risk)
-    PROG_DISCOUNT_3: 0.00,
-    PROG_DISCOUNT_10: 0.16,
-    PROG_DISCOUNT_100: 0.34,
-    PROG_SPEED_MULT: 1.18,
-
-    START_CASH: 260,
-
-    SEIS_MAX: 100,
-    PROT_MAX: 100,
-
-    // seismic: ONLY from unstable drilling/break
-    SEIS_UNSTABLE_PER_SEC: 10.5,
-    SEIS_UNSTABLE_SPIKE_ON_BREAK: 8.0,
-
-    Q_MINOR: 82,
-    Q_MAJOR: 95,
-    Q_COOLDOWN: 7.0,
-
-    // protest dynamics
-    PROT_BASE_PER_SEC: 0.04,
-    PROT_ON_COLD_WATER_HIT: 6.5,
-    PROT_ON_HOT_WATER_HIT: 3.5,
-    PROT_PER_PLANT_PER_SEC: 0.08,
-
-    // contamination is the fastest driver
-    CONTAM_PROT_PER_SEC: 1.60,
-    CONTAM_PROT_PER_SEC_PUMP: 4.20,
-
-    // calming
-    PROT_CALM_PER_SEC_IDLE: 0.30,
-    PROT_CALM_PER_SEC_OUTREACH: 1.35,
-    OUTREACH_COST_PER_SEC: 2.3,
-
-    // plants
-    PLANT_MAX: 14,
-
-    HDR_DOUBLET_MIN_EXPOSURE: 22,
-    HDR_ADJ_BONUS_DIV: 3,
-
-    // HDR: deeper => much hotter + slower depletion
-    HDR_POWER_BASE: 4.8,
-    HDR_POWER_DEPTH_SCALE: 0.017,        // steeper than before
-    HDR_DECAY_BASE: 0.0044,              // base decay at shallow
-    HDR_DECAY_MIN: 0.0018,               // deep HDR decays slower (lower K)
-
-    // hot water: fast depletion
-    HOTW_POWER_BASE: 2.7,
-    HOTW_POWER_DEPTH_SCALE: 0.0085,
-    HOTW_DECAY_K: 0.030,                 // very fast
-
-    // fog/visibility
-    DRILL_WINDOW_CELLS: 3,
-    TUNNEL_REVEAL_CELLS: 1,
-
-    CAM_LERP_Y: 0.10,
-    CAM_LERP_X: 0.05,
-    CAM_TARGET_Y_FRAC: 0.58,
-
-    HIT_FLASH_SEC: 0.26,
-    HIT_SHIMMER_SEC: 1.05,
-
-    CROWD_MAX: 18
-  };
-
-  const PAL = {
-    sky1:"#61c7ff", sky2:"#8bdbff", sky3:"#c6f3ff",
-    sun:"#ffe06a",
-    hillFar:"#6fdc86", hillMid:"#41cc70", hillNear:"#1fb45a",
-    grass1:"#1a8f43", grass2:"#0f6e32",
-    chalet:"#8b5a3c", roof:"#d64545", snow:"#f7fbff",
-
-    unk1:"#111427", unk2:"#0b0f1f",
-    tun1:"#080b14", tun2:"#0c1020",
-
-    rock1:"#b8794b", rock2:"#a66c41",
-    hard1:"#5c6472", hard2:"#424b59",
-
-    unst1:"#8b4a41", unst2:"#602f2a", crack:"#1b0b0b",
-
-    hdr1:"#2a2a33", hdr2:"#181821",
-    hdrGlow:"#ff9b3d",
-
-    cold1:"#194a8a", cold2:"#0f2f5a",
-    hot1:"#2a7bd6", hot2:"#1f5ca3",
-    waterHi:"#7fc4ff",
-
-    warn:"#c73a3a"
-  };
-
-  // ---------- RNG / noise ----------
-  let runSeed = (Date.now() ^ (Math.random()*1e9|0)) >>> 0;
-
-  function mulberry32(seed){
-    let a = seed >>> 0;
-    return function(){
-      a |= 0; a = (a + 0x6D2B79F5) | 0;
-      let t = Math.imul(a ^ (a >>> 15), 1 | a);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-  let rng = mulberry32(runSeed);
-
-  function hash2(x,y){
-    let h = x * 374761393 + y * 668265263;
-    h = (h ^ (h >>> 13)) * 1274126177;
-    return (h ^ (h >>> 16)) >>> 0;
-  }
-  function randAt(ix,iy){
-    const s = (runSeed ^ hash2(ix,iy)) >>> 0;
-    let t = (s + 0x6D2B79F5) | 0;
-    t = Math.imul(t ^ (t >>> 15), 1 | t);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  }
-  function lerp(a,b,t){ return a + (b-a)*t; }
-  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-  function smoothstep(t){ return t*t*(3-2*t); }
-  function valueNoise2D(x,y,scale){
-    const fx = x/scale, fy = y/scale;
-    const x0 = Math.floor(fx), y0 = Math.floor(fy);
-    const x1 = x0+1, y1 = y0+1;
-    const sx = smoothstep(fx-x0), sy = smoothstep(fy-y0);
-    const n00 = randAt(x0,y0), n10 = randAt(x1,y0), n01 = randAt(x0,y1), n11 = randAt(x1,y1);
-    const ix0 = lerp(n00,n10,sx), ix1 = lerp(n01,n11,sx);
-    return lerp(ix0,ix1,sy);
-  }
-  function fbm(x,y,s1,s2,w2=0.55){
-    const a = valueNoise2D(x,y,s1);
-    const b = valueNoise2D(x,y,s2);
-    return a*(1-w2) + b*w2;
-  }
-  function ridge01(x){
-    const d = Math.abs(x-0.5)*2;
-    return 1 - d;
-  }
-
-  // ---------- world ----------
-  const TYPE = { AIR:0, ROCK:1, HARD:2, UNSTABLE:3, HDR:4, COLD:5, HOT:6, BEDROCK:7 };
-
-  const cellType = new Map();
-  const carved = new Set();
-  const prog = new Map();
-
-  function key(cx,cy){ return `${cx},${cy}`; }
-  function wToC(px){ return Math.floor(px / P.CELL); }
-  function cToW(c){ return c * P.CELL; }
-  function inWorldX(px){ return px >= P.WALL_MARGIN_PX && px <= (P.WORLD_W_PX - P.WALL_MARGIN_PX); }
-
-  function getCellType(cx,cy){
-    if (cy < wToC(P.SURFACE_Y_PX)) return TYPE.AIR;
-    const k = key(cx,cy);
-    const cached = cellType.get(k);
-    if (cached !== undefined) return cached;
-    const t = generateCell(cx,cy);
-    cellType.set(k,t);
-    return t;
-  }
-
-  // Vast groundwater veins + deep big HDR clusters
-  function generateCell(cx,cy){
-    const worldX = cToW(cx);
-    if (worldX < P.WALL_MARGIN_PX || worldX > (P.WORLD_W_PX - P.WALL_MARGIN_PX)) return TYPE.BEDROCK;
-
-    const surfaceCy = wToC(P.SURFACE_Y_PX);
-    const dcy = cy - surfaceCy;
-    const depthM = Math.max(0, (dcy * P.CELL) * 0.6);
-
-    let t = TYPE.ROCK;
-
-    // hard blobs
-    const hardField = fbm(cx,cy, 26, 60, 0.45);
-    const hardChance = 0.10 + Math.min(0.20, depthM * 0.00055);
-    if (hardField > 1-hardChance) t = TYPE.HARD;
-
-    // unstable crack zones (large-scale, fewer)
-    const faultBig = valueNoise2D(cx + (cy*0.15|0), cy - (cx*0.12|0), 92);
-    const faultFine = valueNoise2D(cx + (cy*0.35|0), cy - (cx*0.20|0), 30);
-    const faultScore = faultBig*0.70 + faultFine*0.30;
-    const faultChance = 0.050 + Math.min(0.085, depthM * 0.00030);
-    if (faultScore < faultChance) t = TYPE.UNSTABLE;
-
-    // groundwater veins (make them vast)
-    const vA = ridge01((Math.sin((cx*0.09) + (cy*0.07) + (runSeed&255)*0.01) + 1) * 0.5);
-    const vB = ridge01((Math.sin((cx*0.06) - (cy*0.10) + ((runSeed>>>8)&255)*0.012) + 1) * 0.5);
-    const vein = vA*0.55 + vB*0.45;
-
-    // big pockets too
-    const coldBlob = fbm(cx+700, cy-900, 110, 190, 0.55);
-    const hotBlob  = fbm(cx-900, cy+500, 120, 200, 0.55);
-
-    // more continuous veins
-    const coldVeinBoost = (vein > 0.82) ? 0.40 : 0.0;
-    const hotVeinBoost  = (vein > 0.85) ? 0.42 : 0.0;
-
-    // both appear broadly; hot rises with depth
-    const coldBase = 0.16 + 0.06*Math.exp(-Math.pow((depthM-24)/50,2));
-    const hotBase  = 0.12 + 0.18*clamp((depthM-10)/90, 0, 1);
-
-    const coldScore = coldBlob + coldVeinBoost;
-    const hotScore  = hotBlob  + hotVeinBoost;
-
-    // HDR clusters (very deep, very large)
-    const hdrBlob = fbm(cx,cy, 170, 260, 0.52);
-    const hdrBlob2 = valueNoise2D(cx+777, cy-555, 210);
-    const hdrField = hdrBlob*0.72 + hdrBlob2*0.28;
-
-    // depth gate: essentially none above ~80m, ramps to strong at ~135m
-    const gate = clamp((depthM - 80) / 55, 0, 1);
-    const gateS = gate*gate*(3-2*gate);
-
-    // threshold: only reachable when deep (gateS) and field is high
-    const hdrThresh = 1 - (0.02 + 0.28*gateS);
-
-    if (gateS > 0.02 && hdrField > hdrThresh) t = TYPE.HDR;
-
-    // protect deep HDR from being overwritten by water
-    const hdrProtect = (t===TYPE.HDR) ? (0.22 + 0.25*gateS) : 0.0;
-
-    if (hotScore > (1 - hotBase + hdrProtect)) t = TYPE.HOT;
-    else if (coldScore > (1 - coldBase + hdrProtect)) t = TYPE.COLD;
-
-    if (depthM > 165 && randAt(cx,cy+5000) < 0.004) t = TYPE.BEDROCK;
-    return t;
-  }
-
-  function isCarved(cx,cy){ return carved.has(key(cx,cy)); }
-
-  // ---------- game state ----------
-  const state = {
-    running:false, paused:false, over:false,
-
-    cash:P.START_CASH, score:0,
-    seismic:0, protest:0,
-
-    pumping:false,
-    outreach:false,
-    contam:false,
-
-    overlayText:"", overlayT:0,
-
-    lastT:performance.now(),
-    quakeCooldown:0,
-
-    shake:0, shakeX:0, shakeY:0,
-    camX:0, camY:0,
-
-    lastStrike:"—",
-    hitFlashT:0,
-    shimmerT:0,
-    shimmerCX:0,
-    shimmerCY:0,
-    hitFlashKind:"",
-
-    // program drilling (only drilling method)
-    aimDX:0, aimDY:1,
-    progLen:0,
-    progDiscount:0.0,
-    programActive:false,
-    programRemain:0,
-    programTotal:0
-  };
-
-  const player = { x: P.WORLD_W_PX/2, y: P.SURFACE_Y_PX - 14, w: 10, h: 16 };
-  const plants = []; // {kind:"HOTW"|"HDR", name, power0, decayK, pumpedS, componentId?, strikeCX?, strikeCY?}
-
-  let compInfo = [];
-  let compCellToId = new Map();
-  let connTimer = 0;
-
-  let best = Number(localStorage.getItem("jura_frackers_best_v7") || "0");
-  ui.best.textContent = String(best);
-
-  // ---------- input ----------
-  const keys = new Set();
-
-  function setAimFromArrow(k){
-    if (k === "ArrowLeft"){ state.aimDX = -1; state.aimDY = 0; }
-    if (k === "ArrowRight"){ state.aimDX =  1; state.aimDY = 0; }
-    if (k === "ArrowDown"){ state.aimDX = 0; state.aimDY = 1; }
-  }
-
-  window.addEventListener("keydown", (e) => {
-    const k = e.key;
-    const block = ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Enter","p","P"," ","o","O","1","2","3"].includes(k);
-    if (block) e.preventDefault();
-
-    // select program length
-    if (k === "1"){ state.progLen = 3; state.progDiscount = P.PROG_DISCOUNT_3; overlay("PROGRAM LENGTH: 3", 0.6); return; }
-    if (k === "2"){ state.progLen = 10; state.progDiscount = P.PROG_DISCOUNT_10; overlay("PROGRAM LENGTH: 10", 0.6); return; }
-    if (k === "3"){ state.progLen = 100; state.progDiscount = P.PROG_DISCOUNT_100; overlay("PROGRAM LENGTH: 100", 0.6); return; }
-
-    if (k === "Enter"){
-      if (!state.running || state.over){ restart(); return; }
-
-      if (!state.paused && !state.programActive && state.progLen > 0){
-        if (state.aimDY < 0) return; // no up
-        state.programActive = true;
-        state.programRemain = state.progLen;
-        state.programTotal = state.progLen;
-        overlay(`PROGRAM COMMITTED (${state.progLen})`, 1.0);
-      }
-      return;
+'use strict';
+/* ================================================================== config (every balance number lives here) */
+const CFG = {
+  MW:320, MH:200, SW:720, SH:405, HOR:4, UGH:500, MPX:35, DEPTH:95,        // map px, section px; 1 map px = 25 m across, 1 section px = 10 m down
+  NLINES:7, LINE_Y0:26, LINE_DY:26, LEGACY_P:0.6,
+  MONTH_SEC:20, END:120, START_CASH:400, START_MOOD:40,
+  LOAN_STEP:100, LOAN_RATE:0.06, LOAN_TERM:60, CREDIT_BASE:350, CREDIT_ASSET:0.6, CREDIT_INCOME:24, RED_LIMIT:8,
+  SURVEY_K:4, PASS2_K:2, SURVEY_SPEED:30,                           // k per 100 m; map px per month
+  CASE_K:2, PIPE_K:6, LINE_K:2, PIPE_MAX:200, STATION_INC:40, PLANT_POWER:120, PLANT_HEAT:40, WINTER:1.5,
+  STIM:[{n:'Low',out:0.7,q:0.05},{n:'Medium',out:1.0,q:0.2},{n:'High',out:1.3,q:0.5}],
+  QUAKE_NEAR:-14, QUAKE_FAR:-5, QUAKE_MUTE:3, DRIFT:0.08
+};
+const DEF = {
+  survey:{g:'Explore',n:'Survey line',c:'4k per 100 m',h:'Click a grid line, then its start and end. Three vibrator trucks drive it and the section comes into focus.'},
+  pass2:{g:'Explore',n:'Second pass',c:'2k per 100 m',h:'Click a surveyed stretch of a line to sharpen it.'},
+  testrig:{g:'Explore',n:'Test rig',cost:60,up:2,build:3,h:'Click a grid line. A small tower cores one column to 2,000 m, prints a log, and stands there until you dismantle it.'},
+  light:{g:'Drill',n:'Light rig',cost:150,up:3,build:2,h:'Straight wells to 1,500 m. Enough for warm water. Place it on a grid line, then open the line to draw its well.'},
+  deep:{g:'Drill',n:'Deep rig',cost:250,up:5,build:3,need:'deep',h:'Straight wells to 5,000 m, into the granite.'},
+  dir:{g:'Drill',n:'Directional rig',cost:400,up:6,build:3,need:'dir',h:'As the deep rig, and the well may bend up to 30 degrees from vertical.'},
+  quiet:{g:'Drill',n:'Quiet upgrade',cost:80,need:'noise',h:'Click a rig. Halves its noise.'},
+  station:{g:'Drill',n:'Heat station',cost:80,build:3,h:'Click a rig whose well sits in the warm aquifer. Then connect it to a village with a heat pipe.'},
+  plant:{g:'Drill',n:'Power plant',cost:300,build:8,h:'Click one deep rig, then a second one on the same line, 150 to 600 m away, both ending in the same hot granite.'},
+  pipe:{g:'Connect',n:'Heat pipe',c:'6k per 100 m',h:'Click a heat station or plant, then a village. The pipe follows the road.'},
+  pline:{g:'Connect',n:'Power line',c:'2k per 100 m',h:'Click a power plant. The line runs to the grid at the east end of the valley.'},
+  fence:{g:'Connect',n:'Fence',cost:30,build:1,h:'Click a rig or plant. Protesters need twice as long to get at it.'},
+  suit:{g:'Persuade',n:'Man in a suit',up:5,build:1,c:'5k a month',h:'Click near a village. He arrives by car and talks to people.'},
+  stand:{g:'Persuade',n:'Information stand',cost:15,up:2,build:1,h:'Click near a village. Brochures and a parasol.'},
+  lobby:{g:'Persuade',n:'Lobby outpost',cost:120,up:10,build:4,h:'Click the ground. A glass office for the whole valley. Builds go faster.'},
+  fest:{g:'Persuade',n:'Village fest',cost:60,h:'Click a village. Carousel, sausages, damassine. In November it is Saint-Martin.'},
+  congress:{g:'Persuade',n:'Congress',cost:90,build:3,now:1,h:'Three months to organise, held in town.'},
+  school:{g:'Persuade',n:'School funding',cost:40,up:3.3,build:6,c:'40k a year',h:'Click a village. A new sports hall with your name on it.'},
+  chair:{g:'Persuade',n:'University chair',cost:200,up:1.7,build:12,h:'Click the ground. Research gets cheaper and the papers get friendlier.'},
+  police:{g:'Force',n:'Police patrol',up:12,build:1,c:'12k a month',h:'Click near a blockade or site. The van arrives and the tractors leave.'},
+  riot:{g:'Force',n:'Riot unit',up:40,build:1,c:'40k a month',h:'Click near a protest camp. A bus of helmets.'},
+  heli:{g:'Force',n:'Helicopter',cost:80,now:1,h:'Clears every blockade in the valley today. Everyone looks up.'}
+};
+const RES = {deep:{n:'Deep drilling',cost:150,t:6}, dir:{n:'Directional drilling',cost:200,t:8}, noise:{n:'Noise control',cost:100,t:4}};
+const OPP = {banner:'Banner in the field', oppstand:'Opposition stand', rumour:'Rumour', tractor:'Manure blockade', march:'Protest march', camp:'Protest camp', activists:'Outside activists', counterfest:'Counter-fest'};
+const SITE = {light:1,deep:1,dir:1,station:1,plant:1,testrig:1}, RIG = {light:1,deep:1,dir:1};
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const ROCK = {SOIL:0, LIME:1, WATER:2, MARL:3, HARD:4, WARM:5, FAULT:6, GRANITE:7, HOT:8};
+const RNAME = ['topsoil','limestone','water-bearing karst','marl','dolomite','warm aquifer','fault zone','granite','hot granite'];
+const RCOST = [3,3,3,3,6,3,4,7,7], RSPEED = [70,70,70,70,35,70,50,30,30], VEL = [-3, 1, -7, -1, 6, -6, -8, 8, -9];
+const PAL = {sky1:'#61c7ff', sky2:'#8bdbff', sky3:'#c6f3ff', sun:'#ffe06a', hillFar:'#6fdc86', hillMid:'#41cc70', hillNear:'#1fb45a', grass1:'#1a8f43', grass2:'#0f6e32', grass3:'#23a352', grassL:'#2ea85a',
+  road:'#5b6470', roadLine:'#d9d9d9', path:'#b9a37a', roof:'#d64545', roof2:'#7a4a3a', roofS:'#a83434', stone:'#cfc6b3', stone2:'#b7ad9a', wall:'#e8e0cc', fir:'#0d5c2e', fir2:'#157a3c', trunk:'#4a3220', cliff:'#d9d2c0', river:'#2a7bd6', riverHi:'#7fc4ff',
+  unk1:'#111427', unk2:'#0b0f1f', tun1:'#080b14', tun2:'#0c1020', bore:'#b8794b', skin:'#f2d2b6', sign:'#ffffff', warn:'#c73a3a', mud:'#6b4a2a', fire1:'#ff7a00', fire2:'#ffd166', smoke:'#9aa0aa', shadow:'rgba(0,0,0,.18)'};
+const RCOL = [['#6b4a2a','#5a3c22'], ['#b8794b','#a66c41'], ['#194a8a','#0f2f5a'], ['#7d7a5a','#6a674b'], ['#5c6472','#424b59'], ['#2a7bd6','#1f5ca3'], ['#8b4a41','#602f2a'], ['#3a3a44','#2c2c35'], ['#2a2a33','#181821']];
+const NAME_A = ['Cour','Dev','Glo','Sou','Bas','Mer','Vic','Boé','Re','Mont','Vau','Roche','Praz','Fon','Char','Cla','Bré','Mal','Sai','Lou'];
+const NAME_B = ['velier','genay','court','faivre','rendlin','chapoix','ques','lce','tételle','frêne','creux','noire','-Loin','taine','moille','val','gnon','bévaux','ennes','gnez'];
+const TOWN_N = ['Delmoncourt','Porrenvaux','Saignelier','Bassegenay'];
+const COMPANY = 'Chaleur Profonde du Jura SA';
+
+/* ================================================================== helpers */
+const $ = s => document.querySelector(s);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const fmt = k => (k < 0 ? '−' : '') + Math.abs(Math.round(k)).toLocaleString('en-US') + 'k';
+const lerp = (a,b,t) => a + (b-a)*t;
+const m = px => Math.round(px*CFG.MPX);                            // map px -> metres
+function rngFrom(seed){ let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function hash(x,y,z,seed){ let h = (Math.imul(x|0,374761393) + Math.imul(y|0,668265263) + Math.imul(z|0,1274126177) + Math.imul(seed|0,144665)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; }
+function vn(x,y,z,seed){ const x0 = Math.floor(x), y0 = Math.floor(y), sm = t => t*t*(3-2*t), fx = sm(x-x0), fy = sm(y-y0), c = (i,j) => hash(x0+i,y0+j,z,seed);
+  return lerp(lerp(c(0,0),c(1,0),fx), lerp(c(0,1),c(1,1),fx), fy); }
+const MW = CFG.MW, MH = CFG.MH, SW = CFG.SW, SH = CFG.SH, UGH = CFG.UGH, HOR = CFG.HOR;
+const SURF = 60;                                                    // section: surface strip height; underground starts here
+const K_COLS = SW/8, K_ROWS = UGH/8;
+const sx = x => x*SW/MW;                                            // map x -> section x
+const mx = x => x*MW/SW;
+
+/* ================================================================== state */
+let S, cam = {y:0}, view = 'map', line = null, cutLine = null, tool = null, anchor = null, sel = null, plan = null, hover = null, toastT = 0, shake = 0, lastT = 0, scale = 1, showPaper = false;
+const GEO = new Map(), KN = new Map(), CANV = new Map(), DIRTY = new Map(), VELS = new Map();
+
+/* ------------------------------------------------------------------ geology per grid line (a slice through a 3D noise field) */
+function geoFor(li){
+  if (GEO.has(li)) return GEO.get(li);
+  const seed = S.seed, z = li*7.3, geo = new Uint8Array(SW*UGH), springs = S.vil.map(v => sx(v.spring.x));
+  const faults = []; for (let i = 0; i < 4; i++) faults.push({x:120 + i*170 + hash(i,1,2,seed)*90 + li*6*(hash(i,9,9,seed) - 0.5), s:(hash(i,3,4,seed) - 0.5)*1.2, w:4 + hash(i,5,6,seed)*4});
+  for (let x = 0; x < SW; x += 2){
+    const soil = 5 + 3*vn(x/40, z, 1, seed), marlTop = 72 + 14*vn(x/90, z/3, 2, seed), marlBot = marlTop + 28 + 10*vn(x/70, z/3, 3, seed);
+    const warmTop = 160 + 30*vn(x/80, z/3, 4, seed), warmTh = 14 + 12*vn(x/50, z/3, 5, seed), warmHere = vn(x/70, z/4, 6, seed) > 0.33;
+    const granTop = 335 + 45*vn(x/150, z/4, 7, seed);
+    for (let d = 0; d < UGH; d += 2){
+      let t;
+      if (d < soil) t = ROCK.SOIL;
+      else if (d < marlTop){ t = ROCK.LIME; if (d > 8 && d < 62 && vn(x/26, d/9 + z, 8, seed) > 0.74) t = ROCK.WATER; }
+      else if (d < marlBot) t = ROCK.MARL;
+      else if (d < granTop){ t = ROCK.LIME; if (warmHere && d >= warmTop && d < warmTop + warmTh) t = ROCK.WARM; else if (vn(x/24, d/8 + z, 9, seed) > 0.8) t = ROCK.HARD; }
+      else { t = ROCK.GRANITE; const hot = vn(x/170, d/70 + z/5, 10, seed) + (d - granTop)/200; if (d > granTop + 14 && hot > 0.72) t = ROCK.HOT; }
+      for (const f of faults){ const fx = f.x + d*f.s + 6*vn(d/40, f.x + z, 11, seed); if (Math.abs(x - fx) < f.w && t !== ROCK.WATER) t = ROCK.FAULT; }
+      const v = S.lines[li]; for (let k = 0; k < springs.length; k++){ if (Math.abs(S.vil[k].y - v.y) > 40) continue; const dx = (x - springs[k])/26, dy = (d - 16)/7; if (dx*dx + dy*dy < 1 && d > soil) t = ROCK.WATER; }
+      geo[d*SW + x] = geo[d*SW + x + 1] = geo[(d+1)*SW + x] = geo[(d+1)*SW + x + 1] = t;
     }
+  }
+  GEO.set(li, geo); return geo;
+}
+const rockL = (li, x, d) => (x < 0 || x >= SW || d < 0 || d >= UGH) ? ROCK.GRANITE : geoFor(li)[(d|0)*SW + (x|0)];
+function knFor(li){ if (!KN.has(li)){ const k = new Uint8Array(K_COLS*K_ROWS).fill(S.lines[li].legacy ? 1 : 0); KN.set(li, k); } return KN.get(li); }
+const knownAt = (li, x, d) => knFor(li)[clamp((d/8)|0,0,K_ROWS-1)*K_COLS + clamp((x/8)|0,0,K_COLS-1)];
+function reveal(li, x0, x1, d0, d1, lv){
+  const kn = knFor(li), dirty = dirtyFor(li);
+  const c0 = clamp((x0/8)|0, 0, K_COLS-1), c1 = clamp((x1/8)|0, 0, K_COLS-1), r0 = clamp((d0/8)|0, 0, K_ROWS-1), r1 = clamp((d1/8)|0, 0, K_ROWS-1);
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++){ const i = r*K_COLS + c; if (kn[i] < lv){ kn[i] = lv; dirty.add(i); } }
+}
+function dirtyFor(li){ if (!DIRTY.has(li)) DIRTY.set(li, new Set()); return DIRTY.get(li); }
+/* velocity grids (tomography) per line */
+function velFor(li){
+  if (VELS.has(li)) return VELS.get(li);
+  const v3 = new Float32Array(K_COLS*K_ROWS);
+  for (let r = 0; r < K_ROWS; r++) for (let c = 0; c < K_COLS; c++){ let s = 0; for (let d = 0; d < 8; d += 2) for (let x = 0; x < 8; x += 2) s += VEL[rockL(li, c*8 + x, r*8 + d)]; v3[r*K_COLS + c] = s/16; }
+  const blur = (src, rad) => { const t = new Float32Array(src.length), o = new Float32Array(src.length);
+    for (let r = 0; r < K_ROWS; r++) for (let c = 0; c < K_COLS; c++){ let s = 0, n = 0; for (let i = -rad; i <= rad; i++){ const cc = c + i; if (cc >= 0 && cc < K_COLS){ s += src[r*K_COLS + cc]; n++; } } t[r*K_COLS + c] = s/n; }
+    for (let r = 0; r < K_ROWS; r++) for (let c = 0; c < K_COLS; c++){ let s = 0, n = 0; for (let i = -rad; i <= rad; i++){ const rr = r + i; if (rr >= 0 && rr < K_ROWS){ s += t[rr*K_COLS + c]; n++; } } o[r*K_COLS + c] = s/n; }
+    return o; };
+  const v = {v3, v2:blur(v3, 1)}; VELS.set(li, v); return v;
+}
+const RAINBOW = [[-10,[139,0,0]],[-7,[224,36,26]],[-4,[255,140,0]],[-2,[255,212,0]],[0,[229,240,0]],[2,[140,224,0]],[4,[47,214,139]],[6,[26,200,232]],[8,[26,92,232]],[10,[11,11,139]]];
+function rainbow(v){ v = clamp(v, -10, 10); let i = 0; while (i < RAINBOW.length - 2 && RAINBOW[i+1][0] < v) i++; const [a, ca] = RAINBOW[i], [b, cb] = RAINBOW[i+1], t = (v - a)/(b - a);
+  return 'rgb(' + ((ca[0] + (cb[0]-ca[0])*t)|0) + ',' + ((ca[1] + (cb[1]-ca[1])*t)|0) + ',' + ((ca[2] + (cb[2]-ca[2])*t)|0) + ')'; }
+function velAt(grid, cx, cy){ const x0 = clamp(Math.floor(cx), 0, K_COLS-1), y0 = clamp(Math.floor(cy), 0, K_ROWS-1), x1 = Math.min(K_COLS-1, x0+1), y1 = Math.min(K_ROWS-1, y0+1), fx = clamp(cx - x0, 0, 1), fy = clamp(cy - y0, 0, 1);
+  const g = (x,y) => grid[y*K_COLS + x]; return lerp(lerp(g(x0,y0), g(x1,y0), fx), lerp(g(x0,y1), g(x1,y1), fx), fy); }
 
-    if (k === "p" || k === "P"){
-      if (!state.running || state.over) return;
-      state.paused = !state.paused;
-      ui.mode.textContent = state.paused ? "PAUSE" : "RUN";
-      return;
+/* ------------------------------------------------------------------ world */
+function makeName(r){ return NAME_A[(r()*NAME_A.length)|0] + NAME_B[(r()*NAME_B.length)|0]; }
+function newGame(seed){
+  const r = rngFrom(seed);
+  const lines = []; for (let i = 0; i < CFG.NLINES; i++){ const legacy = r() < CFG.LEGACY_P; const gaps = []; if (legacy){ const n = (r()*3)|0; for (let g = 0; g < n; g++){ const a = r()*SW; gaps.push([a, a + 40 + r()*120]); } }
+    lines.push({id:i, name:'JU-' + (71 + ((r()*9)|0)) + '-' + String(i + 1).padStart(2, '0'), y:CFG.LINE_Y0 + i*CFG.LINE_DY, legacy, gaps, segs:[]}); }
+  const vil = []; const used = new Set(); const nm = () => { let n; do n = makeName(r); while (used.has(n)); used.add(n); return n; };
+  vil.push({id:0, name:TOWN_N[(r()*TOWN_N.length)|0], town:true, x:135 + r()*50, y:100 + r()*30, w:46, h:30, pop:3000});
+  vil.push({id:1, name:nm(), x:40 + r()*30, y:46 + r()*40, w:28, h:20, pop:400 + ((r()*4)|0)*100});
+  vil.push({id:2, name:nm(), x:245 + r()*40, y:46 + r()*50, w:28, h:20, pop:400 + ((r()*4)|0)*100});
+  for (const v of vil){
+    const hs = [], n = v.town ? 22 : 9, cols = v.town ? 6 : 3, rows = Math.ceil(n/cols), cw = (v.w - 4)/cols, rh = (v.h - 2)/rows;
+    for (let i = 0; i < n; i++){ const c = i % cols, rr = Math.floor(i/cols); hs.push({x:v.x - v.w/2 + 2 + c*cw + (r() - .5)*2, y:v.y - v.h/2 + 6 + rr*rh + (r() - .5)*1.5, k:(r()*4)|0, big:r() < 0.3}); }
+    v.houses = hs.sort((a,b) => a.y - b.y); v.streets = []; for (let rr = 1; rr < rows; rr++) v.streets.push(v.y - v.h/2 + 6 + rr*rh - rh/2 + 2);
+    v.spring = {x:v.x + (r() < 0.5 ? -1 : 1)*(v.w/2 + 8), y:v.y + v.h/2 + 6, polluted:false}; v.chapel = !v.town && r() < 0.8;
+    Object.assign(v, {mood:CFG.START_MOOD, causes:{}, stored:0, rel:0, relRate:0, mute:0, festUntil:-1, festMult:1, festYear:-1, heat:''});
+  }
+  /* road: axis-aligned so vehicles have two orientations; villages hang on it */
+  const yT = vil[0].y + vil[0].h/2 + 9, yV1 = vil[1].y + vil[1].h/2 + 8, yV2 = vil[2].y + vil[2].h/2 + 8;
+  const road = [[0, yV1], [vil[1].x, yV1], [vil[1].x, yT], [vil[2].x, yT], [vil[2].x, yV2], [MW, yV2]];
+  const river = []; { let x = 95 + r()*70; for (let y = 0; y <= MH; y += 8){ river.push([x, y]); x += (r() - .5)*9 + (y > 120 ? 1.5 : -1.5); } }
+  const trees = []; for (let i = 0; i < 150; i++){ const x = 4 + r()*(MW - 8), y = 4 + r()*(MH - 8); const n = vn(x/60, y/40, 50, seed); if (n > 0.5 && !vil.some(v => Math.abs(x - v.x) < v.w/2 + 12 && Math.abs(y - v.y) < v.h/2 + 12)) trees.push({x, y, s:1 + ((r()*2)|0)}); }
+  const fields = []; for (let i = 0; i < 16; i++){ const x = 20 + r()*(MW - 40), y = 14 + r()*(MH - 30), w = 18 + r()*22, h = 10 + r()*12; if (!vil.some(v => Math.abs(x - v.x) < v.w/2 + w && Math.abs(y - v.y) < v.h/2 + h)) fields.push({x, y, w, h, k:(r()*3)|0}); }
+  const cliffs = []; for (let i = 0; i < 5; i++) cliffs.push({x:r()*MW, w:30 + r()*50});
+  const rail = {y:12 + r()*5, station:vil[0].x + 22}; const pond = {x:60 + r()*200, y:24 + r()*20, w:14 + r()*10, h:9 + r()*5};
+  const hedges = []; for (let i = 0; i < 12; i++){ const x = 20 + r()*(MW - 40), y = 16 + r()*(MH - 32), w = 16 + r()*26; if (!vil.some(v => Math.abs(x - v.x) < v.w/2 + 20 && Math.abs(y - v.y) < v.h/2 + 14)) hedges.push({x, y, w}); }
+  const paddock = {x:vil[1].x + 30 + r()*16, y:Math.max(8, vil[1].y - 30), w:26, h:14};
+  S = {v:3, seed, t:0, month:0, cash:CFG.START_CASH, loans:[], red:0, speed:1, paused:true, started:false, over:null, muted:false,
+       vil, lines, obj:[], pipes:[], plines:[], ents:[], news:[], sold:0, nextId:1, assets:0, quakeBoost:0, forceM:0, sinceForce:99, congressYear:-1,
+       last:{income:0, costs:0, interest:0}, producing:false, road, river, trees, fields, cliffs, paddock, rail, pond, hedges, invest:{warm:false, plant:false}, offer:null, res:{}, gridX:MW - 12, faultsHit:{}, season:0, quakes:[], logs:[], done:{}};
+  GEO.clear(); KN.clear(); CANV.clear(); DIRTY.clear(); VELS.clear();
+  for (let i = 0; i < 6; i++) spawnTraffic(true);
+}
+const nearestVillage = (x, y) => S.vil.reduce((b,v) => Math.hypot(v.x - x, v.y - (y === undefined ? v.y : y)) < Math.hypot(b.x - x, b.y - (y === undefined ? b.y : y)) ? v : b);
+const vdist = (v, x, y) => Math.max(0, Math.hypot(Math.max(0, Math.abs(v.x - x) - v.w/2), Math.max(0, Math.abs(v.y - (y === undefined ? v.y : y)) - v.h/2)));
+const byId = id => S.obj.find(o => o.id === id);
+const forecast = () => { let a = 0, b = 0; for (const v of S.vil){ a += v.mood*v.pop; b += v.pop; } return a/b; };
+const year = () => (S.month/12)|0;
+const bf = () => S.obj.some(o => o.type === 'lobby' && o.on) ? 0.9 : 1;
+const resDone = k => S.res[k] !== undefined && S.t >= S.res[k];
+const objAt = (x,y) => { let b = null, bd = 1e9; for (const o of S.obj) if (Math.abs(o.x - x) <= (o.w || 7) && Math.abs(o.y - y) <= (o.hh || 8)){ const d = Math.hypot(o.x - x, o.y - y); if (d < bd){ bd = d; b = o; } } return b; };
+const vilAt = (x,y) => S.vil.find(v => Math.abs(v.x - x) <= v.w/2 + 4 && Math.abs(v.y - y) <= v.h/2 + 6);
+const lineAt = y => { let b = null; for (const l of S.lines) if (Math.abs(l.y - y) <= 5 && (!b || Math.abs(l.y - y) < Math.abs(b.y - y))) b = l; return b; };
+const isBlocked = o => S.obj.some(b => (b.type === 'tractor' || b.type === 'camp') && b.target === o.id);
+function news(s){ S.news.push({m:S.month, s}); if (S.news.length > 60) S.news.shift(); $('#newsline').textContent = s; }
+function bump(v, label, d){ v.mood = clamp(v.mood + d, 0, 100); v.causes[label] = (v.causes[label] || 0) + d; }
+function toast(s){ const t = $('#toast'); t.textContent = s; t.hidden = false; toastT = performance.now() + 3500; }
+function add(type, x, y, extra){ const d = DEF[type] || {}; const o = Object.assign({id:S.nextId++, type, x, y, t0:S.t, ready:S.t + (d.build || 0)*bf(), on:!d.build, arrived:!d.build}, extra); S.obj.push(o); if (d.cost) S.assets += d.cost; return o; }
+function rm(o){ const i = S.obj.indexOf(o); if (i >= 0) S.obj.splice(i,1); if (sel && sel.id === o.id){ sel = null; $('#card').hidden = true; } if (plan && plan.rig === o.id) plan = null; S.ents = S.ents.filter(e => e.owner !== o.id); }
+function freeSpot(x, y, r, rnd){ for (let i = 0; i < 14; i++){ const fx = clamp(x + (rnd(i) - 0.5)*2*r, 8, MW - 8), fy = clamp(y + (rnd(i + 30) - 0.5)*r, HOR + 6, MH - 8); if (!S.obj.some(o => Math.abs(o.x - fx) < 12 && Math.abs(o.y - fy) < 10) && !S.vil.some(v => Math.abs(v.x - fx) < v.w/2 + 4 && Math.abs(v.y - fy) < v.h/2 + 4) && !onRoad(fx, fy)) return {x:fx, y:fy}; } return null; }
+const tip = o => o.well && o.well.length ? o.well[o.well.length-1] : {x:sx(o.x), d:0};
+const wellHas = (o,t) => !!o.hit && !!o.hit[t];
+/* road geometry */
+function roadLen(){ let L = 0; for (let i = 1; i < S.road.length; i++) L += Math.hypot(S.road[i][0] - S.road[i-1][0], S.road[i][1] - S.road[i-1][1]); return L; }
+function roadPos(s){ let acc = 0; for (let i = 1; i < S.road.length; i++){ const a = S.road[i-1], b = S.road[i], L = Math.hypot(b[0]-a[0], b[1]-a[1]); if (s <= acc + L || i === S.road.length - 1){ const t = clamp((s - acc)/L, 0, 1); return {x:a[0] + (b[0]-a[0])*t, y:a[1] + (b[1]-a[1])*t, dx:(b[0]-a[0])/L, dy:(b[1]-a[1])/L}; } acc += L; } return {x:0, y:0, dx:1, dy:0}; }
+function roadS(x, y){ let best = 1e9, bs = 0, acc = 0; for (let i = 1; i < S.road.length; i++){ const a = S.road[i-1], b = S.road[i], L = Math.hypot(b[0]-a[0], b[1]-a[1]); const t = clamp(((x-a[0])*(b[0]-a[0]) + (y-a[1])*(b[1]-a[1]))/(L*L), 0, 1); const px = a[0] + (b[0]-a[0])*t, py = a[1] + (b[1]-a[1])*t, d = Math.hypot(px - x, py - y); if (d < best){ best = d; bs = acc + t*L; } acc += L; } return {s:bs, d:best}; }
+const onRoad = (x, y) => roadS(x, y).d < 6;
+/* ================================================================== money: a credit line */
+const debt = () => S.loans.reduce((s,l) => s + l.bal, 0);
+const creditLimit = () => CFG.CREDIT_BASE + CFG.CREDIT_ASSET*S.assets + CFG.CREDIT_INCOME*Math.max(0, S.last.income - S.last.costs);
+const loanPay = () => S.loans.reduce((s,l) => s + l.pay, 0);
+function borrow(){ if (debt() + CFG.LOAN_STEP > creditLimit()) return 'The bank will not go beyond ' + fmt(creditLimit()) + '. Build and earn to raise the line.';
+  const r = CFG.LOAN_RATE/12, n = CFG.LOAN_TERM, pay = CFG.LOAN_STEP*r/(1 - Math.pow(1+r, -n));
+  S.loans.push({id:S.loans.length + 1, m:S.month, bal:CFG.LOAN_STEP, pay, left:n}); S.cash += CFG.LOAN_STEP; sfx('coin'); return 'ok'; }
+function repayAll(){ let n = 0; for (const l of S.loans.slice()) if (S.cash >= l.bal + 50){ S.cash -= l.bal; S.loans.splice(S.loans.indexOf(l), 1); n++; } return n ? 'ok' : 'Keep 50k in hand after repaying a loan.'; }
+const canPay = k => S.cash >= k;
+
+/* ================================================================== placement (map coordinates) */
+function place(type, x, y){
+  const def = DEF[type], o = objAt(x,y), v = vilAt(x,y), ln = lineAt(y);
+  if (def.need && !resDone(def.need)) return 'Research ' + RES[def.need].n.toLowerCase() + ' first.';
+  if (def.cost && !canPay(def.cost)) return 'Not enough cash. ' + def.n + ' costs ' + fmt(def.cost) + '.';
+  const onGround = y >= HOR + 4 && y <= MH - 4;
+  switch (type){
+    case 'survey': {
+      if (!anchor || (ln && ln.id !== anchor.line)){ if (!ln) return 'Click on a grid line first.'; anchor = {line:ln.id, x}; return ''; }
+      const l = S.lines[anchor.line]; const x0 = Math.min(anchor.x, x), x1 = Math.max(anchor.x, x), len = m(x1 - x0), cost = Math.ceil(len/100)*CFG.SURVEY_K; anchor = null;
+      if (len < 300) return 'Too short. Draw at least 300 m along the line.'; if (!canPay(cost)) return 'That stretch costs ' + fmt(cost) + '.';
+      S.cash -= cost; const sg = {id:S.nextId++, x0, x1, pass:1, prog:0, active:true, arrived:false, line:l.id}; l.segs.push(sg); spawnConvoy(l, sg);
+      news('Vibrator trucks set off for line ' + l.name + '. The cows are not consulted.'); return 'ok';
     }
-
-    if (k === " "){
-      if (!state.running || state.over || state.paused) return;
-      state.pumping = !state.pumping;
-      overlay(state.pumping ? "PUMPING ON" : "PUMPING OFF", 1.0);
-      return;
+    case 'pass2': {
+      if (!ln) return 'Click a grid line.'; const sg = ln.segs.find(s => x >= s.x0 && x <= s.x1 && !s.active && s.pass < 3); if (!sg) return 'Click a finished survey stretch that can still be sharpened.';
+      const cost = Math.ceil(m(sg.x1 - sg.x0)/100)*CFG.PASS2_K; if (!canPay(cost)) return 'That pass costs ' + fmt(cost) + '.';
+      S.cash -= cost; sg.pass++; sg.prog = 0; sg.active = true; sg.arrived = false; spawnConvoy(ln, sg); return 'ok';
     }
-
-    if (k === "o" || k === "O"){
-      if (!state.running || state.over || state.paused) return;
-      state.outreach = !state.outreach;
-      overlay(state.outreach ? "OUTREACH ON" : "OUTREACH OFF", 1.0);
-      return;
+    case 'testrig': case 'light': case 'deep': case 'dir': case 'lobby': case 'chair': case 'suit': case 'stand': case 'police': case 'riot': {
+      if (!onGround) return 'Click on the ground.';
+      if (o && o.opp && ['banner','oppstand','rumour'].includes(o.type)){ rm(o); bump(S.vil[o.v], 'Field leased over their heads', -3); }
+      else if (o) return 'Too close to ' + (OPP[o.type] || DEF[o.type].n).toLowerCase() + '.';
+      if (v && !['suit','stand','police','riot'].includes(type)) return 'Not in the village itself.';
+      if (onRoad(x, y) && !['police','riot'].includes(type)) return 'Not on the road.';
+      if (SITE[type]){ if (!ln) return 'Rigs stand on a grid line. Click one of the dotted lines.'; if (type !== 'testrig' && knownAt(ln.id, sx(x), 4) < 2) return 'Survey this stretch of the line first, or core it with a test rig.'; }
+      if (type === 'chair' && S.obj.some(c => c.type === 'chair')){ S.cash -= def.cost; S.obj.filter(c => c.type === 'chair').forEach(rm); news('A second endowed chair makes the first one’s study look bought. Both are quietly renamed.'); return 'ok'; }
+      S.cash -= def.cost || 0;
+      const no = add(type, x, SITE[type] ? ln.y : y, RIG[type] ? {line:ln.id, well:[], plan:null, hit:{}, fenced:false, quiet:false, w:8, hh:16} : type === 'testrig' ? {line:ln.id, w:6, hh:12} : {w:7, hh:10});
+      spawnArrival(no); if (type === 'lobby' && S.obj.filter(c => c.type === 'lobby').length > 1) news('A second lobby outpost opens. Locals call it the embassy.');
+      return 'ok';
     }
+    case 'quiet': if (!o || !RIG[o.type]) return 'Click a rig.'; if (o.quiet) return 'Already quiet.'; S.cash -= def.cost; o.quiet = true; return 'ok';
+    case 'fence': if (!o || !SITE[o.type]) return 'Click a rig or plant.'; if (o.fenced) return 'Already fenced.'; S.cash -= def.cost; o.fenced = true; S.assets += def.cost; return 'ok';
+    case 'station': {
+      if (!o || !RIG[o.type]) return 'Click a rig.'; if (o.plant) return 'That well feeds a power plant.'; if (o.drilling) return 'Wait for the drilling to finish.';
+      if (!wellHas(o, ROCK.WARM)) return 'This well has not reached the warm aquifer.';
+      S.cash -= def.cost; S.assets += def.cost; o.type = 'station'; o.on = false; o.t0 = S.t; o.ready = S.t + def.build*bf(); spawnArrival(o); return 'ok';
+    }
+    case 'plant': {
+      const ok = r => r && RIG[r.type] && r.type !== 'light' && !r.plant && !r.drilling && r.on && wellHas(r, ROCK.HOT) && rockL(r.line, tip(r).x, tip(r).d) === ROCK.HOT;
+      if (!anchor){ if (!ok(o)) return 'Click a deep rig whose well ends in hot granite.'; anchor = {id:o.id}; return ''; }
+      const a = byId(anchor.id); if (!a){ anchor = null; return 'The first rig is gone. Click a deep rig again.'; } if (!ok(o) || o === a) return 'The second well must also end in hot granite.'; if (a.line !== o.line) return 'Both wells must stand on the same grid line.'; anchor = null;
+      const dx = m(Math.abs(a.x - o.x)); if (dx < 150 || dx > 600) return 'The wells are ' + dx + ' m apart; they need 150 to 600 m.';
+      if (!sameBody(a, o)) return 'The two wells sit in different hot bodies.';
+      S.cash -= def.cost; const px = (a.x + o.x)/2; const pl = add('plant', px, a.y, {line:a.line, stim:-1, wells:[a.id, o.id], fenced:false, age:0, w:10, hh:14}); a.plant = o.plant = pl.id; spawnArrival(pl);
+      news('Ground is broken for a power plant near ' + nearestVillage(px, a.y).name + '. The brochure calls it a "heat mine".'); return 'ok';
+    }
+    case 'pipe': {
+      if (!anchor){ if (!o || (o.type !== 'station' && o.type !== 'plant')) return 'Click a heat station or power plant first.'; anchor = {id:o.id}; return ''; }
+      const src = byId(anchor.id); if (!src){ anchor = null; return 'That site is gone. Click a heat station or power plant again.'; } if (!v) return 'Now click a village.'; anchor = null;
+      if (S.pipes.some(p => p.from === src.id)) return 'This site already has a pipe.';
+      const a = roadS(src.x, src.y), b = roadS(v.x, v.y), len = m(Math.abs(a.s - b.s) + a.d + b.d), cost = Math.ceil(len/100)*CFG.PIPE_K;
+      if (len > CFG.PIPE_MAX*CFG.MPX) return 'Too far: ' + len + ' m along the road. Beyond ' + CFG.PIPE_MAX*CFG.MPX + ' m nothing arrives warm.';
+      if (!canPay(cost)) return 'That pipe costs ' + fmt(cost) + '.';
+      S.cash -= cost; S.assets += cost; S.pipes.push({from:src.id, to:v.id, s0:Math.min(a.s, b.s), s1:Math.max(a.s, b.s), a:[src.x, src.y], b:[v.x, v.y], len, ready:S.t + len/1500*bf()}); return 'ok';
+    }
+    case 'pline': {
+      if (!o || o.type !== 'plant') return 'Click a power plant.'; if (S.plines.some(l => l.from === o.id)) return 'Already connected.';
+      const a = roadS(o.x, o.y), len = m(roadLen() - a.s + a.d), cost = Math.ceil(len/100)*CFG.LINE_K; if (!canPay(cost)) return 'That line costs ' + fmt(cost) + '.';
+      S.cash -= cost; S.assets += cost; S.plines.push({from:o.id, s0:a.s, s1:roadLen(), a:[o.x, o.y], ready:S.t + len/2500*bf()}); return 'ok';
+    }
+    case 'fest': {
+      if (!v) return 'Click a village.'; S.cash -= def.cost; sfx('jingle');
+      if (v.festYear === year()){ bump(v, 'Fest seen as a bribe', -8); const f = freeSpot(v.x, v.y + v.h/2 + 14, 20, i => hash(S.month, i, 4, S.seed)) || {x:v.x, y:v.y + v.h/2 + 12}; add('counterfest', f.x, f.y, {v:v.id, opp:1, until:S.t + 1, w:7, hh:8}); news('Second fest this year in ' + v.name + '. "We are not for sale," say people eating the free sausages.'); return 'ok'; }
+      v.festYear = year(); v.festUntil = S.t + 2; v.festMult = S.month % 12 === 10 ? 2 : 1;
+      news('Fête de la Saint-Géothermie in ' + v.name + ': heated carousel, free sausages' + (v.festMult === 2 ? ', and it is Saint-Martin.' : '.')); return 'ok';
+    }
+    case 'school': {
+      if (!v) return 'Click a village.'; S.cash -= def.cost;
+      if (S.obj.some(s => s.type === 'school' && s.v === v.id)){ bump(v, 'Buying our children', -10); news('"They are buying our children": ' + v.name + ' returns the second cheque.'); return 'ok'; }
+      const f = freeSpot(v.x - v.w/2 - 14, v.y, 16, i => hash(S.month, i, 5, S.seed)) || {x:v.x - v.w/2 - 14, y:v.y}; const s = add('school', f.x, f.y, {v:v.id, w:8, hh:9}); spawnArrival(s); return 'ok';
+    }
+    case 'congress': {
+      S.cash -= def.cost; if (S.congressYear === year()){ news('A second geothermal congress this year. Nobody comes. The buffet is excellent.'); return 'ok'; }
+      S.congressYear = year(); const t = S.vil[0], f = freeSpot(t.x + t.w/2 + 16, t.y, 16, i => hash(S.month, i, 6, S.seed)) || {x:t.x + t.w/2 + 16, y:t.y}; add('congress', f.x, f.y, {w:9, hh:9}); return 'ok';
+    }
+    case 'heli': {
+      S.cash -= def.cost; S.ents.push({k:'heli', x:-30, y:HOR + 20, vx:60, ttl:30});
+      S.obj.filter(b => b.type === 'tractor').forEach(rm); for (const vv of S.vil) bump(vv, 'Helicopter', -6); S.sinceForce = 0; S.forceM = Math.max(S.forceM, 3); sfx('heli');
+      news('A helicopter clears the roads. Everyone films it.'); return 'ok';
+    }
+  }
+  return 'Cannot place that here.';
+}
+function sameBody(a, b){
+  const ta = tip(a), tb = tip(b), seen = new Set(), q = [[ta.x|0, ta.d|0]], step = 3;
+  while (q.length && seen.size < 30000){ const [x,d] = q.pop(), k = x + ',' + d; if (seen.has(k) || rockL(a.line, x, d) !== ROCK.HOT) continue; seen.add(k);
+    if (Math.abs(x - tb.x) < 6 && Math.abs(d - tb.d) < 6) return true; q.push([x+step,d],[x-step,d],[x,d+step],[x,d-step]); }
+  return false;
+}
+function research(k){ if (S.res[k] !== undefined) return 'Already ' + (resDone(k) ? 'done.' : 'under way.'); const cost = RES[k].cost*(S.obj.some(o => o.type === 'chair' && o.on) ? 0.75 : 1);
+  if (!canPay(cost)) return RES[k].n + ' costs ' + fmt(cost) + '.'; S.cash -= cost; S.res[k] = S.t + RES[k].t; return 'ok'; }
+function withdraw(o){
+  if (o.type === 'police' || o.type === 'riot'){ const v = nearestVillage(o.x, o.y); v.rel += v.stored; v.relRate = v.rel/3; v.stored = 0; }
+  if (o.type === 'plant') for (const id of o.wells){ const w = byId(id); if (w) w.plant = null; }
+  if (SITE[o.type]){ S.pipes = S.pipes.filter(p => p.from !== o.id); S.plines = S.plines.filter(l => l.from !== o.id); S.obj.filter(b => b.target === o.id).forEach(rm); S.assets = Math.max(0, S.assets - ((DEF[o.type] || {}).cost || 0)*0.5); }
+  spawnLeave(o); rm(o);
+}
 
-    // aim selection (even during program, aim changes only for next program; current cannot be aborted)
-    if (k==="ArrowLeft"||k==="ArrowRight"||k==="ArrowDown") setAimFromArrow(k);
+/* ================================================================== drilling: drawn wells (section coordinates) */
+function maxBend(o){ return o.type === 'dir' ? 30 : 0; }
+function maxDepth(o){ return o.type === 'light' ? 150 : UGH - 2; }
+function planCost(o, pts, cased){
+  let cost = 0, len = 0, fog = false, water = false; let p = tip(o);
+  for (const q of pts){ const n = Math.max(1, Math.hypot(q.x - p.x, q.d - p.d)|0);
+    for (let i = 1; i <= n; i++){ const x = p.x + (q.x - p.x)*i/n, d = p.d + (q.d - p.d)*i/n; const t = rockL(o.line, x, d), k = knownAt(o.line, x, d);
+      cost += (k >= 2 ? RCOST[t] : 8)/10 + (cased ? CFG.CASE_K/10 : 0); if (k < 2) fog = true; if (t === ROCK.WATER) water = true; }
+    len += n; p = q; }
+  return {cost, len, fog, water};
+}
+function validPoint(o, prev, q){
+  if (q.d <= prev.d + 2) return 'Wells only go down.'; if (q.d > maxDepth(o)) return 'This rig reaches ' + (maxDepth(o)*10).toLocaleString('en-US') + ' m at most.';
+  const ang = Math.atan2(Math.abs(q.x - prev.x), q.d - prev.d)*180/Math.PI; if (ang > maxBend(o) + 0.01) return maxBend(o) ? 'Too steep a bend: 30 degrees at most.' : 'This rig only drills straight down.';
+  return '';
+}
+function commitPlan(){
+  const o = byId(plan.rig); if (!o || !plan.pts.length) return 'Draw the well first.';
+  const pc = planCost(o, plan.pts, plan.cased); if (!canPay(pc.cost)) return 'This section costs ' + fmt(pc.cost) + '.';
+  S.cash -= pc.cost; S.assets += pc.cost*0.7; o.drilling = {pts:plan.pts.slice(), cased:plan.cased, seg:0, f:0, pos:Object.assign({}, tip(o))}; plan = null; sfx('drill'); return 'ok';
+}
+function stepDrill(o, dm){
+  const dr = o.drilling; let budget = dm;
+  while (budget > 0 && dr.seg < dr.pts.length){
+    const from = dr.seg === 0 ? tip(o) : dr.pts[dr.seg-1], to = dr.pts[dr.seg];
+    const len = Math.hypot(to.x - from.x, to.d - from.d), t = rockL(o.line, dr.pos.x, dr.pos.d), sp = RSPEED[t];
+    const adv = Math.min(budget*sp, len - dr.f*len); dr.f += adv/len; budget -= adv/sp;
+    dr.pos = {x:from.x + (to.x - from.x)*dr.f, d:from.d + (to.d - from.d)*dr.f};
+    const pt = rockL(o.line, dr.pos.x, dr.pos.d); reveal(o.line, dr.pos.x - 14, dr.pos.x + 14, dr.pos.d - 10, dr.pos.d + 12, 4);
+    o.hit = o.hit || {}; if (!o.hit[pt]){ o.hit[pt] = 1; onHit(o, pt); }
+    if (pt === ROCK.FAULT){ const fid = ((dr.pos.d/40)|0) + ':' + ((dr.pos.x/60)|0); if (!S.faultsHit[o.id + ':' + fid]){ S.faultsHit[o.id + ':' + fid] = 1; doQuake(o, 'The drill crosses a fault near ' + nearestVillage(o.x, o.y).name + '. The operator reports a "micro-seismic adjustment"; the village reports broken crockery.', dr.pos); } }
+    if (pt === ROCK.WATER && !dr.cased){ const v = nearestVillage(o.x, o.y); if (!v.spring.polluted){ v.spring.polluted = true; bump(v, 'Polluted spring', -10); news('The fountain in ' + v.name + ' runs brown. The company blames "natural minerals".'); } }
+    if (dr.f >= 0.999){ o.well.push({x:to.x, d:to.d, c:dr.cased}); dr.seg++; dr.f = 0; }
+  }
+  if (dr.seg >= dr.pts.length){ o.drilling = null; news('Drilling complete near ' + nearestVillage(o.x, o.y).name + ' at ' + (tip(o).d*10).toLocaleString('en-US') + ' m.'); }
+}
+function onHit(o, t){
+  const v = nearestVillage(o.x, o.y);
+  if (t === ROCK.WARM){ news('Warm water found near ' + v.name + '. Lukewarm reception.'); offerInvest('warm'); }
+  if (t === ROCK.HOT){ news('The well near ' + v.name + ' reaches hot granite. Champagne in the site container.'); offerInvest('plant'); }
+  if (t === ROCK.GRANITE && !o.hit[ROCK.HOT]) news('Granite under ' + v.name + '. Cold so far.');
+}
+function doQuake(o, text, pos){ S.quakes.push({line:o.line, x:pos.x, d:pos.d, m:S.month}); const n = nearestVillage(o.x, o.y);
+  for (const v of S.vil){ bump(v, 'Felt quake', v === n ? CFG.QUAKE_NEAR : CFG.QUAKE_FAR); v.mute = CFG.QUAKE_MUTE; } S.quakeBoost = 6; shake = 1; sfx('quake'); news(text); }
+function stimulate(pl, i){ if (!pl.on || pl.stim >= 0) return 'Not now.'; pl.stim = i; pl.age = 0; const w = byId(pl.wells[0]);
+  if (hash(pl.id, S.month, i, S.seed) < CFG.STIM[i].q) doQuake(pl, 'Stimulation at ' + CFG.STIM[i].n.toLowerCase() + ' pressure shakes the valley. "Within the expected envelope," says the operator.', w ? tip(w) : {x:sx(pl.x), d:380});
+  else news('Stimulation complete near ' + nearestVillage(pl.x, pl.y).name + '. Nobody felt a thing, which three people find suspicious.'); return 'ok'; }
+function offerInvest(k){ if (S.invest[k] || S.offer) return; S.offer = k; S.paused = true; showOffer(k); }
+function coreLog(o){ // the test rig's printed log
+  const X = sx(o.x), lines = []; let cur = -1, start = 0;
+  for (let d = 0; d <= 200; d++){ const t = d < 200 ? rockL(o.line, X, d) : -2; if (t !== cur){ if (cur >= 0) lines.push(String(start*10).padStart(5, ' ') + '–' + String(d*10).padStart(5, ' ') + ' m  ' + RNAME[cur]); cur = t; start = d; } }
+  const temp = (10 + 2000*0.03).toFixed(0); return 'CORE LOG  ' + S.lines[o.line].name + '  x=' + m(o.x) + ' m\n' + COMPANY + ', ' + MONTHS[S.month % 12] + ' year ' + (year() + 1) + '\n' + lines.join('\n') + '\n' + 'Bottom-hole temperature ' + temp + ' °C. Gradient normal.\nGeologist licked the core: limestone confirmed.'; }
 
-    keys.add(k);
+/* ================================================================== time */
+function running(){ return S.started && !S.paused && !S.over; }
+function advance(dm){ while (dm > 1e-9 && !S.over){ const step = Math.min(dm, S.month + 1 - S.t); S.t += step; dm -= step; continuous(step); if (S.t >= S.month + 1 - 1e-9){ S.month++; S.t = S.month; monthTick(); } } }
+function continuous(dm){
+  for (const l of S.lines) for (const sg of l.segs) if (sg.active && sg.arrived){ sg.prog += dm*CFG.SURVEY_SPEED; const n = sg.x1 - sg.x0; reveal(l.id, sx(sg.x0), sx(sg.x0 + Math.min(n, sg.prog)), 0, UGH, sg.pass + 1); if (sg.prog >= n){ sg.active = false; for (const e of S.ents) if (e.seg === sg.id){ e.leaving = true; e.vs = e.vs > 0 ? 40 : -40; e.seg = null; } } }
+  for (const o of S.obj.slice()){
+    if (!o.on && !o.burnt && S.t >= o.ready && o.arrived){ o.on = true; onReady(o); }
+    if (o.drilling){ if (!isBlocked(o)) stepDrill(o, dm); }
+  }
+}
+function onReady(o){
+  if (o.type === 'testrig'){ reveal(o.line, sx(o.x) - 6, sx(o.x) + 6, 0, 200, 4); o.log = coreLog(o); S.logs.push(o.log); news('Test core on ' + S.lines[o.line].name + ' is out. Log printed. The geologist licks it, as is tradition.'); }
+  if (o.type === 'congress'){ for (const v of S.vil) bump(v, 'Congress', v.town ? 6 : 2); news('Geothermal congress in ' + S.vil[0].name + ': 300 lanyards, polite press coverage.'); o.until = S.t + 1; }
+  if (o.type === 'station') news('Heat station near ' + nearestVillage(o.x, o.y).name + ' is ready. It still needs a pipe to a village.');
+  if (o.type === 'plant') news('The power plant stands. Click it to choose the stimulation pressure.');
+  if (RIG[o.type]) news(DEF[o.type].n + ' stands on ' + S.lines[o.line].name + '. Open the line to draw the well.');
+}
+function monthTick(){
+  const rnd = k => hash(S.month, k, 91, S.seed), mo = S.month % 12, winter = (mo >= 10 || mo <= 2) ? CFG.WINTER : 1; S.season = mo;
+  let income = 0, costs = 0, interest = 0; S.producing = false; for (const v of S.vil) v.heat = '';
+  for (const l of S.loans.slice()){ const i = l.bal*CFG.LOAN_RATE/12; interest += i; const princ = Math.min(l.bal, l.pay - i); l.bal -= princ; l.left--; costs += l.pay; if (l.bal <= 0.5) S.loans.splice(S.loans.indexOf(l), 1); }
+  for (const o of S.obj){
+    costs += (DEF[o.type] && DEF[o.type].up) || 0;
+    const pipe = S.pipes.find(p => p.from === o.id), lnk = S.plines.find(l => l.from === o.id), blocked = isBlocked(o);
+    const eff = pipe ? 1 - 0.6*Math.pow(pipe.len/(CFG.PIPE_MAX*CFG.MPX), 2) : 0; if (pipe && S.t < pipe.ready) S.vil[pipe.to].heat = 'build';
+    let inc = 0;
+    if (o.type === 'station' && o.on && !blocked){ o.age = (o.age || 0) + 1; if (pipe && S.t >= pipe.ready){ inc = CFG.STATION_INC*eff*Math.max(0.3, 1 - o.age/240)*winter; S.vil[pipe.to].heat = 'on'; S.sold += 0.4*eff; } }
+    if (o.type === 'plant' && o.on && o.stim >= 0 && !blocked){ o.age++; const f = CFG.STIM[o.stim].out*Math.pow(0.996, o.age);
+      if (lnk && S.t >= lnk.ready){ inc += CFG.PLANT_POWER*f; S.sold += 3*f; } if (pipe && S.t >= pipe.ready){ inc += CFG.PLANT_HEAT*f*eff*winter; S.vil[pipe.to].heat = 'on'; S.sold += 0.6*f*eff; } }
+    o.inc = inc; income += inc; if (inc > 0) S.producing = true;
+  }
+  S.cash += income - costs; S.last = {income, costs, interest}; S.red = S.cash < 0 ? S.red + 1 : 0;
+  /* mood */
+  const count = t => S.obj.filter(o => o.type === t && o.on).length, lob = S.obj.filter(o => o.type === 'lobby').length, chairs = count('chair');
+  const riots = S.obj.filter(o => o.type === 'riot'), force = S.obj.filter(o => o.type === 'police' || o.type === 'riot');
+  for (const v of S.vil){
+    const c = {}, put = (k,d) => { if (d) c[k] = (c[k] || 0) + d; };
+    put('Old habits', (50 - v.mood)*CFG.DRIFT);
+    const pm = v.mute > 0 ? 0 : (v.spring.polluted ? 0.5 : 1), sk = Math.sqrt(500/v.pop);
+    const mine = (t,r) => S.obj.filter(o => o.type === t && o.on && nearestVillage(o.x, o.y) === v && vdist(v, o.x, o.y) <= r);
+    const suits = mine('suit', 26), stands = mine('stand', 18), opst = S.obj.some(o => o.type === 'oppstand' && o.v === v.id);
+    if (stands.length > 1){ rm(stands.pop()); put('Vandalised stand', -3); news('The second information stand in ' + v.name + ' is repainted overnight. In manure brown.'); }
+    if (suits.length > 2){ put('Too many suits', -1.5*(suits.length - 2)); rm(suits.pop()); news('A third consultant in ' + v.name + ' is chased off with a broom.'); }
+    let eff = Math.min(suits.length, 2); if (opst && eff > 0) eff--;
+    if (eff > 0) put('Men in suits', 0.6*eff*(stands.length ? 1.5 : 1)*pm*sk);
+    if (stands.length && !(opst && !suits.length)) put('Information stand', 0.3*pm*sk);
+    if (lob > 1) put('Lobby "embassy"', -0.8); else if (count('lobby') === 1) put('Lobby outpost', 0.4*pm);
+    if (v.festUntil > S.t - 1e-6) put('Village fest', 5*v.festMult*pm*sk);
+    if (S.obj.some(o => o.type === 'school' && o.on && o.v === v.id)) put('School funding', 0.6*pm*sk);
+    if (chairs === 1) put('University chair', 0.3*pm);
+    if (v.heat === 'on') put('Cheap heat', 0.8); if (v.heat === 'build') put('Dug-up road', -1);
+    if (v.spring.polluted) put('Polluted spring', -0.8);
+    for (const l of S.lines) for (const sg of l.segs) if (sg.active && sg.arrived){ const d = vdist(v, sg.x0 + sg.prog, l.y); if (d <= 36) put('Survey trucks', -1.5*(1 - d/40)); }
+    for (const l of S.plines){ const rs = roadS(v.x, v.y); if (rs.s >= l.s0 - 10) put('Power line', -0.2); }
+    for (const o of S.obj){
+      const d = vdist(v, o.x, o.y), near = nearestVillage(o.x, o.y) === v;
+      if (o.type === 'testrig' && o.on && d <= 28) put('Test rig', -1*(1 - d/30));
+      if (RIG[o.type] && o.on && d <= 40) put('Rig noise', -1*(1 - d/44)*(o.quiet ? 0.5 : 1)*(o.plant ? 0.3 : 1)*(o.drilling ? 1.3 : 0.7));
+      if (SITE[o.type] && near){ if (o.fenced) put('Fence', -0.2); if (o.inc > 0 || o.drilling) put('Local jobs', 0.4); }
+      if (o.type === 'police' && near && o.on){ put('Police presence', -0.8); v.stored += 0.8; }
+      if (o.type === 'riot' && near && o.on){ put('Riot unit', -2.5); v.stored += 2; }
+      if (o.v === v.id){ if (o.type === 'banner') put('Banner in the field', -0.3); if (o.type === 'rumour') put('Rumour', -1); if (o.type === 'counterfest') put('Counter-fest', -2); }
+    }
+    if (riots.length) put('Riot police in the valley', -0.4*riots.length);
+    if (v.rel > 0.01){ put('Stored anger', -v.relRate); v.rel -= v.relRate; }
+    if (v.mute > 0) v.mute--;
+    for (const k in v.causes){ v.causes[k] *= 0.8; if (Math.abs(v.causes[k]) < 0.05) delete v.causes[k]; }
+    for (const k in c){ v.mood = clamp(v.mood + c[k], 0, 100); v.causes[k] = (v.causes[k] || 0) + c[k]; }
+  }
+  /* opposition */
+  if (force.length){ S.forceM++; S.sinceForce = 0; } else { S.forceM = 0; S.sinceForce++; }
+  let act = S.obj.find(o => o.type === 'activists');
+  if (!act && S.forceM >= 3){ const t = S.vil[0], f = freeSpot(t.x - t.w/2 - 16, t.y + 6, 14, i => rnd(500 + i)) || {x:t.x - t.w/2 - 16, y:t.y}; act = add('activists', f.x, f.y, {opp:1, w:9, hh:9}); spawnArrival(act); news('Activists from three cantons arrive in a diesel van with a Zurich plate.'); }
+  if (act && S.sinceForce >= 3){ spawnLeave(act); rm(act); act = null; }
+  const k = act ? 2 : 1, avg = forecast(), guarded = s => S.obj.some(p => p.type === 'police' && p.on && Math.hypot(p.x - s.x, p.y - s.y) <= 18);
+  if (S.quakeBoost > 0) S.quakeBoost--;
+  S.vil.forEach((v, i) => {
+    const has = t => S.obj.find(o => o.type === t && o.v === v.id), ch = (p, salt) => rnd(i*17 + salt) < p*k;
+    let b = has('banner'); if (!b && v.mood < 60 && ch(0.25, 1)){ const f = freeSpot(v.x + (rnd(i+40) < 0.5 ? -1 : 1)*(v.w/2 + 18), v.y, 16, j => rnd(i*7 + j)); if (f) add('banner', f.x, f.y, {v:v.id, opp:1, w:12, hh:6}); } else if (b && v.mood > 65) rm(b);
+    b = has('oppstand'); if (!b && v.mood < 50 && ch(0.2, 2)){ const f = freeSpot(v.x + v.w/2 + 10, v.y + 6, 10, j => rnd(i*9 + j)); if (f) add('oppstand', f.x, f.y, {v:v.id, opp:1, w:6, hh:8}); } else if (b && v.mood > 55) rm(b);
+    b = has('rumour');
+    if (!b && ch(S.quakeBoost > 0 ? 0.1 : 0.03, 3)){ add('rumour', v.x, v.y - v.h/2 - 6, {v:v.id, opp:1, until:S.t + 4, w:6, hh:6});
+      news(v.name + ': ' + ['hens stop laying; geothermy blamed.', 'sour milk linked to drilling, says a neighbour’s cousin.', 'a dry well is found. It was also dry in 1987.', 'the church clock runs slow. "Vibrations," says the sacristan.', 'the Tête de Moine tastes of diesel, claims the cheesemaker.'][(rnd(i+70)*5)|0]); }
+    else if (b && (S.t >= b.until || S.obj.some(o => o.type === 'suit' && o.on && vdist(v, o.x, o.y) <= 26))) rm(b);
+    const sites = S.obj.filter(o => SITE[o.type] && o.on && vdist(v, o.x, o.y) <= 150).sort((a,b2) => vdist(v,a.x,a.y) - vdist(v,b2.x,b2.y));
+    if (v.mood < 33 && ch(0.15, 4) && !S.obj.some(t => t.type === 'tractor' && t.v === v.id)){ const s = sites.find(s => !isBlocked(s) && !guarded(s)); if (s){ const rp = roadPos(roadS(s.x, s.y).s); const tr = add('tractor', rp.x, rp.y, {v:v.id, opp:1, target:s.id, until:S.t + 2, w:8, hh:6}); spawnArrival(tr, v); news('A manure spreader parks across the road near ' + v.name + '. The driver has gone for lunch.'); } }
+    if (v.mood < 25 && ch(0.3, 5)){ const s = sites.find(s => vdist(v,s.x,s.y) <= 90 && !S.obj.some(c => c.type === 'camp' && c.target === s.id)); if (s){ add('camp', s.x + (s.x < v.x ? 12 : -12), s.y + 6, {v:v.id, opp:1, target:s.id, w:9, hh:7}); news('A protest camp goes up at the site near ' + v.name + '. The yurt is better insulated than the village hall.'); } }
   });
-
-  window.addEventListener("keyup", (e) => keys.delete(e.key));
-  ui.restart.addEventListener("click", () => restart());
-
-  // ---------- helpers ----------
-  function overlay(text, seconds){ state.overlayText = text; state.overlayT = seconds; }
-  function clamp01(x){ return clamp(x,0,1); }
-
-  function setStrike(text, cx, cy, flashKind){
-    state.lastStrike = text;
-    state.hitFlashT = P.HIT_FLASH_SEC;
-    state.shimmerT = P.HIT_SHIMMER_SEC;
-    state.shimmerCX = cx;
-    state.shimmerCY = cy;
-    state.hitFlashKind = flashKind || "";
+  if (avg < 45 && !S.obj.some(o => o.type === 'march') && rnd(7) < 0.15*k){ const t = S.vil[0]; add('march', t.x, t.y + t.h/2 + 8, {opp:1, until:S.t + 1, w:1, hh:1}); const s0 = roadS(t.x, t.y).s; for (let i = 0; i < 12; i++) S.ents.push({k:'marcher', s:s0 - 60 - i*5, vs:6, sign:i%2 ? 'NON' : 'STOP', until:S.t + 1}); bump(t, 'Protest march', -4); news('March in ' + t.name + ': a thousand people, twelve tractors, one alphorn.'); }
+  for (const o of S.obj.slice()){
+    if (o.until !== undefined && S.t >= o.until && ['tractor','march','counterfest','congress','rumour'].includes(o.type)){ if (o.type === 'tractor') spawnLeave(o); rm(o); continue; }
+    if (o.type === 'tractor'){ const s = byId(o.target); if (!s || S.obj.some(p => p.type === 'police' && p.on && (Math.hypot(p.x - o.x, p.y - o.y) <= 18 || Math.hypot(p.x - s.x, p.y - s.y) <= 18))){ spawnLeave(o); rm(o); } }
+    if (o.type === 'camp'){ const s = byId(o.target), v = S.vil[o.v];
+      if (!s || v.mood > 35){ rm(o); continue; }
+      if (S.obj.some(p => p.type === 'riot' && p.on && (Math.hypot(p.x - o.x, p.y - o.y) <= 18 || Math.hypot(p.x - s.x, p.y - s.y) <= 18))){ rm(o); news('Riot police clear the camp near ' + v.name + '. The yurt is confiscated as evidence.'); continue; }
+      if (S.t - o.t0 >= (s.fenced ? 6 : 3)){ news('The ' + (RIG[s.type] ? 'rig' : 'plant') + ' near ' + v.name + ' burns. The fire brigade arrives after the apéro.'); s.burnt = S.t; s.on = false; s.drilling = null; S.pipes = S.pipes.filter(p => p.from !== s.id); S.plines = S.plines.filter(l => l.from !== s.id); rm(o); sfx('fire'); } }
   }
-
-  function cellDrillParams(t){
-    if (t === TYPE.BEDROCK) return {rate:0, costMult:1e9};
-    if (t === TYPE.HARD)    return {rate:P.DRILL_RATE_HARD, costMult:P.DRILL_COST_HARD_MULT};
-    if (t === TYPE.UNSTABLE)return {rate:P.DRILL_RATE_UNSTABLE, costMult:P.DRILL_COST_UNSTABLE_MULT};
-    if (t === TYPE.COLD)    return {rate:P.DRILL_RATE_WATER, costMult:P.DRILL_COST_WATER_MULT};
-    if (t === TYPE.HOT)     return {rate:P.DRILL_RATE_WATER, costMult:P.DRILL_COST_WATER_MULT};
-    if (t === TYPE.HDR)     return {rate:P.DRILL_RATE_HDR, costMult:P.DRILL_COST_HDR_MULT};
-    return {rate:P.DRILL_RATE_SOLID, costMult:1.0};
+  if (S.month % 12 === 0 && S.month > 0) committee();
+  for (let i = 0; i < 2; i++) if (rnd(300 + i) < 0.7) spawnTraffic(false);
+  if (S.red >= CFG.RED_LIMIT) end('debt'); else if (S.month >= CFG.END) end(!S.producing && S.sold < 1 ? 'lapsed' : forecast() >= 50.1 ? 'won' : 'lost');
+  if (!S.over) try { localStorage.setItem('jf3_save', JSON.stringify(Object.assign({}, S, {KN:[...KN.entries()].map(([k,v]) => [k, Array.from(v)])}))); } catch (e) {}
+}
+function committee(){ const recs = ['publish the micro-seismic data within 24 hours', 'hold a public information evening per village', 'reduce truck movements on school days', 'install three more seismometers', 'rename "stimulation" to something the public understands', 'invite the opposition to visit the site', 'limit night drilling to weekdays', 'translate the brochure into Patois'];
+  const ai = (hash(S.month, 5, 5, S.seed)*recs.length)|0, b = recs[(ai + 1 + ((hash(S.month, 6, 6, S.seed)*(recs.length - 1))|0)) % recs.length];
+  news('Annual report of the Comité de patronage: "globally positive". It recommends to ' + recs[ai] + ' and to ' + b + '.'); }
+function end(kind){ S.over = {kind, fc:forecast(), sold:S.sold}; plan = null; sel = null; $('#card').hidden = true; tool = null;
+  let best = 0; try { best = Number(localStorage.getItem('jf3_best') || 0); if (S.sold > best) localStorage.setItem('jf3_best', String(S.sold)); localStorage.removeItem('jf3_save'); } catch (e) {} S.over.best = Math.max(best, S.sold); showEnd(); }
+/* ================================================================== entities: everything that moves on the block */
+function spawnTraffic(init){
+  const kinds = ['car','car','car','postauto','tractor','car','lorry'], k = kinds[(Math.random()*kinds.length)|0], dir = Math.random() < 0.5 ? 1 : -1, L = roadLen();
+  S.ents.push({k, s:init ? Math.random()*L : (dir > 0 ? -10 : L + 10), vs:dir*(k === 'tractor' ? 7 : k === 'lorry' ? 11 : 15), lane:dir > 0 ? 1 : -1, col:['#8a3030','#2f4f7a','#d9d9d4','#2b2b2b','#5a6b5a','#8c7a4a','#3b3b4a'][(Math.random()*7)|0], traffic:true});
+}
+function spawnTrain(){ const dir = Math.random() < 0.5 ? 1 : -1; S.ents.push({k:'train', x:dir > 0 ? -40 : MW + 40, vx:dir*22, stopT:0}); }
+function spawnArrival(o, fromV){ const k = o.type === 'police' ? 'policevan' : o.type === 'riot' ? 'riotbus' : o.type === 'suit' ? 'blackcar' : o.type === 'activists' ? 'van' : o.type === 'tractor' ? 'tractor' : 'lorry';
+  const L = roadLen(), tgt = roadS(o.x, o.y).s, s0 = fromV ? roadS(fromV.x, fromV.y).s : (tgt < L/2 ? -10 : L + 10); o.arrived = false;
+  const rp = roadPos(tgt); const side = o.y < rp.y ? -1 : 1;
+  S.ents.push({k, s:s0, vs:(tgt > s0 ? 1 : -1)*(k === 'tractor' ? 8 : 18), lane:tgt > s0 ? 1 : -1, target:tgt, owner:o.id, park:k !== 'lorry' && k !== 'tractor', px:rp.x + (rp.dx ? 0 : side*6), py:rp.y + (rp.dx ? side*6 : 0), pdir:rp.dx ? 'x' : 'y'}); }
+function spawnLeave(o){ const e = S.ents.find(e => e.owner === o.id); if (e){ e.owner = null; e.leaving = true; e.parked = false; e.vs = e.s < roadLen()/2 ? -18 : 18; e.lane = e.vs > 0 ? 1 : -1; } }
+function spawnConvoy(l, sg){ const fromW = sg.x0 < MW/2; for (let i = 0; i < 3; i++) S.ents.push({k:'vib', x:fromW ? -12 - i*11 : MW + 12 + i*11, y:l.y, vs:fromW ? 14 : -14, seg:sg.id, line:l.id, idx:i}); }
+function tickEnts(dt0){
+  const dt = dt0*S.speed, L = roadLen();
+  const blocks = S.obj.filter(b => b.type === 'tractor').map(b => roadS(b.x, b.y).s);
+  if (!S.ents.some(e => e.k === 'train') && Math.random() < dt*0.02) spawnTrain();
+  for (const e of S.ents.slice()){
+    if (e.k === 'heli'){ e.x += e.vx*dt; e.ttl -= dt; if (e.ttl <= 0) S.ents.splice(S.ents.indexOf(e), 1); continue; }
+    if (e.k === 'train'){ const st = S.rail.station; if (e.stopT > 0){ e.stopT -= dt; continue; } if (!e.stopped && Math.abs(e.x - st) < 1.5){ e.stopped = true; e.stopT = 2.5; e.x = st; continue; } e.x += e.vx*dt; if (e.x < -60 || e.x > MW + 60) S.ents.splice(S.ents.indexOf(e), 1); continue; }
+    if (e.k === 'marcher'){ e.s += e.vs*dt; e.anim = (e.anim || 0) + dt*6; if (S.t >= e.until || e.s > L) S.ents.splice(S.ents.indexOf(e), 1); continue; }
+    if (e.k === 'vib'){ const ln = S.lines[e.line], sg = ln && ln.segs.find(s => s.id === e.seg);
+      if (e.leaving){ e.x += e.vs*dt; if (e.x < -30 || e.x > MW + 30) S.ents.splice(S.ents.indexOf(e), 1); continue; }
+      if (!sg){ S.ents.splice(S.ents.indexOf(e), 1); continue; }
+      if (!sg.arrived){ const sgn = Math.sign(e.vs), tx = sg.x0 - e.idx*9*sgn; if ((tx - e.x)*sgn > 0) e.x += e.vs*dt; if ((tx - e.x)*sgn <= 0){ e.x = tx; if (e.idx === 0) sg.arrived = true; } }
+      else e.x = sg.x0 + Math.min(sg.prog, sg.x1 - sg.x0) - e.idx*9;
+      continue; }
+    if (e.parked) continue;
+    if (e.owner !== null && e.owner !== undefined){ const o = byId(e.owner); if (!o){ e.owner = null; e.leaving = true; e.vs = e.s < L/2 ? -18 : 18; }
+      else if ((e.target - e.s)*Math.sign(e.vs) <= 0){ o.arrived = true; if (e.park){ e.parked = true; e.s = e.target; } else { e.owner = null; e.leaving = true; e.vs = e.s < L/2 ? -18 : 18; e.lane = e.vs > 0 ? 1 : -1; } continue; } }
+    const ahead = Math.sign(e.vs); let stop = false;
+    for (const bs of blocks) if ((bs - e.s)*ahead > 0 && (bs - e.s)*ahead < 9) stop = true;
+    if (!stop) for (const q of S.ents) if (q !== e && q.s !== undefined && !q.parked && q.lane === e.lane && Math.sign(q.vs) === ahead && (q.s - e.s)*ahead > 0 && (q.s - e.s)*ahead < 9 && q.stopped) stop = true;
+    e.stopped = stop; if (stop) continue;
+    e.s += e.vs*dt; e.anim = (e.anim || 0) + dt*8;
+    if ((e.traffic || e.leaving) && (e.s < -20 || e.s > L + 20)) S.ents.splice(S.ents.indexOf(e), 1);
   }
+}
 
-  function canStand(px,py){
-    if (!inWorldX(px)) return false;
-    const cx = wToC(px);
-    const cy = wToC(py);
-    if (py < P.SURFACE_Y_PX) return true;
-    return isCarved(cx,cy);
+/* ================================================================== isometric projection (1x units; the context is scaled 2x) */
+const KX = 1, KY = 0.5, OX = MH*KX + 12, OY = 14, D = CFG.DEPTH;
+const CW = (MW + MH)*KX + 24, CH = (MW + MH)*KY + D + 30;
+const P = (x, y, z) => [OX + (x - y)*KX, OY + (x + y)*KY - (z || 0)];
+const unP = (sx, sy) => { const a = (sx - OX)/KX, b = (sy - OY)/KY; return {x:(a + b)/2, y:(b - a)/2}; };
+const R = (g,c,x,y,w,h) => { g.fillStyle = c; g.fillRect(Math.round(x*2)/2, Math.round(y*2)/2, w, h); };
+function poly(g, pts, fill, stroke, lw){ g.beginPath(); pts.forEach((p,i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); if (fill){ g.fillStyle = fill; g.fill(); } if (stroke){ g.strokeStyle = stroke; g.lineWidth = lw || 0.5; g.stroke(); } }
+function wpoly(g, w, fill, stroke, lw){ poly(g, w.map(p => P(p[0], p[1], p[2] || 0)), fill, stroke, lw); }
+function T(g, s, sx, sy, col, size, align, bg){ g.font = (size || 5) + 'px "Pixelify Sans"'; g.textAlign = align || 'left'; g.textBaseline = 'alphabetic';
+  if (bg){ const w = g.measureText(s).width, x0 = align === 'center' ? sx - w/2 : align === 'right' ? sx - w : sx; R(g, bg, x0 - 1.5, sy - (size || 5)*0.8, w + 3, (size || 5) + 1); }
+  g.fillStyle = col; g.fillText(s, Math.round(sx*2)/2, Math.round(sy*2)/2); }
+const shade = (hex, f) => { const n = parseInt(hex.slice(1), 16); const r = clamp(((n >> 16) * f)|0, 0, 255), g = clamp((((n >> 8) & 255) * f)|0, 0, 255), b = clamp(((n & 255) * f)|0, 0, 255); return 'rgb(' + r + ',' + g + ',' + b + ')'; };
+/* a box on the ground: footprint x..x+w (east), y..y+d (south), height h; faces shaded from one colour */
+function box(g, x, y, w, d, h, col, opt){ const o = opt || {}; const top = o.top || shade(col, 1.12), left = o.left || shade(col, 0.9), right = o.right || shade(col, 0.72), ln = o.line || 'rgba(0,0,0,.35)';
+  wpoly(g, [[x, y+d, 0], [x+w, y+d, 0], [x+w, y+d, h], [x, y+d, h]], left, ln);
+  wpoly(g, [[x+w, y, 0], [x+w, y+d, 0], [x+w, y+d, h], [x+w, y, h]], right, ln);
+  wpoly(g, [[x, y, h], [x+w, y, h], [x+w, y+d, h], [x, y+d, h]], top, ln); }
+function shadowAt(g, x, y, w, d){ wpoly(g, [[x + 1.5, y + 1, 0], [x + w + 2.5, y + 1, 0], [x + w + 2.5, y + d + 1.5, 0], [x + 1.5, y + d + 1.5, 0]], 'rgba(0,0,0,.14)'); }
+function house(g, x, y, k, big, snow){ // x,y = north-west corner of the footprint
+  const w = big ? 10 : 8, d = big ? 7 : 6, h = 3.5, walls = ['#f2f2ee','#e6e4dc','#f6f3ea','#dcdad2'][k], roof = snow ? '#f4f6f8' : ['#a33d33','#7d4d3c','#b04a3a','#6e5a4d'][k];
+  shadowAt(g, x, y, w, d); box(g, x, y, w, d, h, walls, {line:'rgba(0,0,0,.4)'});
+  const win = (px, py, pz, face) => { const p = P(px, py, pz); R(g, '#5f6a73', p[0] - 0.5, p[1] - 0.5, 1.2, 1.2); };
+  for (let i = 1.5; i < w - 1; i += 2.5) win(x + i, y + d, 1.8); for (let i = 1.5; i < d - 1; i += 2.5) win(x + w, y + i, 1.8);
+  const ridge = h + (big ? 4 : 3.2);
+  wpoly(g, [[x - 0.6, y + d + 0.6, h], [x + w + 0.6, y + d + 0.6, h], [x + w + 0.6, y + d/2, ridge], [x - 0.6, y + d/2, ridge]], roof, 'rgba(0,0,0,.4)');
+  wpoly(g, [[x - 0.6, y - 0.6, h], [x + w + 0.6, y - 0.6, h], [x + w + 0.6, y + d/2, ridge], [x - 0.6, y + d/2, ridge]], shade(roof, 1.15), 'rgba(0,0,0,.4)');
+  wpoly(g, [[x + w + 0.6, y - 0.6, h], [x + w + 0.6, y + d + 0.6, h], [x + w + 0.6, y + d/2, ridge]], walls, 'rgba(0,0,0,.4)');
+}
+function church(g, x, y, snow){ shadowAt(g, x, y, 10, 8); box(g, x, y, 10, 8, 4.5, '#f2f2ee'); const roof = snow ? '#f4f6f8' : '#7d4d3c';
+  wpoly(g, [[x - 0.6, y + 8.6, 4.5], [x + 10.6, y + 8.6, 4.5], [x + 10.6, y + 4, 8.5], [x - 0.6, y + 4, 8.5]], roof, 'rgba(0,0,0,.4)'); wpoly(g, [[x - 0.6, y - 0.6, 4.5], [x + 10.6, y - 0.6, 4.5], [x + 10.6, y + 4, 8.5], [x - 0.6, y + 4, 8.5]], shade(roof, 1.15), 'rgba(0,0,0,.4)');
+  box(g, x + 0.5, y + 2.5, 3, 3, 13, '#eceae2'); wpoly(g, [[x + 0.5, y + 5.5, 13], [x + 3.5, y + 5.5, 13], [x + 2, y + 4, 19]], '#4a4a52', 'rgba(0,0,0,.4)'); wpoly(g, [[x + 3.5, y + 2.5, 13], [x + 3.5, y + 5.5, 13], [x + 2, y + 4, 19]], '#3a3a42', 'rgba(0,0,0,.4)'); }
+function chapel(g, x, y, snow){ shadowAt(g, x, y, 6, 5); box(g, x, y, 6, 5, 3, '#f2f2ee'); const roof = snow ? '#f4f6f8' : '#7d4d3c'; wpoly(g, [[x - 0.5, y + 5.5, 3], [x + 6.5, y + 5.5, 3], [x + 6.5, y + 2.5, 5.5], [x - 0.5, y + 2.5, 5.5]], roof, 'rgba(0,0,0,.4)'); wpoly(g, [[x - 0.5, y - 0.5, 3], [x + 6.5, y - 0.5, 3], [x + 6.5, y + 2.5, 5.5], [x - 0.5, y + 2.5, 5.5]], shade(roof, 1.15), 'rgba(0,0,0,.4)'); const p = P(x + 1.5, y + 2.5, 5.5); R(g, '#3a3a42', p[0] - 0.3, p[1] - 3, 0.6, 3); }
+function tree(g, x, y, s, fir, snow, autumn){ const p = P(x, y, 0); R(g, 'rgba(0,0,0,.14)', p[0] - 2*s, p[1] - 0.5, 4*s, 1.5); R(g, '#5a3d2a', p[0] - 0.5, p[1] - 3*s, 1, 3*s);
+  if (fir){ g.fillStyle = snow ? '#5e8a68' : '#2f6b3a'; g.beginPath(); g.moveTo(p[0] - 2.5*s, p[1] - 2.5*s); g.lineTo(p[0] + 2.5*s, p[1] - 2.5*s); g.lineTo(p[0], p[1] - 9*s); g.closePath(); g.fill(); g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 0.4; g.stroke(); if (snow){ g.fillStyle = '#f4f6f8'; g.beginPath(); g.moveTo(p[0] - 1.2*s, p[1] - 5.5*s); g.lineTo(p[0] + 1.2*s, p[1] - 5.5*s); g.lineTo(p[0], p[1] - 9*s); g.closePath(); g.fill(); } }
+  else { g.fillStyle = autumn ? '#c47a2c' : '#3f8f4e'; g.beginPath(); g.arc(p[0], p[1] - 5*s, 3*s, 0, 7); g.fill(); g.fillStyle = autumn ? '#dc9b45' : '#58a862'; g.beginPath(); g.arc(p[0] - 0.8*s, p[1] - 5.8*s, 1.6*s, 0, 7); g.fill(); g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 0.4; g.beginPath(); g.arc(p[0], p[1] - 5*s, 3*s, 0, 7); g.stroke(); } }
+function person(g, x, y, f, shirt, sign, hat){ const p = P(x, y, 0), step = f ? (Math.floor(f*2) % 2) : 0; R(g, 'rgba(0,0,0,.18)', p[0] - 1, p[1] - 0.4, 2.5, 1);
+  R(g, '#2b313c', p[0] - 0.8, p[1] - 2, 0.7, 2); R(g, '#2b313c', p[0] + 0.3, p[1] - 2 + step*0.4, 0.7, 2); R(g, shirt, p[0] - 1, p[1] - 4.6, 2.2, 2.8); R(g, '#f0d2b4', p[0] - 0.8, p[1] - 6.4, 1.8, 1.8); R(g, hat || '#4a3220', p[0] - 0.9, p[1] - 6.8, 2, 0.6);
+  if (sign){ R(g, '#5a4632', p[0] + 1.3, p[1] - 10, 0.5, 6); g.font = '4.5px "Pixelify Sans"'; const w = g.measureText(sign).width + 2; R(g, '#2b2b2b', p[0] + 0.3, p[1] - 13.5, w + 1, 4.6); R(g, '#f6f6f2', p[0] + 0.8, p[1] - 13, w, 3.6); T(g, sign, p[0] + 1.8, p[1] - 10, '#b3261e', 4.5); } }
+function policeman(g, x, y, riot){ person(g, x, y, 0, riot ? '#1c2225' : '#2a4fa0', null, riot ? '#1c2225' : '#152a5e'); }
+/* vehicles: oriented boxes. dir: 'x' (east-west) or 'y' (north-south). x,y = centre of footprint */
+function vehicle(g, k, x, y, dir, col, anim){
+  const spec = {car:[6.5,3.2,1.6,col || '#2f4f7a'], blackcar:[6.5,3.2,1.6,'#15171b'], postauto:[11,3.6,2.6,'#e8b923'], lorry:[11,3.6,3,'#d8d8d3'], tractor:[5.5,3.2,2.2,'#3f7a4a'], policevan:[8.5,3.4,2.6,'#eeeeea'], riotbus:[11.5,3.6,2.8,'#2a2d33'], van:[8.5,3.4,2.6,'#f1f1ee'], vib:[9,3.6,2.8,'#2f3f8a']}[k] || [6.5,3.2,1.6,'#888'];
+  let [L, Wd, H, c] = spec; if (dir === 'y'){ const t = L; L = Wd; Wd = t; }
+  const x0 = x - L/2, y0 = y - Wd/2; shadowAt(g, x0 - 1, y0 - 0.5, L, Wd);
+  box(g, x0, y0, L, Wd, H*0.55, c, {line:'rgba(0,0,0,.45)'});
+  const along = dir === 'y' ? Wd : L, cab = {car:0.55, blackcar:0.55, postauto:0.9, lorry:0.3, tractor:0.45, policevan:0.85, riotbus:0.9, van:0.85, vib:0.4}[k] || 0.6;
+  const cx0 = dir === 'y' ? x0 : x0 + (L - L*cab)/2, cy0 = dir === 'y' ? y0 + (Wd - Wd*cab)/2 : y0, cl = dir === 'y' ? L : L*cab, cw = dir === 'y' ? Wd*cab : Wd;
+  const glass = k === 'vib' ? '#9fc3dc' : '#8fb3cc';
+  if (k === 'lorry'){ box(g, dir === 'y' ? x0 : x0 + L*0.3, dir === 'y' ? y0 + Wd*0.3 : y0, dir === 'y' ? L : L*0.7, dir === 'y' ? Wd*0.7 : Wd, H, '#e6e6e2', {line:'rgba(0,0,0,.45)'}); box(g, x0 + 0.3, y0 + 0.3, dir === 'y' ? L - 0.6 : L*0.28, dir === 'y' ? Wd*0.28 : Wd - 0.6, H*0.9, col || '#2f4f7a', {top:glass, line:'rgba(0,0,0,.45)'}); }
+  else if (k === 'tractor'){ box(g, dir === 'y' ? x0 + 0.5 : x0 + L*0.45, dir === 'y' ? y0 + Wd*0.45 : y0 + 0.5, dir === 'y' ? L - 1 : L*0.45, dir === 'y' ? Wd*0.45 : Wd - 1, H, '#4a8a55', {top:glass, line:'rgba(0,0,0,.45)'}); box(g, dir === 'y' ? x0 - 0.2 : x0 - 0.6, dir === 'y' ? y0 - 0.6 : y0 - 0.2, dir === 'y' ? L + 0.4 : 1.6, dir === 'y' ? 1.6 : Wd + 0.4, 1.4, '#1c1f24'); box(g, dir === 'y' ? x0 + 1 : x0 - 4.5, dir === 'y' ? y0 - 4.5 : y0 + 1, dir === 'y' ? L - 2 : 4, dir === 'y' ? 4 : Wd - 2, 1.6, '#7a5a3a'); }
+  else { box(g, cx0 + 0.3, cy0 + 0.3, cl - 0.6, cw - 0.6, H, shade(c, 1.1), {top:glass, line:'rgba(0,0,0,.45)'}); }
+  if (k === 'policevan'){ const p = P(x, y, H + 0.3); R(g, '#e64a3b', p[0] - 1.2, p[1] - 1, 1, 1); R(g, '#3b7be8', p[0] + 0.3, p[1] - 1, 1, 1); }
+  if (k === 'vib' && anim){ const p = P(x, y + Wd/2 + 0.8, 0); R(g, '#f2f2f2', p[0] - 2 + (anim % 2)*0.5, p[1] - 0.5, 4, 0.6); }
+  if (k === 'van'){ const p = P(x, y + Wd/2, H*0.3); T(g, 'ZH', p[0] - 2, p[1] + 1.5, '#1c2225', 3.5); }
+}
+function train(g, x, y, t){ for (let i = -1; i <= 1; i++){ const cx = x + i*12 - 5.5; shadowAt(g, cx, y - 1.8, 11, 3.6); box(g, cx, y - 1.8, 11, 3.6, 3.2, i === 0 ? '#c8102e' : '#d64545', {top:'#dfe4e8', line:'rgba(0,0,0,.45)'}); } }
+function rigSprite(g, x, y, kind, burnt, working, t){ // x,y = centre of the footprint
+  const h = kind === 'testrig' ? 11 : kind === 'light' ? 16 : 23, c = burnt ? '#1c1f24' : '#3a3f47'; shadowAt(g, x - 3.5, y - 3, 7, 6);
+  box(g, x - 3.5, y - 3, 7, 6, 1.3, '#6b7278', {line:'rgba(0,0,0,.4)'});
+  const legs = [[-1.5,-1.5],[1.5,-1.5],[1.5,1.5],[-1.5,1.5]]; g.strokeStyle = c; g.lineWidth = 0.7;
+  for (const [dx, dy] of legs){ const a = P(x + dx*1.2, y + dy*1.2, 1.3), b = P(x + dx*0.6, y + dy*0.6, h); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+  g.lineWidth = 0.4; for (let z = 4; z < h; z += 3.5){ const f = 1.2 - 0.6*(z/h); const q = legs.map(([dx,dy]) => P(x + dx*f, y + dy*f, z)); g.beginPath(); q.forEach((p,i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.stroke(); }
+  wpoly(g, [[x - 1.2, y - 1.2, h], [x + 1.2, y - 1.2, h], [x + 1.2, y + 1.2, h], [x - 1.2, y + 1.2, h]], burnt ? '#1c1f24' : '#e0a93a', 'rgba(0,0,0,.4)');
+  if (working && !burnt){ const p = P(x, y, h + 1); R(g, '#f2c230', p[0] - 0.5, p[1] - ((t*20)|0)%3, 1, 1.5); R(g, '#9aa0aa', p[0] + 2, p[1] - 4 - ((t*6)%4), 1.6, 1.6); }
+  if (burnt){ const p = P(x, y, 4), ph = ((t*6)|0)%2; R(g, '#ff7a00', p[0] - 2 + ph, p[1] - 4, 4, 4); R(g, '#ffd166', p[0] - 0.5, p[1] - 6 - ph, 1.5, 2.5); R(g, '#9aa0aa', p[0] + 1.5, p[1] - 10 - ((t*8)%6), 2, 2); }
+}
+function billboard(g, x, y, z, lines, size, col, w){ const p = P(x, y, z); const sz = size || 4.5; g.font = sz + 'px "Pixelify Sans"'; const tw = w || Math.max(...lines.map(l => g.measureText(l).width)) + 3, th = lines.length*(sz + 0.6) + 1.5;
+  R(g, '#2b2b2b', p[0] - tw/2 - 0.5, p[1] - th - 0.5, tw + 1, th + 1); R(g, '#f6f6f2', p[0] - tw/2, p[1] - th, tw, th); lines.forEach((l, i) => T(g, l, p[0], p[1] - th + (i + 1)*(sz + 0.6) - 0.8, col || '#b3261e', sz, 'center')); }
+function obj(g, o, t){
+  const x = o.x, y = o.y, bob = ((t*4)|0)%2;
+  switch (o.type){
+    case 'testrig': case 'light': case 'deep': case 'dir': rigSprite(g, x, y, o.type, o.burnt, o.drilling, t); if (o.type === 'dir' && !o.burnt){ const p = P(x, y, 22); R(g, '#b3261e', p[0] + 1.5, p[1], 1.5, 1.5); } break;
+    case 'station': shadowAt(g, x - 4, y - 3, 8, 6); box(g, x - 4, y - 3, 8, 6, 4, '#b35a3a'); box(g, x + 2, y - 2.5, 1.2, 1.2, 7.5, '#555'); if (o.inc > 0){ const p = P(x + 2.6, y - 2, 8); R(g, '#f2f2f2', p[0] - 1, p[1] - 2 - bob, 2.2, 1.8); } break;
+    case 'plant': shadowAt(g, x - 6, y - 4.5, 12, 9); box(g, x - 6, y - 4.5, 12, 9, 5.5, '#7b848c'); box(g, x + 1, y - 3, 4.5, 4.5, 13, '#d3d8dc'); if (o.on && o.stim >= 0){ const p = P(x + 3.2, y - 0.8, 13.5); R(g, '#f2f2f2', p[0] - 1.5, p[1] - 2.5 - bob, 3.2, 2.2); } if (o.on && o.stim < 0) billboard(g, x, y - 4.5, 8, ['!'], 6); break;
+    case 'lobby': shadowAt(g, x - 4.5, y - 3.5, 9, 7); box(g, x - 4.5, y - 3.5, 9, 7, 6.5, '#9cc3de', {top:'#e9ecef', line:'rgba(255,255,255,.7)'}); break;
+    case 'stand': { const p = P(x, y, 0); R(g, 'rgba(0,0,0,.14)', p[0] - 3, p[1] - 0.5, 6, 1.2); R(g, '#555', p[0] - 0.3, p[1] - 7, 0.7, 7); g.fillStyle = '#2a6fb0'; g.beginPath(); g.ellipse(p[0], p[1] - 7, 4.5, 1.6, 0, 0, 7); g.fill(); R(g, '#f2f2f2', p[0] - 2.5, p[1] - 2.5, 5, 2); break; }
+    case 'oppstand': { const p = P(x, y, 0); R(g, 'rgba(0,0,0,.14)', p[0] - 3, p[1] - 0.5, 6, 1.2); R(g, '#555', p[0] - 0.3, p[1] - 7, 0.7, 7); g.fillStyle = '#b3261e'; g.beginPath(); g.ellipse(p[0], p[1] - 7, 4.5, 1.6, 0, 0, 7); g.fill(); R(g, '#f2f2f2', p[0] - 3, p[1] - 2.5, 6, 2); T(g, 'NON', p[0], p[1] - 0.9, '#b3261e', 3.2, 'center'); break; }
+    case 'suit': person(g, x, y, t, '#1d2743', null, '#1c2225'); break;
+    case 'police': policeman(g, x - 1.5, y, false); policeman(g, x + 1.5, y + 1, false); break;
+    case 'riot': for (let i = 0; i < 4; i++) policeman(g, x - 3 + i*2, y + (i%2), true); break;
+    case 'school': shadowAt(g, x - 4.5, y - 3, 9, 6); box(g, x - 4.5, y - 3, 9, 6, 4, '#f3f3ef'); { const p = P(x + 5, y - 3, 0); R(g, '#555', p[0], p[1] - 11, 0.6, 11); R(g, '#b3261e', p[0] + 0.6, p[1] - 11, 3, 2); } break;
+    case 'chair': shadowAt(g, x - 4.5, y - 3, 9, 6); box(g, x - 4.5, y - 3, 9, 6, 5, '#2b313c'); billboard(g, x, y + 3, 5.5, ['UNI'], 4, '#1c2225'); break;
+    case 'congress': shadowAt(g, x - 5.5, y - 3.5, 11, 7); box(g, x - 5.5, y - 3.5, 11, 7, 5, '#f2f2f2', {top:'#2a6fb0'}); break;
+    case 'banner': { const a = P(x - 6, y, 0), b = P(x + 6, y, 0); R(g, '#5a4632', a[0], a[1] - 8, 0.7, 8); R(g, '#5a4632', b[0], b[1] - 8, 0.7, 8); billboard(g, x, y, 4, ['JURA SANS', 'FRACKING'], 4, '#b3261e', 24); break; }
+    case 'rumour': billboard(g, x, y, 6 + bob, ['?'], 6, '#1c2225'); break;
+    case 'tractor': vehicle(g, 'tractor', x, y, (roadPos(roadS(x, y).s).dx ? 'y' : 'x'), null); break;
+    case 'march': break;
+    case 'camp': shadowAt(g, x - 6, y - 2, 12, 5); wpoly(g, [[x - 6, y + 2, 0], [x - 1, y + 2, 0], [x - 3.5, y, 4]], '#6f7d3c', 'rgba(0,0,0,.4)'); wpoly(g, [[x - 6, y - 2, 0], [x - 1, y - 2, 0], [x - 3.5, y, 4]], '#879a4a', 'rgba(0,0,0,.4)'); wpoly(g, [[x + 1, y + 2.5, 0], [x + 6, y + 2.5, 0], [x + 3.5, y + 0.5, 4]], '#3d4a1c', 'rgba(0,0,0,.4)'); wpoly(g, [[x + 1, y - 1.5, 0], [x + 6, y - 1.5, 0], [x + 3.5, y + 0.5, 4]], '#556529', 'rgba(0,0,0,.4)'); { const p = P(x, y + 4, 0); R(g, '#ff7a00', p[0] - 1, p[1] - 2 + bob, 2, 2); } person(g, x + 7, y + 3, t, '#b3261e', 'NON'); break;
+    case 'activists': vehicle(g, 'van', x - 4, y, 'x', null); person(g, x + 4, y + 2, t, '#1c2225', 'STOP'); break;
+    case 'counterfest': wpoly(g, [[x - 3, y + 2, 0], [x + 3, y + 2, 0], [x, y, 4]], '#1c2225', 'rgba(0,0,0,.4)'); wpoly(g, [[x - 3, y - 2, 0], [x + 3, y - 2, 0], [x, y, 4]], '#2f343a', 'rgba(0,0,0,.4)'); break;
   }
+  if (o.fenced && SITE[o.type]){ g.strokeStyle = '#666'; g.lineWidth = 0.5; const w = o.type === 'plant' ? 9 : 6; const pts = [[x - w, y - w*0.7], [x + w, y - w*0.7], [x + w, y + w*0.7], [x - w, y + w*0.7]]; for (let i = 0; i < 4; i++){ const a = pts[i], b = pts[(i + 1)%4]; for (let f = 0; f <= 1; f += 0.2){ const px = a[0] + (b[0]-a[0])*f, py = a[1] + (b[1]-a[1])*f; const q = P(px, py, 0), q2 = P(px, py, 2); g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(q2[0], q2[1]); g.stroke(); } const a2 = P(a[0], a[1], 1.6), b2 = P(b[0], b[1], 1.6); g.beginPath(); g.moveTo(a2[0], a2[1]); g.lineTo(b2[0], b2[1]); g.stroke(); } }
+  if (!o.on && !o.burnt && o.arrived){ const f = clamp((S.t - o.t0)/Math.max(0.01, o.ready - o.t0), 0, 1), p = P(x, y, 0); R(g, '#1c2225', p[0] - 4, p[1] + 2, 8.5, 1.8); R(g, '#f2c230', p[0] - 3.7, p[1] + 2.4, 7.9*f, 1); }
+}
+function festSprite(g, x, y, t){ const p = P(x, y, 0); R(g, 'rgba(0,0,0,.14)', p[0] - 5, p[1] - 0.5, 10, 1.5); R(g, '#444', p[0] - 0.4, p[1] - 9, 0.8, 9); g.fillStyle = '#b3261e'; g.beginPath(); g.ellipse(p[0], p[1] - 9, 5, 1.8, 0, 0, 7); g.fill(); for (let i = 0; i < 4; i++){ const ang = t*2 + i*1.57; R(g, ['#2a6fb0','#2c7a4b','#f2c230','#d64545'][i], p[0] + Math.cos(ang)*3.8 - 1, p[1] - 5 + Math.sin(ang)*1.2, 2, 2); } for (let i = -10; i <= 10; i += 2.5) R(g, ((t*5 + i)|0)%2 ? '#f2c230' : '#ff7a00', p[0] + i, p[1] - 12 + (Math.abs(i)%2)*0.6, 1, 1); }
 
-  function isMouthCell(cx,cy){
-    if (!isCarved(cx,cy)) return false;
-    return getCellType(cx, cy-1) === TYPE.AIR;
+/* ================================================================== the block */
+let baseMap = null, baseKey = '';
+function groundColor(winter){ return winter ? '#b9c7b4' : '#7fb56b'; }
+function drawBase(cutY){
+  const g = baseMap.getContext('2d'); g.setTransform(2, 0, 0, 2, 0, 0); g.imageSmoothingEnabled = false; g.clearRect(0, 0, CW, CH); const seed = S.seed, mo = S.season, winter = mo >= 11 || mo <= 1;
+  const yc = cutY;
+  /* block sides */
+  const li = cutLine !== null ? cutLine : S.lines.length - 1; const col = x => rockL(li, x, 0);
+  wpoly(g, [[MW, 0, 0], [MW, yc, 0], [MW, yc, -D], [MW, 0, -D]], '#c9c1b2', 'rgba(0,0,0,.5)');
+  for (let d = 0; d < UGH; d += 10){ const t = rockL(li, SW - 2, d + 5), c = RCOL[t][0]; wpoly(g, [[MW, 0, -d*D/UGH], [MW, yc, -d*D/UGH], [MW, yc, -(d + 10)*D/UGH], [MW, 0, -(d + 10)*D/UGH]], shade(c, 0.85)); }
+  g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 0.6; wpoly(g, [[MW, 0, 0], [MW, yc, 0], [MW, yc, -D], [MW, 0, -D]], null, 'rgba(0,0,0,.55)', 0.6);
+  /* top face */
+  wpoly(g, [[0, 0, 0], [MW, 0, 0], [MW, yc, 0], [0, yc, 0]], groundColor(winter));
+  g.save(); g.beginPath(); [[0,0],[MW,0],[MW,yc],[0,yc]].map(p => P(p[0], p[1], 0)).forEach((p,i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.clip();
+  for (let x = 0; x < MW; x += 4) for (let y = 0; y < MH; y += 4){ const n = hash(x, y, 9, seed); if (n > 0.86){ const p = P(x + 1, y + 1, 0); R(g, winter ? 'rgba(255,255,255,.5)' : 'rgba(0,0,0,.08)', p[0], p[1], 1.5, 0.7); } }
+  for (const f of S.fields){ const c = winter ? '#c7d2c0' : ['#9ac25c','#d2bb62','#b0d070'][f.k]; wpoly(g, [[f.x - f.w/2, f.y - f.h/2], [f.x + f.w/2, f.y - f.h/2], [f.x + f.w/2, f.y + f.h/2], [f.x - f.w/2, f.y + f.h/2]], c, 'rgba(0,0,0,.12)', 0.4); if (!winter) for (let yy = f.y - f.h/2 + 1.5; yy < f.y + f.h/2; yy += 2.2){ const a = P(f.x - f.w/2 + 1, yy, 0), b = P(f.x + f.w/2 - 1, yy, 0); g.strokeStyle = 'rgba(0,0,0,.08)'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); } }
+  for (const h of S.hedges){ wpoly(g, [[h.x - h.w/2, h.y - 0.8, 0], [h.x + h.w/2, h.y - 0.8, 0], [h.x + h.w/2, h.y + 0.8, 0], [h.x - h.w/2, h.y + 0.8, 0]], winter ? '#5e7a64' : '#2f6b3a'); wpoly(g, [[h.x - h.w/2, h.y - 0.8, 1.4], [h.x + h.w/2, h.y - 0.8, 1.4], [h.x + h.w/2, h.y + 0.8, 1.4], [h.x - h.w/2, h.y + 0.8, 1.4]], winter ? '#6f8f75' : '#3a7d46'); }
+  const pd = S.pond; { const pts = []; for (let a = 0; a < 6.3; a += 0.4) pts.push(P(pd.x + Math.cos(a)*pd.w/2, pd.y + Math.sin(a)*pd.h/2, 0)); poly(g, pts, '#3d7fbf', '#2b5f93', 0.6); }
+  g.strokeStyle = '#3d7fbf'; g.lineWidth = 4.5; g.lineJoin = 'round'; g.beginPath(); S.river.forEach((p,i) => { const q = P(p[0], p[1], 0); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.stroke(); g.strokeStyle = '#2b5f93'; g.lineWidth = 5.5; g.globalCompositeOperation = 'destination-over'; g.stroke(); g.globalCompositeOperation = 'source-over';
+  /* railway */
+  const ry = S.rail.y; wpoly(g, [[0, ry - 1.4], [MW, ry - 1.4], [MW, ry + 1.4], [0, ry + 1.4]], '#8a8378'); for (let x = 0; x < MW; x += 3) wpoly(g, [[x, ry - 1.2], [x + 1.2, ry - 1.2], [x + 1.2, ry + 1.2], [x, ry + 1.2]], '#5a4a3a'); g.strokeStyle = '#6b6b6b'; g.lineWidth = 0.5; for (const off of [-0.6, 0.6]){ const a = P(0, ry + off, 0), b = P(MW, ry + off, 0); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+  /* road */
+  for (let i = 1; i < S.road.length; i++){ const a = S.road[i-1], b = S.road[i], hz = a[1] === b[1]; const x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]);
+    const q = hz ? [[x0 - 3.5, y0 - 3.5], [x1 + 3.5, y0 - 3.5], [x1 + 3.5, y0 + 3.5], [x0 - 3.5, y0 + 3.5]] : [[x0 - 3.5, y0 - 3.5], [x0 + 3.5, y0 - 3.5], [x0 + 3.5, y1 + 3.5], [x0 - 3.5, y1 + 3.5]]; wpoly(g, q, '#6a7078', 'rgba(0,0,0,.35)', 0.5);
+    g.strokeStyle = '#e8e8e8'; g.lineWidth = 0.5; g.setLineDash([2.5, 2.5]); g.beginPath(); const s = P(a[0], a[1], 0), e = P(b[0], b[1], 0); g.moveTo(s[0], s[1]); g.lineTo(e[0], e[1]); g.stroke(); g.setLineDash([]); }
+  for (const v of S.vil){ for (const sy of v.streets) wpoly(g, [[v.x - v.w/2 + 1, sy - 1], [v.x + v.w/2 - 1, sy - 1], [v.x + v.w/2 - 1, sy + 1.2], [v.x - v.w/2 + 1, sy + 1.2]], '#9a9a94'); wpoly(g, [[v.x - 1.2, v.y - v.h/2 + 4], [v.x + 1.2, v.y - v.h/2 + 4], [v.x + 1.2, v.y + v.h/2 + 9], [v.x - 1.2, v.y + v.h/2 + 9]], '#9a9a94'); }
+  /* grid lines */
+  for (const l of S.lines){ if (l.y > yc + 0.1) continue; const a = P(0, l.y, 0), b = P(MW, l.y, 0); g.strokeStyle = l.legacy ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.55)'; g.lineWidth = 0.6; g.setLineDash(l.legacy ? [2, 1.5] : [0.8, 2.5]); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.setLineDash([]); }
+  const pk = S.paddock; g.strokeStyle = '#7a5a3a'; g.lineWidth = 0.5; { const c = [[pk.x, pk.y], [pk.x + pk.w, pk.y], [pk.x + pk.w, pk.y + pk.h], [pk.x, pk.y + pk.h]]; for (let i = 0; i < 4; i++){ const a = c[i], b = c[(i+1)%4]; for (let f = 0; f <= 1; f += 0.12){ const px = a[0] + (b[0]-a[0])*f, py = a[1] + (b[1]-a[1])*f; const q = P(px, py, 0), q2 = P(px, py, 2); g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(q2[0], q2[1]); g.stroke(); } const a2 = P(a[0], a[1], 1.5), b2 = P(b[0], b[1], 1.5); g.beginPath(); g.moveTo(a2[0], a2[1]); g.lineTo(b2[0], b2[1]); g.stroke(); } }
+  g.restore();
+  /* block top edge and the cut lip */
+  wpoly(g, [[0, 0, 0], [MW, 0, 0], [MW, yc, 0], [0, yc, 0]], null, 'rgba(0,0,0,.5)', 0.6);
+}
+function faceTransform(g, yc){ // maps section canvas (u, v) onto the front face at y = yc; 2x overall
+  const a = MW/SW, b = 0.5*MW/SW, c = 0, d = D/UGH, e = OX - yc*KX, f = OY + yc*KY; g.setTransform(2*a, 2*b, 2*c, 2*d, 2*e, 2*f); }
+function drawMap(g, t){
+  const yc = cutLine !== null ? S.lines[cutLine].y : MH, key = S.season + ':' + yc;
+  if (!baseMap || baseKey !== key){ baseMap = document.createElement('canvas'); baseMap.width = CW*2; baseMap.height = CH*2; baseKey = key; drawBase(yc); }
+  g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false; g.clearRect(0, 0, CW*2, CH*2);
+  g.save(); g.setTransform(2, 0, 0, 2, 0, 0); g.translate(4, 6); g.filter = 'blur(5px)'; wpoly(g, [[0, 0, -D], [MW, 0, -D], [MW, yc, -D], [0, yc, -D]], 'rgba(20,30,40,.22)'); g.restore();
+  /* front face: the section of the cut line (or the southernmost line when nothing is selected) */
+  const li = cutLine !== null ? cutLine : S.lines.length - 1; flushKnown(li);
+  g.setTransform(2, 0, 0, 2, 0, 0); if (shake > 0.02){ g.translate(((Math.random()-.5)*4*shake)|0, ((Math.random()-.5)*4*shake)|0); shake *= 0.92; } else shake = 0;
+  g.drawImage(baseMap, 0, 0, CW, CH);
+  faceTransform(g, yc); g.drawImage(showPaper ? paperCanvas(li) : knownCanvas(li), 0, 0);
+  if (!showPaper){ for (const o of S.obj) if (o.line === li && o.well){ let p = {x:sx(o.x), d:0}; const pts = o.well.slice(); if (o.drilling) pts.push(o.drilling.pos); for (let i = 0; i < pts.length; i++){ const q = pts[i]; g.strokeStyle = (i < o.well.length ? o.well[i].c : o.drilling.cased) ? '#9aa0aa' : '#b8794b'; g.lineWidth = 5; g.beginPath(); g.moveTo(p.x, p.d); g.lineTo(q.x, q.d); g.stroke(); g.strokeStyle = '#0c1020'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(p.x, p.d); g.lineTo(q.x, q.d); g.stroke(); p = q; } }
+    for (const q of S.quakes) if (q.line === li){ g.strokeStyle = '#111'; g.lineWidth = 1.5; g.beginPath(); g.arc(q.x, q.d, 6, 0, 7); g.stroke(); } }
+  g.setTransform(2, 0, 0, 2, 0, 0); wpoly(g, [[0, yc, 0], [MW, yc, 0], [MW, yc, -D], [0, yc, -D]], null, 'rgba(0,0,0,.6)', 0.7);
+  for (let d = 100; d < UGH; d += 100){ const p = P(0, yc, -d*D/UGH); T(g, (d*10).toLocaleString('en-US') + ' m', p[0] - 2, p[1] + 2, '#15181c', 5.5, 'right'); }
+  /* surface drawables, sorted by depth */
+  const mo = S.season, winter = mo >= 11 || mo <= 1, autumn = mo === 9 || mo === 10, draws = [], K = (x, y) => x + y;
+  for (const l of S.lines){ if (l.y > yc + 0.1) continue; for (const sg of l.segs){ const a = P(sg.x0, l.y, 0), b = P(sg.x1, l.y, 0); g.strokeStyle = sg.active ? '#f2c230' : sg.pass >= 3 ? '#1c2225' : '#2f3f8a'; g.lineWidth = 1; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+    const p = P(2, l.y, 0); T(g, l.name, p[0] - 3, p[1] + 2, '#15181c', 6, 'right', 'rgba(255,255,255,.9)'); }
+  for (const p of S.pipes){ const on = S.t >= p.ready; g.strokeStyle = on ? '#c8571b' : 'rgba(200,87,27,.5)'; g.lineWidth = 1.2; g.beginPath(); let first = true; for (let s = p.s0; s <= p.s1 + 0.01; s += 2){ const q = roadPos(Math.min(s, p.s1)); if (q.y > yc) continue; const sp = P(q.x - q.dy*2.5, q.y + q.dx*2.5, 0); first ? g.moveTo(sp[0], sp[1]) : g.lineTo(sp[0], sp[1]); first = false; } g.stroke();
+    for (const end of [p.a, p.b]){ if (end[1] > yc) continue; const rs = roadS(end[0], end[1]), q = roadPos(rs.s), a = P(end[0], end[1], 0), b = P(q.x - q.dy*2.5, q.y + q.dx*2.5, 0); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); } }
+  for (const l of S.plines){ const on = S.t >= l.ready; let prev = null; for (let s = l.s0; s <= l.s1; s += 12){ const q = roadPos(s); if (q.y > yc) continue; const base = [q.x - q.dy*4.5, q.y + q.dx*4.5]; const a = P(base[0], base[1], 0), b = P(base[0], base[1], 9); g.strokeStyle = on ? '#3a3f47' : '#8a8f93'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); const c = P(base[0] - 1.2, base[1], 8), d2 = P(base[0] + 1.2, base[1], 8); g.beginPath(); g.moveTo(c[0], c[1]); g.lineTo(d2[0], d2[1]); g.stroke(); if (prev && on){ g.strokeStyle = 'rgba(40,40,50,.6)'; g.lineWidth = 0.4; g.beginPath(); g.moveTo(prev[0], prev[1]); g.lineTo(b[0], b[1]); g.stroke(); } prev = b; } }
+  { const gx = S.gridX, gy = S.road[S.road.length-1][1] - 8; if (gy <= yc){ const a = P(gx - 2, gy, 0), b = P(gx - 2, gy, 12), c = P(gx + 2, gy, 0), d2 = P(gx + 2, gy, 12); g.strokeStyle = '#3a3f47'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.moveTo(c[0], c[1]); g.lineTo(d2[0], d2[1]); g.moveTo(b[0] - 2, b[1] + 1); g.lineTo(d2[0] + 2, d2[1] + 1); g.stroke(); T(g, 'GRID', b[0] + 2, b[1] - 1, '#15181c', 5.5, 'center', 'rgba(255,255,255,.9)'); } }
+  const st = S.rail.station; if (S.rail.y + 4 <= yc){ draws.push({k:K(st, S.rail.y + 3), f:() => { box(g, st - 7, S.rail.y + 2.2, 14, 3.5, 3, '#e9e3d3', {top:'#7a4a3a'}); const p = P(st, S.rail.y + 6.5, 0); T(g, 'GARE', p[0], p[1] + 5, '#3a3028', 5, 'center'); }}); }
+  for (const v of S.vil){ if (v.y - v.h/2 > yc) continue; for (const h of v.houses) if (h.y <= yc) draws.push({k:K(h.x + 4, h.y + 3), f:() => house(g, h.x, h.y, h.k, v.town && h.big, winter)}); if (v.town) draws.push({k:K(v.x, v.y + 4), f:() => church(g, v.x - 5, v.y, winter)}); else if (v.chapel) draws.push({k:K(v.x, v.y + 2), f:() => chapel(g, v.x - 3, v.y - 1, winter)});
+    if (v.spring.y <= yc) draws.push({k:K(v.spring.x, v.spring.y), f:() => { box(g, v.spring.x - 1.5, v.spring.y - 1.5, 3, 3, 1, '#9aa0aa', {top:v.spring.polluted ? PAL.mud : '#3d7fbf'}); }});
+    draws.push({k:K(v.x, v.y + v.h/2) + 900, f:() => { const p = P(v.x, v.y + v.h/2 + 3, 0); T(g, v.name, p[0], p[1] + 6, '#15181c', 7, 'center', 'rgba(255,255,255,.9)'); }});
+    if (v.festUntil > S.t) draws.push({k:K(v.x + v.w/2 + 8, v.y + v.h/2 + 4), f:() => festSprite(g, v.x + v.w/2 + 8, v.y + v.h/2 + 4, t)});
+    const signs = v.mood < 50 ? Math.min(5, ((50 - v.mood)/8)|0) : 0;
+    for (let i = 0; i < 3 + signs; i++){ const ph = t*0.5 + i*1.3, px = v.x - v.w/2 + 4 + ((Math.sin(ph)*0.5 + 0.5)*(v.w - 8)), py = (v.streets[i % v.streets.length] || v.y) + 0.3; if (py > yc) continue; draws.push({k:K(px, py) + 0.5, f:() => person(g, px, py, t + i, ['#2f4f7a','#3f7a4a','#8c7a4a','#8a2b2b','#e9e3d3'][i%5], i < signs ? (i%2 ? 'NON' : 'STOP') : null)}); }
+    if (v.heat === 'on') for (const h of v.houses.slice(0, 3)) draws.push({k:K(h.x + 4, h.y + 3) + 0.1, f:() => { const p = P(h.x + 7, h.y + 1, 8); R(g, '#f2f2f2', p[0], p[1] - (((t*6)|0)%3), 1.5, 1.5); }});
   }
-
-  function maybeCreateHotWaterPlantImmediate(cx,cy){
-    if (plants.length >= P.PLANT_MAX) return;
-    for (const pl of plants){
-      if (pl.kind==="HOTW" && pl.strikeCX===cx && pl.strikeCY===cy) return;
-    }
-    const depthM = Math.max(0, Math.floor((cToW(cy) - P.SURFACE_Y_PX) * 0.6));
-    const power0 = P.HOTW_POWER_BASE + depthM * P.HOTW_POWER_DEPTH_SCALE;
-    plants.push({ kind:"HOTW", name:"Hot Water Plant", power0, decayK:P.HOTW_DECAY_K, pumpedS:0, componentId: undefined, strikeCX:cx, strikeCY:cy });
-    overlay("HOT WATER PLANT ONLINE", 1.1);
+  for (const tr of S.trees) if (tr.y <= yc) draws.push({k:K(tr.x, tr.y), f:() => tree(g, tr.x, tr.y, 1, tr.s === 2, winter, autumn)});
+  const pk = S.paddock; if (pk.y + pk.h <= yc) draws.push({k:K(pk.x + 10, pk.y + 8), f:() => { const hx = pk.x + 6 + 2*Math.sin(t), hy = pk.y + 6; box(g, hx, hy, 4, 1.6, 2.4, '#5a3d2a'); box(g, hx + 3.5, hy + 0.2, 1.4, 1.2, 3.6, '#5a3d2a'); box(g, pk.x + 16, pk.y + 9, 4, 1.6, 2.4, '#4a3020'); box(g, pk.x + 19.5, pk.y + 9.2, 1.4, 1.2, 3.6, '#4a3020'); }});
+  for (const o of S.obj) if (o.y <= yc && !(!o.arrived && ['tractor','suit','police','riot','activists'].includes(o.type))) draws.push({k:K(o.x, o.y), f:() => obj(g, o, t)});
+  for (const e of S.ents){ if (e.k === 'heli') continue;
+    if (e.k === 'train'){ if (S.rail.y <= yc) draws.push({k:K(e.x, S.rail.y), f:() => train(g, e.x, S.rail.y, t)}); continue; }
+    if (e.k === 'vib'){ if (e.y <= yc) draws.push({k:K(e.x, e.y + 2), f:() => vehicle(g, 'vib', e.x, e.y + 2.5, 'x', null, S.lines[e.line].segs.some(s => s.id === e.seg && s.arrived) ? ((t*8)|0) : 0)}); continue; }
+    if (e.k === 'marcher'){ const q = roadPos(e.s); if (q.y > yc) continue; draws.push({k:K(q.x, q.y + 2), f:() => person(g, q.x, q.y + 2, e.anim, '#8a2b2b', e.sign)}); continue; }
+    if (e.parked){ if (e.py <= yc) draws.push({k:K(e.px, e.py), f:() => vehicle(g, e.k, e.px, e.py, e.pdir, e.col)}); continue; }
+    const q = roadPos(e.s); if (q.y > yc) continue; const off = (e.lane || 1)*1.7; const vx = q.x - q.dy*off, vy = q.y + q.dx*off; draws.push({k:K(vx, vy), f:() => vehicle(g, e.k, vx, vy, Math.abs(q.dx) > Math.abs(q.dy) ? 'x' : 'y', e.col, e.anim)}); }
+  draws.sort((a,b) => a.k - b.k); for (const d of draws) d.f();
+  for (const e of S.ents) if (e.k === 'heli'){ const p = P(e.x, 60, 30); R(g, 'rgba(0,0,0,.12)', p[0] - 3, p[1] + 30, 10, 2); R(g, '#3b3f45', p[0], p[1], 8, 3); R(g, '#3b3f45', p[0] - 4, p[1] + 1, 4, 1); R(g, '#3b3f45', p[0] - 3 + (((t*30)|0)%2), p[1] - 2, 13, 0.8); }
+  /* interaction overlays */
+  if (anchor && tool === 'survey' && hover && hover.x !== undefined){ const l = S.lines[anchor.line]; const a = P(Math.min(anchor.x, hover.x), l.y, 0), b = P(Math.max(anchor.x, hover.x), l.y, 0); g.strokeStyle = 'rgba(242,194,48,.9)'; g.lineWidth = 2; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+  if (anchor && anchor.id){ const a = byId(anchor.id); if (a){ const p = P(a.x, a.y, 26); R(g, '#b3261e', p[0] - 4, p[1], 8, 1); } }
+  if (hover && hover.x !== undefined && tool){ const l = SITE[tool] ? lineAt(hover.y) : null; const hx = hover.x, hy = l ? l.y : hover.y; wpoly(g, [[hx - 4, hy - 4], [hx + 4, hy - 4], [hx + 4, hy + 4], [hx - 4, hy + 4]], null, l ? '#f2c230' : 'rgba(255,255,255,.9)', 0.8); }
+  if (hover && hover.x !== undefined && !tool){ const l = lineAt(hover.y); if (l && l.y <= yc + 0.1){ const a = P(0, l.y, 0), b = P(MW, l.y, 0); g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); } }
+  if (cutLine !== null){ const l = S.lines[cutLine], a = P(0, l.y, 0), b = P(MW, l.y, 0); g.strokeStyle = '#1f5fa8'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); const p = P(MW, l.y, -D - 2); T(g, 'Line ' + l.name + (showPaper ? ' · 1970s paper' : '') + ' · click the face to open', p[0], p[1] + 9, '#15181c', 6.5, 'right', 'rgba(255,255,255,.9)'); }
+  if (sel && sel.id){ const o = byId(sel.id); if (o){ const p = P(o.x, o.y, 0); g.strokeStyle = '#b3261e'; g.lineWidth = 0.8; g.strokeRect(p[0] - 8, p[1] - 26, 16, 30); } }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+}
+/* front-view sprites for the flat section's surface strip */
+function frontHouse(g, x, y, k, big, snow){ const w = big ? 11 : 8, wh = 4, rh = big ? 5 : 4; R(g, '#3a3028', x - 0.5, y - wh - 0.5, w + 1, wh + 1); R(g, ['#f2f2ee','#e6e4dc','#f6f3ea','#dcdad2'][k], x, y - wh, w, wh); R(g, '#5f6a73', x + 1.5, y - 2.8, 1.3, 1.3); R(g, '#5f6a73', x + w - 3, y - 2.8, 1.3, 1.3); g.fillStyle = snow ? '#f4f6f8' : ['#a33d33','#7d4d3c','#b04a3a','#6e5a4d'][k]; g.beginPath(); g.moveTo(x - 1.5, y - wh); g.lineTo(x + w + 1.5, y - wh); g.lineTo(x + w/2, y - wh - rh); g.closePath(); g.fill(); g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = 0.5; g.stroke(); }
+function frontObj(g, o, t){ const x = o.x, y = o.y; if (RIG[o.type] || o.type === 'testrig'){ const h = o.type === 'testrig' ? 10 : o.type === 'light' ? 15 : 22, c = o.burnt ? '#1c1f24' : '#3a3f47'; R(g, '#6b7278', x - 4.5, y - 2.5, 9, 2.5); g.strokeStyle = c; g.lineWidth = 0.8; g.beginPath(); g.moveTo(x - 3.5, y - 2.5); g.lineTo(x - 1.3, y - h); g.moveTo(x + 3.5, y - 2.5); g.lineTo(x + 1.3, y - h); g.stroke(); g.lineWidth = 0.45; for (let z = 4; z < h; z += 3){ const f = 3.5 - 2.2*(z/h); g.beginPath(); g.moveTo(x - f, y - z); g.lineTo(x + f, y - z); g.stroke(); } R(g, o.burnt ? '#1c1f24' : '#e0a93a', x - 2, y - h - 1, 4, 1); if (o.drilling){ R(g, '#9aa0aa', x + 3, y - h - 3 - ((t*6)%4), 1.6, 1.6); } }
+  else if (o.type === 'station'){ R(g, '#3a3028', x - 4.5, y - 5.5, 10, 6); R(g, '#b35a3a', x - 4, y - 5, 9, 5); R(g, '#555', x + 2.5, y - 11, 1.5, 6); if (o.inc > 0) R(g, '#f2f2f2', x + 2.5, y - 14, 2.5, 2); }
+  else if (o.type === 'plant'){ R(g, '#3a3f47', x - 7, y - 6.5, 11, 7); R(g, '#7b848c', x - 6.5, y - 6, 10, 6); R(g, '#d3d8dc', x + 3, y - 15, 5, 15); R(g, 'rgba(0,0,0,.15)', x + 7, y - 15, 1, 15); if (o.on && o.stim >= 0) R(g, '#f2f2f2', x + 3.5, y - 18, 4, 2.5); } }
+function frontVib(g, x, y, anim){ R(g, '#1c1f24', x - 5.5, y - 5.5, 11, 6); R(g, '#2f3f8a', x - 5, y - 5, 10, 5); R(g, '#9fc3dc', x + 2, y - 4.5, 2, 2); R(g, '#9aa0aa', x - 3, y - 2.5, 5, 1.5); R(g, '#2b2b2b', x - 4, y, 2, 1); R(g, '#2b2b2b', x + 2, y, 2, 1); if (anim) R(g, '#f2f2f2', x - 3 + (anim % 2)*0.5, y + 1.2, 6, 0.6); }
+/* ================================================================== section view: paper, tomography, truth */
+function geoCanvas(li){
+  const key = li + 'g'; if (CANV.has(key)) return CANV.get(key);
+  const c = document.createElement('canvas'); c.width = SW; c.height = UGH; const g = c.getContext('2d'), img = g.createImageData(SW, UGH), p = img.data, geo = geoFor(li);
+  const cols = RCOL.map(pair => pair.map(h => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)]));
+  for (let d = 0; d < UGH; d++) for (let x = 0; x < SW; x++){
+    const t = geo[d*SW + x], c0 = cols[t][(x + d) & 1], i = (d*SW + x)*4; let r = c0[0], gg = c0[1], b = c0[2];
+    if (t === ROCK.HOT && ((x*7 + d*11) & 7) === 0){ r = 255; gg = 155; b = 61; }
+    if ((t === ROCK.WATER || t === ROCK.WARM) && ((x*5 + d*9) & 7) === 0){ r = 127; gg = 196; b = 255; }
+    if (t === ROCK.FAULT && ((x + d*3) & 5) === 0){ r = 27; gg = 11; b = 11; }
+    if (t === ROCK.GRANITE && ((x % 8 === 3 && d % 8 >= 1 && d % 8 <= 5) || (d % 8 === 3 && x % 8 >= 1 && x % 8 <= 5))){ r += 45; gg += 45; b += 50; }
+    if (t === ROCK.LIME && x % 6 === 0 && d % 6 === 3){ r -= 40; gg -= 30; b -= 20; }
+    if (t === ROCK.MARL && d % 5 === 0 && x % 8 < 5){ r -= 25; gg -= 25; b -= 25; }
+    if (t === ROCK.HARD && (x + d) % 6 === 0){ r += 25; gg += 25; b += 25; }
+    p[i] = r; p[i+1] = gg; p[i+2] = b; p[i+3] = 255;
   }
-
-  // ---------- drilling (program only) ----------
-  function drillAtCell(cx,cy, dt, costDiscount){
-    const t = getCellType(cx,cy);
-    const p = cellDrillParams(t);
-    if (p.rate <= 0) return {drilled:false, carvedNow:false, blocked:true};
-
-    const k = key(cx,cy);
-    const cur = prog.get(k) || 0;
-
-    const dp = p.rate * P.PROG_SPEED_MULT * dt;
-    const next = cur + dp;
-
-    const costPerCell = P.DRILL_COST_BASE * p.costMult * (1 - (costDiscount||0));
-    const cost = costPerCell * dp;
-
-    if (state.cash <= 0) return {drilled:false, carvedNow:false, blocked:false};
-
-    if (state.cash < cost){
-      const frac = state.cash / cost;
-      prog.set(k, cur + dp * frac);
-      state.cash = 0;
-      if (t === TYPE.UNSTABLE) state.seismic += P.SEIS_UNSTABLE_PER_SEC * dt * frac;
-      return {drilled:true, carvedNow:false, blocked:false};
-    }
-
-    state.cash -= cost;
-    prog.set(k, next);
-
-    if (t === TYPE.UNSTABLE){
-      state.seismic += P.SEIS_UNSTABLE_PER_SEC * dt;
-    }
-
-    if (next >= 1.0){
-      carved.add(k);
-      prog.delete(k);
-
-      if (t === TYPE.COLD){
-        state.protest += P.PROT_ON_COLD_WATER_HIT;
-        overlay("COLD GROUNDWATER STRIKE!", 1.2);
-        setStrike("COLD WATER", cx, cy, "cold");
-      } else if (t === TYPE.HOT){
-        state.protest += P.PROT_ON_HOT_WATER_HIT;
-        overlay("HOT WATER STRIKE!", 1.2);
-        setStrike("HOT WATER", cx, cy, "hot");
-        maybeCreateHotWaterPlantImmediate(cx,cy);
-      } else if (t === TYPE.HDR){
-        setStrike("HDR", cx, cy, "hdr");
-      } else if (t === TYPE.UNSTABLE){
-        state.seismic += P.SEIS_UNSTABLE_SPIKE_ON_BREAK;
-        overlay("UNSTABLE ROCK", 0.9);
-        setStrike("UNSTABLE", cx, cy, "unstable");
-      } else if (t === TYPE.HARD){
-        setStrike("HARD ROCK", cx, cy, "hard");
-      } else {
-        setStrike("ROCK", cx, cy, "");
-      }
-
-      return {drilled:true, carvedNow:true, blocked:false};
-    }
-
-    return {drilled:true, carvedNow:false, blocked:false};
+  g.putImageData(img, 0, 0); CANV.set(key, c); return c;
+}
+function paperCanvas(li){ // the 1970s section: variable-area wiggle traces on yellowed paper, two-way time axis, pencil horizons, gaps
+  const key = li + 'p'; if (CANV.has(key)) return CANV.get(key);
+  const c = document.createElement('canvas'); c.width = SW; c.height = UGH; const g = c.getContext('2d'), l = S.lines[li], seed = S.seed;
+  g.fillStyle = '#efe3c2'; g.fillRect(0, 0, SW, UGH);
+  for (let i = 0; i < 1400; i++){ const x = hash(i, 1, li, seed)*SW, y = hash(i, 2, li, seed)*UGH; g.fillStyle = 'rgba(120,90,40,' + (0.05 + hash(i,3,li,seed)*0.1) + ')'; g.fillRect(x, y, 1 + hash(i,4,li,seed)*2, 1); }
+  g.fillStyle = 'rgba(90,70,30,.25)'; for (let d = 0; d < UGH; d += 43){ g.fillRect(0, d, SW, 1); }
+  if (!l.legacy){ g.fillStyle = '#5a4a2a'; g.font = '16px "Pixelify Sans"'; g.textAlign = 'center'; g.fillText('LINE ' + l.name + ' WAS NEVER SHOT', SW/2, 120); g.font = '11px "Pixelify Sans"'; g.fillText('Petroleum campaign 1971-79: no coverage on this profile.', SW/2, 140); g.fillText('Commission a survey to see anything here.', SW/2, 156); CANV.set(key, c); return c; }
+  /* wiggle traces: reflectivity from velocity contrasts, a short wavelet, variable-area fill */
+  const wav = [0.15, 0.55, 1, 0.55, 0.15, -0.3, -0.45, -0.3];
+  for (let x = 4; x < SW; x += 4){
+    const refl = new Float32Array(UGH); for (let d = 1; d < UGH - 1; d++) refl[d] = (VEL[rockL(li, x, d + 1)] - VEL[rockL(li, x, d - 1)])*0.45 + (hash(x, d, li + 50, seed) - 0.5)*0.5;
+    const amp = new Float32Array(UGH); for (let d = 0; d < UGH; d++){ let s = 0; for (let k = 0; k < wav.length; k++){ const dd = d - k + 3; if (dd >= 0 && dd < UGH) s += refl[dd]*wav[k]; } amp[d] = clamp(s*(1 + d/400), -3.5, 3.5); }
+    g.fillStyle = '#1c1a14';
+    for (let d = 0; d < UGH; d++){ const a = amp[d]; if (a > 0.15) g.fillRect(x, d, Math.max(1, a*1.4), 1); else if (Math.abs(a) <= 0.15 && d % 3 === 0) g.fillRect(x, d, 1, 1); else g.fillRect(x + a*1.1, d, 1, 1); }
   }
-
-  function canMoveIntoCell(cx,cy){
-    const wx = cToW(cx) + P.CELL*0.5;
-    if (!inWorldX(wx)) return false;
-    const wy = cToW(cy) + P.CELL*0.5;
-    if (wy < P.SURFACE_Y_PX) return true;
-    return isCarved(cx,cy);
+  /* pencil horizons: the 1970s interpreter's guesses */
+  const horizon = (col, fn, label) => { g.strokeStyle = col; g.lineWidth = 1.5; g.beginPath(); for (let x = 0; x < SW; x += 6){ const y = fn(x); x === 0 ? g.moveTo(x, y) : g.lineTo(x, y); } g.stroke(); g.fillStyle = col; g.font = '10px "Pixelify Sans"'; g.textAlign = 'left'; g.fillText(label, 8, fn(8) - 4); };
+  horizon('#b3261e', x => 72 + 14*vn(x/90, li*7.3/3, 2, seed) + 6*Math.sin(x/37), 'Top Keuper?');
+  horizon('#1f4ea3', x => 335 + 45*vn(x/150, li*7.3/4, 7, seed) + 10*Math.sin(x/53) - 12, 'Basement (?)');
+  g.strokeStyle = '#1c1a14'; g.setLineDash([3, 3]); g.lineWidth = 1; for (let i = 0; i < 2; i++){ const x0 = 150 + i*300 + hash(i, 8, li, seed)*120; g.beginPath(); g.moveTo(x0, 40); g.lineTo(x0 + 60, 420); g.stroke(); } g.setLineDash([]);
+  /* gaps: torn or never recorded */
+  for (const gp of l.gaps){ g.fillStyle = '#f4ecd6'; g.fillRect(gp[0], 0, gp[1] - gp[0], UGH); g.strokeStyle = '#8a7a55'; g.setLineDash([2, 4]); g.beginPath(); g.moveTo(gp[0] + .5, 0); g.lineTo(gp[0] + .5, UGH); g.moveTo(gp[1] - .5, 0); g.lineTo(gp[1] - .5, UGH); g.stroke(); g.setLineDash([]); g.save(); g.translate((gp[0] + gp[1])/2, 200); g.rotate(-Math.PI/2); g.fillStyle = '#8a7a55'; g.font = '11px "Pixelify Sans"'; g.textAlign = 'center'; g.fillText('NO DATA', 0, 4); g.restore(); }
+  /* time axis and a coffee ring */
+  g.fillStyle = '#5a4a2a'; g.font = '9px "Pixelify Sans"'; g.textAlign = 'left'; for (let d = 0; d < UGH; d += 87){ g.fillRect(0, d, 6, 1); g.fillText((d/87*0.5).toFixed(1) + ' s', 8, d + 9); }
+  g.strokeStyle = 'rgba(120,70,20,.35)'; g.lineWidth = 3; g.beginPath(); g.arc(SW - 120 + hash(li,1,1,seed)*60, 300 + hash(li,2,2,seed)*120, 26, 0, 7); g.stroke();
+  g.fillStyle = '#5a4a2a'; g.font = '10px "Pixelify Sans"'; g.textAlign = 'right'; g.fillText('LINE ' + l.name + '  ·  SEAG 197' + (li % 9) + '  ·  VIBROSEIS 12-FOLD  ·  TWT (s)', SW - 8, UGH - 8);
+  CANV.set(key, c); return c;
+}
+function knownCanvas(li){ const key = li + 'k'; if (!CANV.has(key)){ const c = document.createElement('canvas'); c.width = SW; c.height = UGH; CANV.set(key, c); const d = dirtyFor(li); for (let i = 0; i < K_COLS*K_ROWS; i++) d.add(i); } return CANV.get(key); }
+function flushKnown(li){
+  const dirty = dirtyFor(li); if (!dirty.size) return; const g = knownCanvas(li).getContext('2d'), kn = knFor(li), geo = geoCanvas(li), paper = paperCanvas(li), vel = velFor(li); let n = 0;
+  for (const i of dirty){ if (n++ > 600) break; dirty.delete(i);
+    const cx = i % K_COLS, cy = (i / K_COLS) | 0, lv = kn[i], x = cx*8, y = cy*8;
+    if (lv >= 4){ g.drawImage(geo, x, y, 8, 8, x, y, 8, 8); continue; }
+    if (lv <= 1){ g.drawImage(paper, x, y, 8, 8, x, y, 8, 8); if (lv === 0 || !S.lines[li].legacy){ g.fillStyle = 'rgba(11,15,31,.55)'; g.fillRect(x, y, 8, 8); } continue; }
+    const grid = lv === 2 ? vel.v2 : vel.v3;
+    for (let py = 0; py < 8; py += 2) for (let px = 0; px < 8; px += 2){
+      const v = velAt(grid, cx + (px + 1)/8 - 0.5, cy + (py + 1)/8 - 0.5); g.fillStyle = rainbow(v); g.fillRect(x + px, y + py, 2, 2);
+      if (Math.abs(v) > 5.5 && ((x + px + y + py) % 8) < 2){ g.fillStyle = 'rgba(40,10,10,.55)'; g.fillRect(x + px, y + py, 2, 1); }
+    }
+    if (lv === 3){ let f = 0; for (let d = 0; d < 8; d += 2) for (let xx = 0; xx < 8; xx += 2) if (rockL(li, x + xx, y + d) === ROCK.FAULT) f++; if (f >= 4){ g.fillStyle = '#ff2a2a'; g.fillRect(x + 3, y, 2, 8); } }
   }
-
-  function moveToward(tx, ty, speed, dt){
-    const dx = tx - player.x;
-    const dy = ty - player.y;
-    const dist = Math.hypot(dx,dy);
-    if (dist < 0.001) return;
-    const step = Math.min(dist, speed*dt);
-    const nx = player.x + (dx/dist)*step;
-    const ny = player.y + (dy/dist)*step;
-    if (canStand(nx, player.y)) player.x = nx;
-    if (canStand(player.x, ny)) player.y = ny;
+}
+function bore(g, p, q, cased, y0){ const n = Math.max(1, Math.hypot(q.x - p.x, q.d - p.d)|0); for (let i = 0; i <= n; i++){ const x = (p.x + (q.x - p.x)*i/n)|0, y = (y0 + p.d + (q.d - p.d)*i/n)|0; R(g, cased ? '#9aa0aa' : PAL.bore, x - 2, y, 5, 1); R(g, ((x + y) & 1) ? PAL.tun1 : PAL.tun2, x - 1, y, 3, 1); } }
+function drawSection(g, t){
+  const li = line, l = S.lines[li], cy = cam.y|0; flushKnown(li); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
+  g.save(); if (shake > 0.02){ g.translate(((Math.random()-.5)*6*shake)|0, ((Math.random()-.5)*6*shake)|0); shake *= 0.92; } else shake = 0;
+  g.translate(0, -cy);
+  /* surface strip */
+  const winter = S.season >= 11 || S.season <= 1;
+  for (let y = 0; y < SURF; y++){ g.fillStyle = y < 18 ? PAL.sky1 : y < 34 ? PAL.sky2 : PAL.sky3; g.fillRect(0, y, SW, 1); }
+  for (let x = 0; x < SW; x += 2){ const yy = SURF - 22 - 8*(0.5 + 0.5*Math.sin((x + 40)*0.012)); R(g, winter ? '#dfeaf2' : PAL.hillFar, x, yy, 2, SURF - yy); } for (let x = 0; x < SW; x += 2){ const yy = SURF - 14 - 6*(0.5 + 0.5*Math.sin((x + 10)*0.03)); R(g, winter ? '#c9dbe8' : PAL.hillNear, x, yy, 2, SURF - yy); }
+  R(g, winter ? '#eef4fb' : PAL.grass1, 0, SURF - 8, SW, 8); R(g, PAL.grass2, 0, SURF - 1, SW, 1);
+  g.save(); g.scale(1.5, 1.5); const fx = x => sx(x)/1.5;            // map x -> strip x, so sprites sit above their wells
+  for (const v of S.vil){ const dy = Math.abs(v.y - l.y); if (dy > 45) continue; g.globalAlpha = dy < 12 ? 1 : 0.45; for (let i = 0; i < 3; i++) frontHouse(g, fx(v.x) + (i - 1)*v.w/2 - 4, SURF/1.5 - 5 + (i%2), i, v.town, winter); T(g, v.name, fx(v.x), SURF/1.5 - 16, '#0b1b2b', 6, 'center'); g.globalAlpha = 1; }
+  for (const o of S.obj) if (o.line === li && SITE[o.type]) frontObj(g, Object.assign({}, o, {x:fx(o.x), y:SURF/1.5 - 5}), t);
+  for (const e of S.ents) if (e.k === 'vib' && e.line === li) frontVib(g, fx(e.x), SURF/1.5 - 4, ((t*8)|0));
+  g.restore();
+  /* underground */
+  if (showPaper) g.drawImage(paperCanvas(li), 0, SURF); else g.drawImage(knownCanvas(li), 0, SURF);
+  if (!showPaper) for (const sg of l.segs) if (sg.active && sg.arrived){ const x = sx(sg.x0 + Math.min(sg.prog, sg.x1 - sg.x0)); R(g, 'rgba(255,224,106,.6)', x - 1, SURF, 3, UGH); }
+  if (!showPaper){
+    for (const o of S.obj) if (o.line === li && o.well){
+      let p = {x:sx(o.x), d:0}; const pts = o.well.slice(); if (o.drilling) pts.push(o.drilling.pos);
+      for (let i = 0; i < pts.length; i++){ const q = pts[i]; bore(g, p, q, i < o.well.length ? o.well[i].c : o.drilling.cased, SURF); p = q; }
+      if (o.drilling){ const ph = ((t*12)|0)%2; R(g, '#ffcc55', p.x - 2 - ph, SURF + p.d - 1, 5, 3); R(g, '#e6e6e6', p.x - 1, SURF + p.d + 2, 3, 2); }
+    }
+    for (const q of S.quakes) if (q.line === li){ g.strokeStyle = '#111'; g.lineWidth = 1; g.beginPath(); g.arc(q.x, SURF + q.d, 5, 0, 7); g.stroke(); g.beginPath(); g.arc(q.x + 8, SURF + q.d + 6, 2.5, 0, 7); g.stroke(); }
+    if (plan){ const o = byId(plan.rig); if (o && o.line === li){ let p = tip(o); g.setLineDash([3,3]); g.strokeStyle = '#64c86b'; g.lineWidth = 2; g.beginPath(); g.moveTo(p.x, SURF + p.d); for (const q of plan.pts){ g.lineTo(q.x, SURF + q.d); p = q; } g.stroke();
+      if (hover && hover.ug){ const hq = {x:maxBend(o) ? hover.ug.x : p.x, d:hover.ug.d}; const e = validPoint(o, p, hq); g.strokeStyle = e ? PAL.warn : '#ffe06a'; g.beginPath(); g.moveTo(p.x, SURF + p.d); g.lineTo(hq.x, SURF + hq.d); g.stroke(); } g.setLineDash([]);
+      for (const q of plan.pts) R(g, '#64c86b', q.x - 1, SURF + q.d - 1, 3, 3); } }
   }
-
-  // Program cannot be aborted once committed.
-  function updateProgram(dt){
-    if (!state.programActive) return;
-
-    const dx = state.aimDX, dy = state.aimDY;
-    if ((dx===0 && dy===0) || dy < 0){
-      // invalid aim: treat as blocked
-      state.programActive = false;
-      state.programRemain = 0;
-      overlay("PROGRAM FAILED", 1.1);
-      return;
-    }
-
-    const cx = wToC(player.x);
-    const cy = wToC(player.y);
-    const nx = cx + dx;
-    const ny = cy + dy;
-
-    // Move through carved freely (fast)
-    if (canMoveIntoCell(nx, ny)){
-      const targetWX = cToW(nx) + P.CELL*0.5;
-      const targetWY = cToW(ny) + P.CELL*0.5;
-      moveToward(targetWX, targetWY, P.MOVE_EMPTY * 1.55, dt);
-
-      if (wToC(player.x) === nx && wToC(player.y) === ny){
-        state.programRemain -= 1;
-        if (state.programRemain <= 0){
-          state.programActive = false;
-          overlay("PROGRAM COMPLETE", 0.9);
-        }
-      }
-      return;
-    }
-
-    // Drill next cell (discounted by chosen length)
-    if (ny >= wToC(P.SURFACE_Y_PX) && !isCarved(nx, ny)){
-      const res = drillAtCell(nx, ny, dt, state.progDiscount);
-      if (res.blocked){
-        state.programActive = false;
-        state.programRemain = 0;
-        overlay("PROGRAM BLOCKED", 1.1);
-        return;
-      }
-      if (res.carvedNow){
-        const targetWX = cToW(nx) + P.CELL*0.5;
-        const targetWY = cToW(ny) + P.CELL*0.5;
-        moveToward(targetWX, targetWY, P.MOVE_EMPTY * 1.10, dt);
-
-        if (wToC(player.x) === nx && wToC(player.y) === ny){
-          state.programRemain -= 1;
-          if (state.programRemain <= 0){
-            state.programActive = false;
-            overlay("PROGRAM COMPLETE", 0.9);
-          }
-        }
-      }
-      return;
-    }
-
-    // If somehow blocked by world boundary
-    state.programActive = false;
-    state.programRemain = 0;
-    overlay("PROGRAM BLOCKED", 1.1);
+  for (let d = 50; d < UGH; d += 50){ R(g, 'rgba(255,255,255,.4)', 0, SURF + d, 12, 1); T(g, (d*10).toLocaleString('en-US') + ' m', 14, SURF + d + 3, showPaper ? '#5a4a2a' : '#fff', 9, 'left', showPaper ? null : 'rgba(11,15,31,.6)'); }
+  g.restore();
+  /* legend strip */
+  if (!showPaper){ R(g, 'rgba(255,255,255,.85)', SW - 150, SH - 16, 142, 12); for (let i = 0; i < 100; i++) R(g, rainbow(-10 + i*0.2), SW - 146 + i, SH - 13, 1, 6); T(g, 'slow', SW - 146, SH - 5, '#0b1b2b', 7); T(g, 'fast', SW - 46, SH - 5, '#0b1b2b', 7, 'right'); T(g, 'Vs', SW - 36, SH - 5, '#0b1b2b', 7); }
+  if (sel && sel.id){ const o = byId(sel.id); if (o && o.line === li){ g.strokeStyle = PAL.warn; g.lineWidth = 1; g.strokeRect(sx(o.x) - 9.5, SURF - 36.5 - cy, 19, 34); } }
+}
+/* ================================================================== HUD, palette, cards */
+function buildPalette(){
+  const pal = $('#pal'); let h = '', grp = '';
+  for (const k in DEF){ const d = DEF[k]; if (d.g !== grp){ grp = d.g; h += '<h3>' + grp + '</h3>'; }
+    h += '<button class="it" data-t="' + k + '" title="' + d.h.replace(/"/g, '&quot;') + '" aria-pressed="false"><canvas width="30" height="30"></canvas><span><b>' + d.n + '</b><small>' + (d.c || (d.cost ? fmt(d.cost) : '') + (d.up && d.cost ? ' + ' + d.up + 'k/mo' : '')) + '</small></span></button>'; }
+  pal.innerHTML = h;
+  pal.querySelectorAll('.it').forEach(b => { const g = b.querySelector('canvas').getContext('2d'), tk = b.dataset.t; g.fillStyle = PAL.grass1; g.fillRect(0, 18, 30, 12); g.save(); g.scale(1.5, 1.5);
+    const fake = {type:tk, x:0, y:0, on:true, stim:0, well:[], arrived:true, line:0};
+    g.translate(10 - (OX), 12 - OY); // centre the iso origin in the icon
+    if (tk === 'survey' || tk === 'pass2') vehicle(g, 'vib', 0, 0, 'x', null, 1); else if (tk === 'pipe'){ g.setTransform(1.5,0,0,1.5,0,0); R(g, '#c8571b', 2, 11, 16, 3); } else if (tk === 'pline'){ g.setTransform(1.5,0,0,1.5,0,0); R(g, '#2b313c', 5, 3, 1, 14); R(g, '#2b313c', 14, 3, 1, 14); R(g, '#2b313c', 2, 6, 16, 1); } else if (tk === 'fence'){ g.setTransform(1.5,0,0,1.5,0,0); for (let i = 2; i < 19; i += 3) R(g, '#555', i, 8, 1, 9); R(g, '#555', 2, 10, 17, 1); R(g, '#555', 2, 14, 17, 1); }
+    else if (tk === 'fest') festSprite(g, 0, 2, 1); else if (tk === 'heli'){ g.setTransform(1.5,0,0,1.5,0,0); R(g, '#3b3f45', 5, 9, 8, 3); R(g, '#3b3f45', 1, 10, 4, 1); R(g, '#3b3f45', 2, 7, 13, 1); } else if (tk === 'quiet'){ g.setTransform(1.5,0,0,1.5,0,0); T(g, 'SH', 3, 14, '#0b1b2b', 10); } else if (tk) obj(g, Object.assign(fake, {x:0, y:0}), 0);
+    g.restore(); });
+}
+function hud(){
+  $('#cash').textContent = fmt(S.cash); $('#cashc').className = 'chip' + (S.cash < 0 ? ' neg' : '');
+  const net = S.last.income - S.last.costs; $('#net').textContent = S.month ? (net >= 0 ? '+' : '') + fmt(net) : '—'; $('#net').className = net < 0 ? 'neg' : 'pos';
+  $('#debt').textContent = fmt(debt()); $('#date').textContent = MONTHS[S.month % 12] + ', year ' + (year() + 1);
+  $('#left').textContent = S.red ? ' · ' + S.red + '/' + CFG.RED_LIMIT + ' months in the red' : ' · ' + Math.max(0, CFG.END - S.month) + ' mo. to the vote';
+  const fc = forecast(); $('#fc').textContent = fc.toFixed(1) + '%'; $('#fcfill').style.width = fc + '%'; $('#fcfill').style.background = fc >= 50.1 ? 'var(--ok)' : 'var(--warn)';
+  $('#sp0').setAttribute('aria-pressed', S.paused); $('#sp1').setAttribute('aria-pressed', !S.paused && S.speed === 1); $('#sp4').setAttribute('aria-pressed', !S.paused && S.speed === 4); $('#mute').textContent = S.muted ? '♪̸' : '♪';
+  document.querySelectorAll('#pal .it').forEach(b => { const tk = b.dataset.t, r = b.dataset.r;
+    if (tk){ const d = DEF[tk], locked = !!(d.need && !resDone(d.need)), el = b.querySelector('small'); b.classList.toggle('off', locked || (d.cost || 0) > S.cash);
+      const base = d.c || (d.cost ? fmt(d.cost) : '') + (d.up && d.cost ? ' + ' + d.up + 'k/mo' : ''); const txt = locked ? base + ' \u00b7 needs research' : base; if (el.textContent !== txt){ el.textContent = txt; el.className = locked ? 'lock' : ''; }
+      b.setAttribute('aria-pressed', tool === tk); } });
+  const vb = $('#viewbar'); vb.hidden = view !== 'section'; if (view === 'section'){ const l = S.lines[line]; $('#linename').textContent = 'Line ' + l.name + (l.legacy ? '' : ' (no 1970s data)'); $('#togglebtn').textContent = showPaper ? 'Show survey' : '1970s paper'; $('#togglebtn').disabled = !l.legacy && !showPaper; }
+  const hint = $('#hint'); let hs = '';
+  if (plan) hs = ''; else if (tool) hs = anchor ? (tool === 'survey' ? 'Now click where the stretch ends on the same line.' : tool === 'pipe' ? 'Now click the village to heat.' : 'Now click the second deep rig.') : DEF[tool].n + ': ' + DEF[tool].h;
+  else if (view === 'map') hs = cutLine !== null ? 'The block is cut along line ' + S.lines[cutLine].name + '. Click the face to open it flat; Esc closes the cut.' : 'Click a dotted grid line to cut the block there. Click houses to hear how a village feels.';
+  if (hs){ if (hint.textContent !== hs){ hint.textContent = hs; hint.dataset.plan = ''; } hint.hidden = false; } else if (!plan) hint.hidden = true;
+  if (toastT && performance.now() > toastT){ $('#toast').hidden = true; toastT = 0; }
+  const ro = $('#readout'); const tr = sel && sel.id && byId(sel.id); if (view === 'section' && tr && tr.type === 'testrig' && tr.log){ if (ro.textContent !== tr.log) ro.textContent = tr.log; ro.hidden = false; } else ro.hidden = true;
+  if (sel) renderCard(); if (!$('#loans').hidden) renderLoans(); if (!$('#research').hidden) renderResearch(); renderSteps();
+}
+function renderCard(){
+  const el = $('#card'); let h = '<button class="x" data-a="close" aria-label="Close">×</button>';
+  if (sel.v !== undefined){
+    const v = S.vil[sel.v], top = Object.entries(v.causes).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0,3);
+    const feel = v.mood >= 65 ? 'Mostly in favour.' : v.mood >= 50 ? 'Leaning yes, quietly.' : v.mood >= 40 ? 'Sceptical.' : v.mood >= 25 ? 'Against. Signs in the windows.' : 'Furious. Tractors are being fuelled.';
+    h += '<h4>' + v.name + '</h4><div class="sub">' + (v.town ? 'Town' : 'Village') + ', ' + v.pop.toLocaleString('en-US') + ' voters</div><div><b>' + feel + '</b></div><div class="meter"><i style="width:' + v.mood + '%"></i></div><ul>';
+    h += top.length ? top.map(c => '<li>' + (c[1] < 0 ? '<span class="neg">▼</span> ' : '<span class="pos">▲</span> ') + c[0] + '</li>').join('') : '<li>No strong feelings yet</li>';
+    h += '</ul><div class="sub">Fountain: ' + (v.spring.polluted ? '<span class="neg">brown, for good</span>' : 'clear') + ' · Heating: ' + (v.heat === 'on' ? '<span class="pos">geothermal</span>' : v.heat === 'build' ? 'pipe being laid' : 'oil and wood') + (v.mute > 0 ? ' · <span class="neg">not listening after the quake</span>' : '') + '</div>';
+  } else if (sel.line !== undefined){
+    const l = S.lines[sel.line]; h += '<h4>Line ' + l.name + '</h4><div class="sub">Seismic grid profile ' + (sel.line + 1) + ' of ' + CFG.NLINES + '</div>';
+    h += '<div>' + (l.legacy ? 'Shot by the petroleum campaign in the 1970s. The paper section survives' + (l.gaps.length ? ', with ' + l.gaps.length + ' gap' + (l.gaps.length > 1 ? 's' : '') + '.' : '.') : 'Never shot. Nothing is known below this line.') + (l.segs.length ? ' ' + l.segs.length + ' modern survey stretch' + (l.segs.length > 1 ? 'es' : '') + '.' : '') + '</div>';
+    h += '<div class="acts"><button class="btn main" data-a="open">Open section</button>' + (l.legacy ? '<button class="btn" data-a="toggle">' + (showPaper ? 'Survey view' : '1970s paper') + '</button>' : '') + '<button class="btn" data-a="uncut">Close cut</button></div>';
+  } else {
+    const o = byId(sel.id); if (!o){ sel = null; el.hidden = true; return; }
+    const opp = OPP[o.type], name = opp || DEF[o.type].n, v = nearestVillage(o.x, o.y); let s = '', acts = '';
+    h += '<h4>' + name + '</h4><div class="sub">near ' + v.name + (o.line !== undefined ? ' · line ' + S.lines[o.line].name : '') + (opp ? ' · placed by the opposition' : '') + '</div>';
+    if (o.burnt) s = '<span class="neg">Burnt out.</span> Only the ruin is left.';
+    else if (!o.on) s = o.arrived ? 'Being built, ready in ' + Math.max(1, Math.ceil(o.ready - S.t)) + ' month(s).' : 'On its way.';
+    else if (o.type === 'tractor') s = 'Blocks the road to a site. Leaves after two months, or when a police patrol parks next to it.';
+    else if (o.type === 'camp') s = 'Stops the site. If it stays ' + ((byId(o.target) || {}).fenced ? 'six' : 'three') + ' months, the site burns. It leaves when the village calms down, or when a riot unit arrives.';
+    else if (opp) s = {banner:'Lowers the mood nearby until the village warms up.', oppstand:'Cancels one of your suits or your stand here.', rumour:'Blames you for something unrelated. Fades, or a suit nearby ends it.', march:'A month of bad press in town.', activists:'Double the pace of the opposition. They leave three months after the last police unit.', counterfest:'Cancels your second fest.'}[o.type];
+    else if (SITE[o.type]){
+      if (isBlocked(o)) s = '<span class="neg">Blocked by protesters.</span> ';
+      if (RIG[o.type]){ const tp = tip(o); s += o.plant ? 'Wellhead of the power plant.' : o.drilling ? 'Drilling at ' + ((o.drilling.pos.d*10)|0).toLocaleString('en-US') + ' m. Cannot be stopped.' : o.well.length ? 'Well ends at ' + (tp.d*10).toLocaleString('en-US') + ' m in ' + RNAME[rockL(o.line, tp.x, tp.d)] + '.' : 'No well yet.';
+        if (!o.plant && !o.drilling) acts += '<button class="btn main" data-a="plan">' + (o.well.length ? 'Extend well' : 'Draw well') + '</button>'; }
+      if (o.type === 'testrig') s += o.log ? 'Core log printed (shown in the section). Costs ' + DEF.testrig.up + 'k a month while it stands.' : 'Coring.';
+      if (o.type === 'station') s += S.pipes.some(p => p.from === o.id) ? 'Earned ' + fmt(o.inc || 0) + ' last month.' : 'Needs a heat pipe to a village.';
+      if (o.type === 'plant'){ if (o.stim < 0){ s += 'Choose the stimulation pressure. Done once.'; acts += CFG.STIM.map((p,i) => '<button class="btn" data-a="stim" data-v="' + i + '">' + p.n + ' pressure</button>').join(''); } else s += (S.plines.some(l => l.from === o.id) ? '' : 'Needs a power line. ') + 'Earned ' + fmt(o.inc || 0) + ' last month.'; }
+      if (view === 'map' && o.line !== undefined) acts += '<button class="btn" data-a="open">Open section</button>';
+      if (!o.plant && !o.drilling) acts += '<button class="btn" data-a="rm">Dismantle</button>';
+    } else { s = DEF[o.type].h; if (o.type !== 'congress') acts += '<button class="btn" data-a="rm">' + (o.type === 'police' || o.type === 'riot' ? 'Withdraw' : 'Remove') + '</button>'; }
+    if (o.burnt) acts = '<button class="btn" data-a="rm">Clear the ruin</button>';
+    h += '<div>' + s + '</div>' + (acts ? '<div class="acts">' + acts + '</div>' : '');
   }
+  if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } el.hidden = false;
+}
+function renderResearch(){
+  const el = $('#research'); let h = '<button class="x" data-a="closeres" aria-label="Close">\u00d7</button><h4>Research</h4><div class="sub">Each programme runs for its term, then unlocks its rig. A university chair makes them 25% cheaper.</div>';
+  for (const k in RES){ const st = S.res[k], done = resDone(k); h += '<div class="row"><div><b>' + RES[k].n + '</b><div class="sub" style="margin:0">' + (k === 'deep' ? 'Unlocks the deep rig (5,000 m).' : k === 'dir' ? 'Unlocks the directional rig (bends 30\u00b0).' : 'Unlocks the quiet upgrade for rigs.') + '</div></div>' + (done ? '<span class="pos">Done</span>' : st !== undefined ? '<span>' + Math.ceil(st - S.t) + ' mo. left</span>' : '<button class="btn" data-a="research" data-v="' + k + '">' + fmt(RES[k].cost) + ' \u00b7 ' + RES[k].t + ' mo.</button>') + '</div>'; }
+  if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; }
+}
+function renderSteps(){
+  const el = $('#steps'); if (!S.started || S.over || S.month > 48 || view !== 'map'){ el.hidden = true; return; }
+  const st = [['Survey a stretch of a grid line', S.lines.some(l => l.segs.length)], ['Place a rig on the surveyed stretch', S.obj.some(o => RIG[o.type] || o.type === 'station' || o.type === 'plant')], ['Open the line and draw the well', S.obj.some(o => (o.well && o.well.length) || o.drilling)], ['Reach warm water, build a heat station', S.obj.some(o => o.type === 'station' || o.type === 'plant')], ['Lay a heat pipe to a village', S.pipes.length > 0]];
+  if (st.every(x => x[1])){ el.hidden = true; return; }
+  let seen = false; let h = '<b>First well</b><ol>' + st.map(x => { const now = !x[1] && !seen; if (now) seen = true; return '<li class="' + (x[1] ? 'done' : now ? 'now' : '') + '">' + x[0] + '</li>'; }).join('') + '</ol>';
+  if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } el.hidden = false;
+}
+function renderLoans(){
+  const el = $('#loans'); let h = '<button class="x" data-a="closeloans" aria-label="Close">×</button><h4>Loan book</h4>';
+  h += '<div class="sub">Credit line ' + fmt(creditLimit()) + ': a base amount, 60% of what you have built, and two years of net income. Loans are 100k at 6%, repaid over 5 years.</div>';
+  h += '<table><tr><th>Loan</th><th>Balance</th><th>Per month</th><th>Left</th></tr>' + (S.loans.length ? S.loans.map(l => '<tr><td>#' + l.id + '</td><td>' + fmt(l.bal) + '</td><td>' + l.pay.toFixed(1) + 'k</td><td>' + l.left + ' mo.</td></tr>').join('') : '<tr><td colspan="4">No loans.</td></tr>') + '</table>';
+  h += '<div>Debt service <b>' + loanPay().toFixed(1) + 'k</b> a month, of which interest ' + S.last.interest.toFixed(1) + 'k last month. Upkeep of rigs, staff and police: <b>' + fmt(S.obj.reduce((s,o) => s + ((DEF[o.type] || {}).up || 0), 0)) + '</b> a month.</div>';
+  h += '<div class="acts"><button class="btn main" data-a="borrow">Borrow 100k</button><button class="btn" data-a="repay">Repay what you can</button></div>';
+  if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; }
+}
+function planBar(){
+  const el = $('#hint'); if (!plan){ if (el.dataset.plan) el.dataset.plan = ''; return; }
+  const o = byId(plan.rig); if (!o) return; const pc = planCost(o, plan.pts, plan.cased);
+  const h = '<b>Drawing the well</b> (' + DEF[o.type].n.toLowerCase() + '): click points downward' + (maxBend(o) ? ', up to 30° off vertical.' : ', straight down.') + ' ' + (plan.pts.length ? 'Section ' + (pc.len*10).toLocaleString('en-US') + ' m for <b>' + fmt(pc.cost) + '</b>' + (pc.fog ? ' (blind through unsurveyed ground)' : '') + (pc.water && !plan.cased ? ' <span class="neg">crosses groundwater uncased</span>' : '') + '.' : '') + (plan.err ? ' <span class="neg">' + plan.err + '</span>' : '') +
+    '<div class="acts"><button class="btn" data-a="case" aria-pressed="' + plan.cased + '">' + (plan.cased ? '☑' : '☐') + ' Case it (+' + CFG.CASE_K + 'k per 100 m)</button><button class="btn" data-a="undo">Undo point</button><button class="btn main" data-a="commit"' + (plan.pts.length ? '' : ' disabled') + '>Commit ' + (plan.pts.length ? fmt(pc.cost) : '') + '</button><button class="btn" data-a="cancelplan">Cancel</button></div>';
+  if (el.dataset.plan !== h){ el.innerHTML = h; el.dataset.plan = h; } el.hidden = false;
+}
 
-  // ---------- movement (no drilling) ----------
-  function updateMovementFree(dt){
-    const dx = (keys.has("ArrowRight")?1:0) - (keys.has("ArrowLeft")?1:0);
-    const dy = (keys.has("ArrowDown")?1:0) - (keys.has("ArrowUp")?1:0);
+/* ================================================================== overlays: the contract, offers, the end */
+function showContract(hasSave){
+  $('#overlay').hidden = false;
+  $('#overlay').innerHTML = '<div class="contract"><h1>Concession agreement</h1><div class="sub">between the Republic and Canton and ' + COMPANY + ' · ref. ' + S.seed + '</div>' +
+    '<p><b>Preamble.</b> Whereas the Canton wishes to heat its valleys without importing oil, and whereas the Company, founded by three engineers and a former cantonal councillor, holds a brochure that says the granite beneath the valley is hot; the parties agree as follows.</p>' +
+    '<ol><li><b>Term.</b> Ten years from signature. On the last day the population of the valley votes on continuation. Below 50.1% yes, the Company dismantles everything at its own cost.</li>' +
+    '<li><b>Exploration.</b> The Company receives the Canton’s seismic archive of the 1970s petroleum campaign, in the state in which it was found in the basement of the Office of the Environment. New surveys and test drillings are at the Company’s expense and the population’s patience.</li>' +
+    '<li><b>Capital.</b> The Company starts with 400,000 francs. Its bank lends against what it builds and earns, and no further. Eight months of insolvency end this agreement.</li>' +
+    '<li><b>Seismicity.</b> Felt earthquakes are to be reported as "micro-seismic adjustments". The Comité de patronage reports yearly and is always globally positive.</li>' +
+    '<li><b>Good neighbourliness.</b> The Company may inform, invite, sponsor and celebrate. The Canton notes that the valley can tell the difference between a fest and a bribe, usually.</li></ol>' +
+    '<div class="stamp">SIGNED AND SEALED</div><p>You are the managing director. Open a grid line on the map to see what the 1970s left you.</p>' +
+    '<div class="acts"><button class="btn main" data-a="start">Countersign</button>' + (hasSave ? '<button class="btn" data-a="continue">Continue saved game</button>' : '') + '</div></div>';
+}
+function showOffer(k){
+  const txt = k === 'warm' ? {h:'Amendment I: a utility from a neighbouring canton', p:'A cantonal energy company from the Aargau offers <b>300,000 francs</b> for a stake, "to accelerate the energy transition". Their logo goes on the rig. The valley will notice where the money comes from.', c:300, m:-3}
+    : {h:'Amendment II: Zurich capital', p:'A fund from Zurich offers <b>800,000 francs</b> against future electricity. The Jura flag on the brochure is replaced by a stylised flame. People will notice.', c:800, m:-5};
+  S.offerData = txt; $('#overlay').hidden = false;
+  $('#overlay').innerHTML = '<div class="contract"><h1>' + txt.h + '</h1><div class="sub">' + MONTHS[S.month % 12] + ', year ' + (year() + 1) + '</div><p>' + txt.p + '</p><div class="acts"><button class="btn main" data-a="accept">Sign the amendment</button><button class="btn" data-a="decline">Stay Jurassien</button></div></div>';
+}
+function showEnd(){
+  const o = S.over, head = {won:'The valley votes yes', lost:'The valley votes no', lapsed:'Concession lapses: nothing to vote on', debt:'The bank terminates the agreement'}[o.kind];
+  const sub = {won:'The Company calls it "a mandate". The opposition calls it "close". Both are right.', lost:'Dismantling at the Company’s cost begins Monday. The opposition holds a fest. It is not geothermal-themed.', lapsed:'Ten years of surveys and brochures produced no heat. The Canton thanks all participants.', debt:'Eight months of insolvency. The investors from out of canton have stopped answering.'}[o.kind];
+  $('#overlay').hidden = false;
+  $('#overlay').innerHTML = '<div class="contract"><h1>' + head + '</h1><div class="sub">' + MONTHS[S.month % 12] + ', year ' + (year() + 1) + '</div><p>' + sub + '</p><div class="fig"><div><b>' + o.fc.toFixed(1) + '%</b><span>Yes vote</span></div><div><b>' + o.sold.toFixed(1) + ' GWh</b><span>Energy sold</span></div><div><b>' + o.best.toFixed(1) + '</b><span>Your best</span></div><div><b>' + fmt(S.cash - debt()) + '</b><span>Net cash</span></div></div><p class="sub">Ref. ' + S.seed + '</p><div class="acts"><button class="btn main" data-a="again">New concession</button></div></div>';
+}
 
-    if (dx === 0 && dy === 0) return;
+/* ================================================================== sound (Web Audio, synthesised) */
+let AC = null;
+function audio(){ if (!AC){ try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; } } if (AC && AC.state === 'suspended') AC.resume(); return AC; }
+function sfx(k){ const ac = audio(); if (!ac || S.muted) return; const t0 = ac.currentTime, o = ac.createOscillator(), g = ac.createGain(); o.connect(g); g.connect(ac.destination);
+  const env = (v, d) => { g.gain.setValueAtTime(v, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + d); o.start(t0); o.stop(t0 + d); };
+  if (k === 'click'){ o.type = 'square'; o.frequency.setValueAtTime(880, t0); env(0.05, 0.06); }
+  else if (k === 'coin'){ o.type = 'square'; o.frequency.setValueAtTime(660, t0); o.frequency.setValueAtTime(990, t0 + 0.08); env(0.08, 0.2); }
+  else if (k === 'drill'){ o.type = 'sawtooth'; o.frequency.setValueAtTime(90, t0); o.frequency.linearRampToValueAtTime(60, t0 + 0.6); env(0.08, 0.7); }
+  else if (k === 'quake'){ o.type = 'sawtooth'; o.frequency.setValueAtTime(40, t0); o.frequency.linearRampToValueAtTime(25, t0 + 1.2); env(0.25, 1.4); }
+  else if (k === 'heli'){ o.type = 'square'; o.frequency.setValueAtTime(30, t0); env(0.12, 1.5); }
+  else if (k === 'fire'){ o.type = 'sawtooth'; o.frequency.setValueAtTime(200, t0); o.frequency.exponentialRampToValueAtTime(50, t0 + 0.8); env(0.12, 0.9); }
+  else if (k === 'jingle'){ o.type = 'square'; [523,659,784,1047].forEach((f,i) => o.frequency.setValueAtTime(f, t0 + i*0.12)); env(0.07, 0.6); }
+  else if (k === 'no'){ o.type = 'square'; o.frequency.setValueAtTime(200, t0); o.frequency.setValueAtTime(150, t0 + 0.1); env(0.08, 0.25); }
+}
 
-    const speed = P.MOVE_EMPTY;
-
-    const inTunnel = (player.y >= P.SURFACE_Y_PX) && isCarved(wToC(player.x), wToC(player.y));
-    const dyAllowed = (dy < 0 && !inTunnel) ? 0 : dy;
-
-    const nx = player.x + dx * speed * dt;
-    const ny = player.y + dyAllowed * speed * dt;
-
-    if (canStand(nx, player.y)) player.x = nx;
-    if (canStand(player.x, ny)) player.y = ny;
+/* ================================================================== input */
+function toWorld(e){ const c = $('#game'), r = c.getBoundingClientRect();
+  if (view === 'map'){ const cx = (e.clientX - r.left)/r.width*CW, cy = (e.clientY - r.top)/r.height*CH, yc = cutLine !== null ? S.lines[cutLine].y : MH, w = unP(cx, cy);
+    if (w.x >= 0 && w.x <= MW && w.y >= 0 && w.y <= yc) return {x:w.x, y:w.y};
+    const xf = cx - OX + yc*KX, v = (cy - OY - (xf + yc)*KY)*UGH/D; if (xf >= 0 && xf <= MW && v >= 0 && v <= UGH) return {face:true, u:xf*SW/MW, v}; return {}; }
+  const x = (e.clientX - r.left)/r.width*SW, y = (e.clientY - r.top)/r.height*SH + cam.y; return {x, y, ug:y > SURF ? {x:clamp(x, 0, SW-1), d:clamp(y - SURF, 0, UGH-1)} : null}; }
+function openSection(li){ view = 'section'; line = li; cutLine = li; sel = null; $('#card').hidden = true; anchor = null; if (tool && !['pass2'].includes(tool)) tool = null; cam.y = 0; fit(); }
+function closeSection(){ view = 'map'; plan = null; sel = null; $('#card').hidden = true; $('#readout').hidden = true; fit(); }
+function pickTool(tk){ anchor = null; plan = null; if (tool === tk){ tool = null; return; } tool = tk; sel = null; $('#card').hidden = true; sfx('click');
+  if (DEF[tk].now){ const r = place(tk, 0, 0); tool = null; toast(r === 'ok' ? DEF[tk].n + (tk === 'congress' ? ' booked.' : ' sent.') : r); return; }
+  if (view === 'section' && tk !== 'pass2'){ closeSection(); toast('Place it on the map.'); } }
+function clickWorld(p){
+  if (S.over || !S.started) return;
+  if (view === 'section'){
+    if (plan){ if (!p.ug) return; const o = byId(plan.rig); if (!o){ plan = null; return; } const prev = plan.pts.length ? plan.pts[plan.pts.length-1] : tip(o); const q = {x:maxBend(o) ? p.ug.x : prev.x, d:p.ug.d};
+      const err = validPoint(o, prev, q); if (err){ plan.err = err; sfx('no'); return; } plan.err = ''; plan.pts.push(q); sfx('click'); return; }
+    if (tool === 'pass2'){ const r = place('pass2', mx(p.x), S.lines[line].y); if (r === 'ok'){ tool = null; sfx('coin'); } else toast(r); return; }
+    const o = S.obj.find(o => o.line === line && SITE[o.type] && Math.abs(sx(o.x) - p.x) < 12 && (p.y < SURF + 4 || (o.well && p.y - SURF < (tip(o).d || 0) + 10 && Math.abs(sx(o.x) - p.x) < 6)));
+    if (o){ sel = {id:o.id}; renderCard(); return; } sel = null; $('#card').hidden = true; return;
   }
-
-  // ---------- components / contamination / HDR doublets ----------
-  function rebuildComponentsAndMaps(){
-    compInfo = [];
-    compCellToId = new Map();
-
-    const visited = new Set();
-    let id = 0;
-
-    for (const k0 of carved){
-      if (visited.has(k0)) continue;
-      const q = [k0];
-      visited.add(k0);
-
-      const comp = { id, mouths:0, touchesHot:false, touchesCold:false, hdrCarved:0, hdrAdj:0, hasHdrPlant:false };
-      while (q.length){
-        const cur = q.pop();
-        compCellToId.set(cur, id);
-
-        const comma = cur.indexOf(",");
-        const cx = Number(cur.slice(0,comma));
-        const cy = Number(cur.slice(comma+1));
-
-        if (isMouthCell(cx,cy)) comp.mouths++;
-
-        const tHere = getCellType(cx,cy);
-        if (tHere === TYPE.HDR) comp.hdrCarved++;
-
-        for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
-          const nx = cx+dx, ny = cy+dy;
-          const nk = key(nx,ny);
-          if (carved.has(nk)){
-            if (!visited.has(nk)){ visited.add(nk); q.push(nk); }
-          } else {
-            const nt = getCellType(nx,ny);
-            if (nt === TYPE.HOT) comp.touchesHot = true;
-            if (nt === TYPE.COLD) comp.touchesCold = true;
-            if (nt === TYPE.HDR) comp.hdrAdj++;
-          }
-        }
-      }
-
-      compInfo.push(comp);
-      id++;
-    }
-
-    // mark existing HDR plants
-    for (const pl of plants){
-      if (pl.kind === "HDR" && pl.componentId !== undefined){
-        const c = compInfo.find(x => x.id === pl.componentId);
-        if (c) c.hasHdrPlant = true;
-      }
-    }
-
-    // attach HOTW plants to component
-    for (const pl of plants){
-      if (pl.kind === "HOTW" && pl.componentId === undefined){
-        const kid = compCellToId.get(key(pl.strikeCX, pl.strikeCY));
-        if (kid !== undefined) pl.componentId = kid;
-      }
-    }
-
-    // contamination: any connected component touches both hot and cold
-    state.contam = compInfo.some(c => c.touchesHot && c.touchesCold);
-  }
-
-  function maybeCreateHdrPlantForComponent(comp){
-    if (plants.length >= P.PLANT_MAX) return;
-    if (comp.mouths < 2) return;
-    if (comp.hasHdrPlant) return;
-
-    const exposure = comp.hdrCarved + Math.floor(comp.hdrAdj / P.HDR_ADJ_BONUS_DIV);
-    if (exposure < P.HDR_DOUBLET_MIN_EXPOSURE) return;
-
-    // depth at commissioning
-    const depthM = Math.max(0, Math.floor((player.y - P.SURFACE_Y_PX) * 0.6));
-
-    const power0 = P.HDR_POWER_BASE + depthM * P.HDR_POWER_DEPTH_SCALE;
-
-    // deeper => lower decayK (slower depletion)
-    const deep01 = clamp01(depthM / 200);
-    const decayK = lerp(P.HDR_DECAY_BASE, P.HDR_DECAY_MIN, deep01);
-
-    plants.push({ kind:"HDR", name:"HDR Doublet", power0, decayK, pumpedS:0, componentId: comp.id });
-    comp.hasHdrPlant = true;
-    overlay("HDR DOUBLET COMMISSIONED", 1.3);
-  }
-
-  // ---------- systems ----------
-  function triggerQuake(kind){
-    if (kind==="minor"){
-      overlay("MINOR EARTHQUAKE", 1.0);
-      state.shake = 8;
-      state.protest += 2.5;
-      state.score += 25;
-    } else {
-      overlay("MAJOR EARTHQUAKE", 1.1);
-      state.shake = 16;
-      state.protest += 6.5;
-      state.score += 50;
-    }
-    state.quakeCooldown = P.Q_COOLDOWN;
-  }
-
-  function endRun(reason){
-    state.running = false;
-    state.over = true;
-    state.paused = false;
-    state.programActive = false;
-    state.programRemain = 0;
-
-    ui.mode.textContent = "GAME OVER";
-
-    if (reason === "FIRE") overlay("PROTESTERS BURN THE RIG", 3.2);
-    else if (reason === "BANKRUPT") overlay("OPERATION BANKRUPT", 3.0);
-    else if (reason === "COLLAPSE") overlay("CATASTROPHIC COLLAPSE", 3.0);
-    else overlay("OPERATION SHUT DOWN", 3.0);
-
-    if (state.score > best){
-      best = Math.floor(state.score);
-      localStorage.setItem("jura_frackers_best_v7", String(best));
-      ui.best.textContent = String(best);
-    }
-  }
-
-  function updateSystems(dt){
-    state.protest += P.PROT_BASE_PER_SEC * dt;
-
-    if (!state.pumping && !state.contam){
-      state.protest -= P.PROT_CALM_PER_SEC_IDLE * dt;
-    }
-
-    if (state.outreach){
-      const cost = P.OUTREACH_COST_PER_SEC * dt;
-      if (state.cash >= cost){
-        state.cash -= cost;
-        state.protest -= P.PROT_CALM_PER_SEC_OUTREACH * dt;
-      } else {
-        state.outreach = false;
-        overlay("OUTREACH STOPPED (NO CASH)", 1.2);
-      }
-    }
-
-    if (state.pumping && plants.length){
-      for (const pl of plants){
-        pl.pumpedS += dt;
-        const power = pl.power0 * Math.exp(-pl.decayK * pl.pumpedS);
-        const eff = Math.max(0, power);
-        state.cash += eff * dt;
-        state.score += (eff * 0.65) * dt;
-        state.protest += P.PROT_PER_PLANT_PER_SEC * dt;
-      }
-    }
-
-    if (state.contam){
-      state.protest += (state.pumping ? P.CONTAM_PROT_PER_SEC_PUMP : P.CONTAM_PROT_PER_SEC) * dt;
-    }
-
-    // quake logic only from unstable drilling seismic
-    state.quakeCooldown = Math.max(0, state.quakeCooldown - dt);
-    if (state.quakeCooldown <= 0){
-      if (state.seismic >= P.Q_MAJOR && state.seismic < P.SEIS_MAX) triggerQuake("major");
-      else if (state.seismic >= P.Q_MINOR && state.seismic < P.Q_MAJOR) triggerQuake("minor");
-    }
-
-    state.seismic = clamp(state.seismic, 0, P.SEIS_MAX + 10);
-    state.protest = clamp(state.protest, 0, P.PROT_MAX + 10);
-
-    const totalPowerNow = state.pumping ? plants.reduce((s,pl)=>s + (pl.power0*Math.exp(-pl.decayK*pl.pumpedS)), 0) : 0;
-    if (state.cash <= 0 && totalPowerNow <= 0.05) endRun("BANKRUPT");
-    if (state.seismic >= P.SEIS_MAX) endRun("COLLAPSE");
-
-    // fire at 100% protest
-    if (state.protest >= P.PROT_MAX) endRun("FIRE");
-  }
-
-  // ---------- camera ----------
-  function updateCamera(){
-    const targetY = player.y - H * P.CAM_TARGET_Y_FRAC;
-    const targetX = player.x - W * 0.5;
-    state.camY = lerp(state.camY, targetY, P.CAM_LERP_Y);
-    state.camX = lerp(state.camX, targetX, P.CAM_LERP_X);
-    state.camX = clamp(state.camX, 0, P.WORLD_W_PX - W);
-    state.camY = Math.max(-40, state.camY);
-  }
-  function w2sX(wx){ return Math.floor(wx - state.camX); }
-  function w2sY(wy){ return Math.floor(wy - state.camY); }
-
-  // ---------- render ----------
-  function drawTitle(){
-    const title = "Jura Frackers";
-    const x = W/2;
-    const y = 20;
-    ctx.fillStyle = "rgba(255,255,255,0.45)";
-    ctx.fillRect(0, 0, W, 28);
-
-    ctx.font = "bold 20px Impact, Haettenschweiler, 'Arial Black', sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-
-    ctx.fillStyle = "#000";
-    ctx.fillText(title, x+2, y+2);
-    ctx.fillText(title, x-2, y+2);
-    ctx.fillText(title, x+2, y-2);
-    ctx.fillText(title, x-2, y-2);
-
-    const grad = ctx.createLinearGradient(0, y-10, 0, y+10);
-    grad.addColorStop(0, "#ffef9a");
-    grad.addColorStop(0.45, "#ffb14a");
-    grad.addColorStop(1, "#d34b2a");
-    ctx.fillStyle = grad;
-    ctx.fillText(title, x, y);
-
-    ctx.fillStyle = "rgba(255,255,255,0.35)";
-    ctx.fillText(title, x, y-1);
-
-    ctx.textAlign = "start";
-  }
-
-  function drawSurface(){
-    for (let y=0; y<H; y++){
-      const c = y < 45 ? PAL.sky1 : (y < 95 ? PAL.sky2 : PAL.sky3);
-      ctx.fillStyle = c; ctx.fillRect(0,y,W,1);
-    }
-    ctx.fillStyle = PAL.sun;
-    ctx.fillRect(W-62, 10, 16, 16);
-    ctx.fillRect(W-60, 8, 12, 2);
-    ctx.fillRect(W-60, 26, 12, 2);
-
-    const surfY = w2sY(P.SURFACE_Y_PX);
-    const topY = clamp(surfY, -40, H+40);
-
-    ctx.fillStyle = PAL.hillFar;
-    for (let x=0; x<W; x+=2){
-      const yy = (topY - 30) + ((Math.sin((x + state.camX*0.02)*0.05)+1)*3|0);
-      ctx.fillRect(x, yy, 2, topY-yy);
-    }
-    ctx.fillStyle = PAL.hillMid;
-    for (let x=0; x<W; x+=2){
-      const yy = (topY - 18) + ((Math.sin((x + 40 + state.camX*0.03)*0.065)+1)*4|0);
-      ctx.fillRect(x, yy, 2, topY-yy);
-    }
-    ctx.fillStyle = PAL.hillNear;
-    for (let x=0; x<W; x+=2){
-      const yy = (topY - 10) + ((Math.sin((x + 10 + state.camX*0.04)*0.085)+1)*3|0);
-      ctx.fillRect(x, yy, 2, topY-yy);
-    }
-
-    ctx.fillStyle = PAL.grass1; ctx.fillRect(0, topY, W, 2);
-    ctx.fillStyle = PAL.grass2; ctx.fillRect(0, topY+2, W, 1);
-
-    // chalet
-    ctx.fillStyle = PAL.chalet;
-    ctx.fillRect(26, topY-10, 14, 10);
-    ctx.fillStyle = PAL.roof;
-    ctx.fillRect(24, topY-12, 18, 3);
-
-    drawRigPanel(topY);
-    drawProtesters(topY);
-  }
-
-  function drawRigPanel(topY){
-    const rigWX = P.WORLD_W_PX/2;
-    const x = w2sX(rigWX);
-    const baseY = topY - 1;
-
-    // rig
-    ctx.fillStyle = "#2b313c";
-    ctx.fillRect(x+3, baseY-26, 2, 26);
-    ctx.fillRect(x+6, baseY-20, 2, 20);
-    ctx.fillStyle = "#ffd166";
-    ctx.fillRect(x+2, baseY-28, 8, 2);
-    ctx.fillStyle = "#444c5a";
-    ctx.fillRect(x-7, baseY-7, 24, 7);
-    ctx.fillStyle = "#ffd166";
-    ctx.fillRect(x-2, baseY-10, 3, 3);
-
-    // plant panel at rig (your choice 3B)
-    const panelX = x - 34;
-    const panelY = baseY - 34;
-    ctx.fillStyle = "rgba(255,255,255,0.70)";
-    ctx.fillRect(panelX, panelY, 68, 20);
-    ctx.fillStyle = "#8fb8d6";
-    ctx.fillRect(panelX, panelY, 68, 2);
-
-    let ox = panelX + 4;
-    const maxShow = 10;
-    for (let i=0; i<Math.min(maxShow, plants.length); i++){
-      const pl = plants[i];
-      ctx.fillStyle = (pl.kind==="HDR") ? PAL.hdrGlow : PAL.waterHi;
-      ctx.fillRect(ox, panelY+6, 4, 4);
-      ctx.fillStyle = "#0b0f1f";
-      ctx.fillRect(ox+1, panelY+7, 2, 2);
-      ox += 6;
-    }
-
-    ctx.fillStyle = "#0b1b2b";
-    ctx.font = "10px ui-monospace, monospace";
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    const label = plants.length ? (plants.some(p=>p.kind==="HDR") ? "PLANTS: HDR + HOTW" : "PLANTS: HOTW") : "PLANTS: NONE";
-    ctx.fillText(label, panelX+4, panelY+12);
-
-    // If fire ending, draw flames on rig
-    if (state.over && state.overlayText.includes("BURN")){
-      ctx.fillStyle = "#ff7a00";
-      ctx.fillRect(x-2, baseY-16, 4, 6);
-      ctx.fillStyle = "#ffd166";
-      ctx.fillRect(x-1, baseY-18, 2, 2);
-      ctx.fillStyle = "#c73a3a";
-      ctx.fillRect(x+2, baseY-14, 2, 4);
-    }
-  }
-
-  function drawProtesters(topY){
-    const protest01 = clamp(state.protest / 100, 0, 1);
-    const count = clamp(Math.floor(protest01 * P.CROWD_MAX), 0, P.CROWD_MAX);
-    if (count <= 0) return;
-
-    const rigX = w2sX(P.WORLD_W_PX/2);
-    const groundY = topY - 1;
-
-    for (let i=0; i<count; i++){
-      const spread = 70 + (i%3)*10;
-      const side = (i%2===0) ? -1 : 1;
-      const jitter = ((i*17) % 11) - 5;
-      const x = clamp(rigX + side*(12 + (i*6)%spread) + jitter, 10, W-16);
-      const y = groundY - (i%3);
-      drawProtesterSprite(x, y, state.outreach, state.pumping, state.contam);
-    }
-  }
-
-  function drawProtesterSprite(x, groundY, outreach, pumping, contam){
-    const angry = contam || pumping;
-    const calm = outreach && !angry;
-
-    ctx.fillStyle = "#2b313c";
-    ctx.fillRect(x, groundY-2, 1, 2);
-    ctx.fillRect(x+2, groundY-2, 1, 2);
-
-    ctx.fillStyle = calm ? "#64c86b" : (angry ? "#d34b2a" : "#ffd166");
-    ctx.fillRect(x, groundY-5, 3, 3);
-
-    ctx.fillStyle = "#f2d2b6";
-    ctx.fillRect(x, groundY-7, 3, 2);
-
-    ctx.fillStyle = "#8b5a3c";
-    ctx.fillRect(x+3, groundY-8, 1, 6);
-
-    ctx.fillStyle = calm ? "#c6f3ff" : "#ffffff";
-    ctx.fillRect(x+4, groundY-9, 5, 4);
-    ctx.fillStyle = "#0b1b2b";
-    ctx.fillRect(x+5, groundY-8, 3, 1);
-    ctx.fillRect(x+5, groundY-6, 4, 1);
-
-    if (calm){
-      ctx.fillStyle = "#d64545";
-      ctx.fillRect(x+7, groundY-7, 1, 1);
-      ctx.fillRect(x+6, groundY-8, 1, 1);
-      ctx.fillRect(x+8, groundY-8, 1, 1);
-    } else if (angry){
-      ctx.fillStyle = PAL.warn;
-      ctx.fillRect(x+7, groundY-8, 1, 2);
-      ctx.fillRect(x+6, groundY-7, 3, 1);
-    }
-  }
-
-  function cellColor(t, cx, cy){
-    const parity = (cx + cy) & 1;
-    switch(t){
-      case TYPE.ROCK:    return parity ? PAL.rock2 : PAL.rock1;
-      case TYPE.HARD:    return parity ? PAL.hard2 : PAL.hard1;
-      case TYPE.UNSTABLE:return parity ? PAL.unst2 : PAL.unst1;
-      case TYPE.HDR:     return parity ? PAL.hdr2 : PAL.hdr1;
-      case TYPE.COLD:    return parity ? PAL.cold2 : PAL.cold1;
-      case TYPE.HOT:     return parity ? PAL.hot2  : PAL.hot1;
-      case TYPE.BEDROCK: return "#050712";
-      default:           return parity ? PAL.unk2 : PAL.unk1;
-    }
-  }
-
-  function shouldRevealSolid(cx,cy, bcx,bcy){
-    if (Math.abs(cx-bcx) <= P.DRILL_WINDOW_CELLS && Math.abs(cy-bcy) <= P.DRILL_WINDOW_CELLS) return true;
-    const r = P.TUNNEL_REVEAL_CELLS;
-    for (let dy=-r; dy<=r; dy++){
-      for (let dx=-r; dx<=r; dx++){
-        if (carved.has(key(cx+dx, cy+dy))) return true;
-      }
-    }
-    return false;
-  }
-
-  function drawUnstableCracks(sx,sy,cx,cy){
-    ctx.fillStyle = PAL.crack;
-    const h = hash2(cx,cy);
-    const m = h & 7;
-    if (m & 1){
-      ctx.fillRect(sx+0, sy+1, 4, 1);
-      ctx.fillRect(sx+1, sy+2, 3, 1);
-      ctx.fillRect(sx+2, sy+3, 2, 1);
-    } else {
-      ctx.fillRect(sx+0, sy+2, 4, 1);
-      ctx.fillRect(sx+0, sy+3, 3, 1);
-    }
-    if (m & 2){
-      ctx.fillRect(sx+1, sy+0, 1, 4);
-    } else {
-      ctx.fillRect(sx+3, sy+0, 1, 4);
-    }
-    if (m & 4){
-      ctx.fillRect(sx+0, sy+0, 2, 1);
-      ctx.fillRect(sx+2, sy+1, 2, 1);
-    }
-  }
-
-  function drawUnderground(){
-    const surfY = w2sY(P.SURFACE_Y_PX);
-    if (surfY < H){
-      ctx.fillStyle = PAL.unk1;
-      ctx.fillRect(0, Math.max(0,surfY), W, H - Math.max(0,surfY));
-    }
-
-    const leftWX = state.camX, rightWX = state.camX + W;
-    const topWY = state.camY, botWY = state.camY + H;
-
-    const cLeft = wToC(leftWX) - 2, cRight = wToC(rightWX) + 2;
-    const cTop = wToC(topWY) - 2, cBot = wToC(botWY) + 2;
-
-    const headX = player.x;
-    const headY = player.y + (player.h * 0.35);
-    const bcx = wToC(headX), bcy = wToC(headY);
-
-    for (let cy=cTop; cy<=cBot; cy++){
-      const wy = cToW(cy);
-      const sy = w2sY(wy);
-      if (sy > H || sy+P.CELL < 0) continue;
-
-      for (let cx=cLeft; cx<=cRight; cx++){
-        const wx = cToW(cx);
-        const sx = w2sX(wx);
-        if (sx > W || sx+P.CELL < 0) continue;
-        if (wy < P.SURFACE_Y_PX) continue;
-
-        const k0 = key(cx,cy);
-
-        if (carved.has(k0)){
-          ctx.fillStyle = ((cx+cy)&1) ? PAL.tun2 : PAL.tun1;
-          ctx.fillRect(sx, sy, P.CELL, P.CELL);
-          if (isMouthCell(cx,cy)){
-            ctx.fillStyle = "rgba(255,255,255,0.22)";
-            ctx.fillRect(sx, sy, P.CELL, 1);
-          }
-          continue;
-        }
-
-        if (shouldRevealSolid(cx,cy,bcx,bcy)){
-          const t = getCellType(cx,cy);
-          ctx.fillStyle = cellColor(t,cx,cy);
-          ctx.fillRect(sx, sy, P.CELL, P.CELL);
-
-          if (t === TYPE.HDR && ((cx*7 + cy*11)&7)===0){
-            ctx.fillStyle = PAL.hdrGlow;
-            ctx.fillRect(sx+1, sy+1, 1, 1);
-          }
-          if ((t === TYPE.HOT || t === TYPE.COLD) && ((cx*5 + cy*9)&7)===0){
-            ctx.fillStyle = PAL.waterHi;
-            ctx.fillRect(sx+1, sy+2, 1, 1);
-          }
-          if (t === TYPE.UNSTABLE){
-            drawUnstableCracks(sx,sy,cx,cy);
-          }
-
-          const pv = prog.get(k0);
-          if (pv !== undefined){
-            ctx.fillStyle = "rgba(0,0,0,0.35)";
-            const w = Math.max(1, Math.floor(clamp(pv,0,1) * P.CELL));
-            ctx.fillRect(sx, sy + P.CELL - 1, w, 1);
-          }
-        }
-      }
-    }
-
-    if (state.shimmerT > 0){
-      const alpha = clamp(state.shimmerT / P.HIT_SHIMMER_SEC, 0, 1);
-      const cx0 = state.shimmerCX, cy0 = state.shimmerCY;
-      for (let dy=-3; dy<=3; dy++){
-        for (let dx=-3; dx<=3; dx++){
-          const cx = cx0+dx, cy = cy0+dy;
-          const wx = cToW(cx), wy = cToW(cy);
-          const sx = w2sX(wx), sy = w2sY(wy);
-          if (sx < -10 || sy < -10 || sx > W+10 || sy > H+10) continue;
-          const t = getCellType(cx,cy);
-          if (t === TYPE.HOT || t === TYPE.COLD){
-            ctx.fillStyle = `rgba(127,196,255,${0.14*alpha})`;
-            ctx.fillRect(sx, sy, P.CELL, P.CELL);
-          }
-        }
-      }
-    }
-  }
-
-  function drawDrill(){
-    if (state.shake > 0){
-      state.shake *= 0.88;
-      state.shakeX = ((rng()*2-1) * state.shake) | 0;
-      state.shakeY = ((rng()*2-1) * state.shake) | 0;
-    } else {
-      state.shakeX = 0; state.shakeY = 0;
-    }
-
-    const x = w2sX(player.x) + state.shakeX;
-    const y = w2sY(player.y) + state.shakeY;
-
-    // pipe tail
-    ctx.fillStyle = "#3a3f4a";
-    ctx.fillRect(x-2, y-18, 4, 10);
-    ctx.fillStyle = "#2b313c";
-    ctx.fillRect(x-1, y-17, 2, 8);
-
-    // body
-    ctx.fillStyle = "#8b5a3c";
-    ctx.fillRect(x-6, y-8, 12, 14);
-    ctx.fillStyle = "#e0a93a";
-    ctx.fillRect(x-5, y-7, 10, 12);
-    ctx.fillStyle = "#ffcc55";
-    ctx.fillRect(x-4, y-6, 8, 10);
-
-    // braces
-    ctx.fillStyle = "#2b313c";
-    ctx.fillRect(x-7, y-4, 1, 6);
-    ctx.fillRect(x+6, y-4, 1, 6);
-
-    // bit
-    ctx.fillStyle = "#e6e6e6";
-    ctx.fillRect(x-3, y+6, 6, 2);
-    ctx.fillStyle = "#cfcfcf";
-    ctx.fillRect(x-2, y+8, 4, 1);
-    ctx.fillStyle = "#9aa0aa";
-    ctx.fillRect(x-1, y+9, 2, 1);
-
-    // program indicator
-    if (state.programActive){
-      ctx.fillStyle = "#64c86b";
-      ctx.fillRect(x+6, y-8, 2, 2);
-    }
-  }
-
-  function drawOverlay(){
-    if (state.overlayT > 0){
-      ctx.fillStyle = "rgba(255,255,255,0.74)";
-      ctx.fillRect(0, 30, W, 22);
-      ctx.fillStyle = PAL.warn;
-      ctx.font = "bold 12px ui-monospace, monospace";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(state.overlayText, W/2, 41);
-      ctx.textAlign = "start";
-    }
-
-    if (!state.running && !state.over){
-      ctx.fillStyle = "rgba(255,255,255,0.72)";
-      ctx.fillRect(0, 52, W, H-52);
-      ctx.fillStyle = "#0b1b2b";
-      ctx.font = "bold 16px ui-monospace, monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("Press Enter to start", W/2, H/2 - 6);
-      ctx.font = "10px ui-monospace, monospace";
-      ctx.fillText("Commit drilling programs. Longer programs are cheaper, but you cannot abort.", W/2, H/2 + 12);
-      ctx.textAlign = "start";
-    }
-
-    if (state.paused && state.running){
-      ctx.fillStyle = "rgba(255,255,255,0.72)";
-      ctx.fillRect(0, 52, W, H-52);
-      ctx.fillStyle = "#0b1b2b";
-      ctx.font = "bold 18px ui-monospace, monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("PAUSED", W/2, H/2);
-      ctx.textAlign = "start";
-    }
-
-    if (state.over){
-      ctx.fillStyle = "rgba(255,255,255,0.82)";
-      ctx.fillRect(0, 52, W, H-52);
-      ctx.fillStyle = PAL.warn;
-      ctx.font = "bold 16px ui-monospace, monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("OPERATION TERMINATED", W/2, H/2 - 6);
-      ctx.fillStyle = "#0b1b2b";
-      ctx.font = "10px ui-monospace, monospace";
-      ctx.fillText("Press Enter to restart", W/2, H/2 + 14);
-      ctx.textAlign = "start";
-    }
-
-    if (state.hitFlashT > 0){
-      const a = clamp(state.hitFlashT / P.HIT_FLASH_SEC, 0, 1);
-      let col = `rgba(255,255,255,${0.18*a})`;
-      if (state.hitFlashKind === "hot") col = `rgba(127,196,255,${0.24*a})`;
-      if (state.hitFlashKind === "cold") col = `rgba(25,74,138,${0.22*a})`;
-      if (state.hitFlashKind === "hdr") col = `rgba(255,155,61,${0.20*a})`;
-      if (state.hitFlashKind === "unstable") col = `rgba(199,58,58,${0.16*a})`;
-      ctx.fillStyle = col;
-      ctx.fillRect(0,0,W,H);
-    }
-  }
-
-  function render(){
-    ctx.clearRect(0,0,W,H);
-    drawSurface();
-    drawUnderground();
-    drawDrill();
-    drawTitle();
-    drawOverlay();
-  }
-
-  // ---------- UI sync ----------
-  function syncUI(){
-    ui.cash.textContent = String(Math.max(0, Math.floor(state.cash)));
-    ui.score.textContent = String(Math.floor(state.score));
-    const depthM = Math.max(0, Math.floor((player.y - P.SURFACE_Y_PX) * 0.6));
-    ui.depth.textContent = String(depthM);
-    ui.pump.textContent = state.pumping ? "ON" : "OFF";
-    ui.outreach.textContent = state.outreach ? "ON" : "OFF";
-    ui.plants.textContent = String(plants.length);
-    ui.seis.textContent = `${Math.floor(clamp(state.seismic,0,100))}%`;
-    ui.prot.textContent = `${Math.floor(clamp(state.protest,0,100))}%`;
-    ui.contam.textContent = state.contam ? "YES" : "NO";
-    ui.strike.textContent = state.lastStrike;
-
-    let bestMouths = 0;
-    let bestExposure = 0;
-    for (const c of compInfo){
-      const exp = c.hdrCarved + Math.floor(c.hdrAdj / P.HDR_ADJ_BONUS_DIV);
-      if (c.mouths > bestMouths || (c.mouths === bestMouths && exp > bestExposure)){
-        bestMouths = c.mouths;
-        bestExposure = exp;
-      }
-    }
-    ui.dblt.textContent = `${Math.min(2,bestMouths)}/2 • ${bestExposure}`;
-
-    if (state.programActive){
-      ui.program.textContent = `${state.programRemain}/${state.programTotal} (-${Math.round(state.progDiscount*100)}%)`;
-    } else if (state.progLen > 0){
-      const dir = state.aimDY>0 ? "↓" : (state.aimDX<0 ? "←" : "→");
-      ui.program.textContent = `${state.progLen}${dir} (-${Math.round(state.progDiscount*100)}%)`;
-    } else {
-      ui.program.textContent = "—";
-    }
-  }
-
-  // ---------- main loop ----------
-  function tick(now){
-    const dt = Math.min(0.033, (now - state.lastT) / 1000);
-    state.lastT = now;
-
-    if (state.overlayT > 0) state.overlayT = Math.max(0, state.overlayT - dt);
-    if (state.hitFlashT > 0) state.hitFlashT = Math.max(0, state.hitFlashT - dt);
-    if (state.shimmerT > 0) state.shimmerT = Math.max(0, state.shimmerT - dt);
-
-    if (state.running && !state.paused && !state.over){
-      // move always (even during program you are "busy" but can still drift inside tunnels minimally)
-      if (!state.programActive) updateMovementFree(dt);
-
-      if (state.programActive) updateProgram(dt);
-
-      connTimer -= dt;
-      if (connTimer <= 0){
-        connTimer = 0.25;
-        rebuildComponentsAndMaps();
-        for (const c of compInfo) maybeCreateHdrPlantForComponent(c);
-      }
-
-      updateSystems(dt);
-      updateCamera();
-    }
-
-    syncUI();
-    render();
-    requestAnimationFrame(tick);
-  }
-
-  // ---------- restart / boot ----------
-  function restart(){
-    runSeed = (Date.now() ^ (Math.random()*1e9|0)) >>> 0;
-    rng = mulberry32(runSeed);
-
-    state.running = true;
-    state.paused = false;
-    state.over = false;
-
-    state.cash = P.START_CASH;
-    state.score = 0;
-    state.seismic = 0;
-    state.protest = 0;
-
-    state.pumping = false;
-    state.outreach = false;
-    state.contam = false;
-
-    state.overlayText = "";
-    state.overlayT = 0;
-    state.quakeCooldown = 0;
-
-    state.shake = 0;
-    state.shakeX = 0;
-    state.shakeY = 0;
-
-    state.lastStrike = "—";
-    state.hitFlashT = 0;
-    state.shimmerT = 0;
-    state.hitFlashKind = "";
-
-    state.programActive = false;
-    state.programRemain = 0;
-    state.programTotal = 0;
-    if (state.aimDX===0 && state.aimDY===0){ state.aimDX = 0; state.aimDY = 1; }
-
-    cellType.clear();
-    carved.clear();
-    prog.clear();
-    plants.length = 0;
-    compInfo = [];
-    compCellToId = new Map();
-    connTimer = 0;
-
-    player.x = P.WORLD_W_PX/2;
-    player.y = P.SURFACE_Y_PX - 14;
-
-    state.camX = clamp(player.x - W/2, 0, P.WORLD_W_PX - W);
-    state.camY = player.y - H * P.CAM_TARGET_Y_FRAC;
-
-    ui.mode.textContent = "RUN";
-    overlay("COMMIT YOUR FIRST PROGRAM", 1.1);
-  }
-
-  function boot(){
-    ui.mode.textContent = "READY";
-    state.running = false;
-    state.paused = false;
-    state.over = false;
-
-    player.x = P.WORLD_W_PX/2;
-    player.y = P.SURFACE_Y_PX - 14;
-
-    state.camX = clamp(player.x - W/2, 0, P.WORLD_W_PX - W);
-    state.camY = player.y - H * P.CAM_TARGET_Y_FRAC;
-
-    syncUI();
-    requestAnimationFrame(tick);
-  }
-
-  // ---------- components rebuild ----------
-  function rebuildComponentsAndMaps(){
-    compInfo = [];
-    compCellToId = new Map();
-
-    const visited = new Set();
-    let id = 0;
-
-    for (const k0 of carved){
-      if (visited.has(k0)) continue;
-      const q = [k0];
-      visited.add(k0);
-
-      const comp = { id, mouths:0, touchesHot:false, touchesCold:false, hdrCarved:0, hdrAdj:0, hasHdrPlant:false };
-      while (q.length){
-        const cur = q.pop();
-        compCellToId.set(cur, id);
-
-        const comma = cur.indexOf(",");
-        const cx = Number(cur.slice(0,comma));
-        const cy = Number(cur.slice(comma+1));
-
-        if (isMouthCell(cx,cy)) comp.mouths++;
-
-        const tHere = getCellType(cx,cy);
-        if (tHere === TYPE.HDR) comp.hdrCarved++;
-
-        for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
-          const nx = cx+dx, ny = cy+dy;
-          const nk = key(nx,ny);
-          if (carved.has(nk)){
-            if (!visited.has(nk)){ visited.add(nk); q.push(nk); }
-          } else {
-            const nt = getCellType(nx,ny);
-            if (nt === TYPE.HOT) comp.touchesHot = true;
-            if (nt === TYPE.COLD) comp.touchesCold = true;
-            if (nt === TYPE.HDR) comp.hdrAdj++;
-          }
-        }
-      }
-
-      compInfo.push(comp);
-      id++;
-    }
-
-    for (const pl of plants){
-      if (pl.kind === "HDR" && pl.componentId !== undefined){
-        const c = compInfo.find(x => x.id === pl.componentId);
-        if (c) c.hasHdrPlant = true;
-      }
-    }
-    for (const pl of plants){
-      if (pl.kind === "HOTW" && pl.componentId === undefined){
-        const kid = compCellToId.get(key(pl.strikeCX, pl.strikeCY));
-        if (kid !== undefined) pl.componentId = kid;
-      }
-    }
-
-    state.contam = compInfo.some(c => c.touchesHot && c.touchesCold);
-  }
-
-  boot();
+  if (p.face){ openSection(cutLine !== null ? cutLine : S.lines.length - 1); return; }
+  if (p.x === undefined){ sel = null; $('#card').hidden = true; return; }
+  if (tool){ const tk = tool, r = place(tk, p.x, p.y); if (r === 'ok'){ tool = null; anchor = null; sfx('coin'); const l = lineAt(p.y); if (l && SITE[tk]) cutLine = l.id; } else if (r){ toast(r); sfx('no'); if (tk !== 'survey' && tk !== 'pipe' && tk !== 'plant') anchor = null; } return; }
+  const o = objAt(p.x, p.y); if (o){ sel = {id:o.id}; if (o.line !== undefined) cutLine = o.line; renderCard(); return; }
+  const v = vilAt(p.x, p.y); if (v){ sel = {v:v.id}; renderCard(); return; }
+  const l = lineAt(p.y); if (l){ sel = {line:l.id}; cutLine = l.id; showPaper = false; renderCard(); return; }
+  sel = null; $('#card').hidden = true;
+}
+function act(a, v){
+  if (a === 'close'){ sel = null; $('#card').hidden = true; return; } if (a === 'closeloans'){ $('#loans').hidden = true; return; } if (a === 'closeres'){ $('#research').hidden = true; return; }
+  if (a === 'research'){ const r = research(v); toast(r === 'ok' ? RES[v].n + ' started.' : r); return; } if (a === 'uncut'){ cutLine = null; sel = null; $('#card').hidden = true; return; }
+  if (a === 'map'){ closeSection(); return; } if (a === 'toggle'){ showPaper = !showPaper; return; }
+  if (a === 'start'){ S.started = true; S.paused = false; $('#overlay').hidden = true; audio(); return; }
+  if (a === 'continue'){ try { const d = JSON.parse(localStorage.getItem('jf3_save')); if (d && d.v === 3){ S = d; GEO.clear(); KN.clear(); CANV.clear(); DIRTY.clear(); VELS.clear(); for (const [k,arr] of (S.KN || [])) KN.set(k, Uint8Array.from(arr)); delete S.KN; baseMap = null; } } catch (e) {} S.paused = false; S.started = true; $('#overlay').hidden = true; return; }
+  if (a === 'again'){ boot(true); return; }
+  if (a === 'accept'){ const d = S.offerData; S.cash += d.c; S.invest[S.offer] = true; for (const vv of S.vil) bump(vv, 'Out-of-canton money', d.m); news('Investors from outside the canton take a stake. The logo on the rig changes overnight.'); S.offer = null; S.paused = false; $('#overlay').hidden = true; sfx('coin'); return; }
+  if (a === 'decline'){ S.invest[S.offer] = true; news('The Company declines outside money. "We remain Jurassien," says the press release, printed in Bern.'); S.offer = null; S.paused = false; $('#overlay').hidden = true; return; }
+  if (a === 'borrow'){ const r = borrow(); if (r !== 'ok') toast(r); return; } if (a === 'repay'){ const r = repayAll(); if (r !== 'ok') toast(r); return; }
+  if (a === 'commit'){ const r = commitPlan(); if (r !== 'ok') toast(r); else toast('Committed. The drill cannot be stopped now.'); return; }
+  if (a === 'undo'){ if (plan && plan.pts.length) plan.pts.pop(); return; } if (a === 'cancelplan'){ plan = null; return; } if (a === 'case'){ if (plan) plan.cased = !plan.cased; return; }
+  if (a === 'open'){ if (sel && sel.line !== undefined) openSection(sel.line); else if (sel && sel.id){ const o = byId(sel.id); if (o && o.line !== undefined){ const id = o.id; openSection(o.line); sel = {id}; renderCard(); } } return; }
+  const o = sel && byId(sel.id); if (!o) return;
+  if (a === 'plan'){ if (view !== 'section') openSection(o.line); plan = {rig:o.id, pts:[], cased:false, err:''}; tool = null; sel = null; $('#card').hidden = true; cam.y = clamp(SURF + tip(o).d - 80, 0, SURF + UGH - SH); return; }
+  if (a === 'stim'){ const r = stimulate(o, Number(v)); if (r !== 'ok') toast(r); return; }
+  if (a === 'rm'){ withdraw(o); sfx('click'); }
+}
+function bind(){
+  const c = $('#game'); let drag = null, moved = false;
+  c.addEventListener('pointerdown', e => { drag = {y:e.clientY, cy:cam.y}; moved = false; c.setPointerCapture(e.pointerId); });
+  c.addEventListener('pointermove', e => { hover = toWorld(e); if (drag && view === 'section'){ const dy = (e.clientY - drag.y)/scale; if (Math.abs(dy) > 4) moved = true; if (moved) cam.y = clamp(drag.cy - dy, 0, SURF + UGH - SH); } });
+  c.addEventListener('pointerup', e => { if (drag && !moved) clickWorld(toWorld(e)); drag = null; });
+  c.addEventListener('pointerleave', () => { hover = null; });
+  c.addEventListener('wheel', e => { if (view !== 'section') return; e.preventDefault(); cam.y = clamp(cam.y + e.deltaY*0.5, 0, SURF + UGH - SH); }, {passive:false});
+  $('#pal').addEventListener('click', e => { const b = e.target.closest('.it'); if (!b || !S.started || S.over) return; if (b.dataset.t){ const d = DEF[b.dataset.t]; if (d.need && !resDone(d.need)){ $('#research').hidden = false; renderResearch(); toast(d.n + ' needs ' + RES[d.need].n.toLowerCase() + '. See Research.'); return; } pickTool(b.dataset.t); } });
+  $('#stage').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) act(b.dataset.a, b.dataset.v); });
+  $('#sp0').onclick = () => { S.paused = true; }; $('#sp1').onclick = () => { if (S.offer) return; S.paused = false; S.speed = 1; audio(); }; $('#sp4').onclick = () => { if (S.offer) return; S.paused = false; S.speed = 4; audio(); };
+  $('#mute').onclick = () => { S.muted = !S.muted; }; $('#loanbtn').onclick = () => { $('#loans').hidden = !$('#loans').hidden; $('#research').hidden = true; renderLoans(); }; $('#resbtn').onclick = () => { $('#research').hidden = !$('#research').hidden; $('#loans').hidden = true; renderResearch(); };
+  window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; const k = e.key;
+    if (k === ' ' && S.started && !S.offer){ S.paused = !S.paused; e.preventDefault(); } if (k === 'Escape'){ tool = null; anchor = null; plan = null; sel = null; $('#card').hidden = true; $('#loans').hidden = true; $('#research').hidden = true; if (view === 'section') closeSection(); else cutLine = null; }
+    if (view === 'section'){ if (k === 'ArrowUp'){ cam.y = clamp(cam.y - 24, 0, SURF + UGH - SH); e.preventDefault(); } if (k === 'ArrowDown'){ cam.y = clamp(cam.y + 24, 0, SURF + UGH - SH); e.preventDefault(); } } });
+  window.addEventListener('resize', fit);
+}
+function fit(){ const st = $('#stage'), c = $('#game'); const W = view === 'map' ? CW*2 : SW, H = view === 'map' ? CH*2 : SH; if (c.width !== W){ c.width = W; c.height = H; }
+  const aw = st.clientWidth - 8, ah = st.clientHeight - 8; if (aw < 50 || ah < 50) return; let s = Math.min(aw/W, ah/H); if (s >= 1) s = Math.floor(s*8)/8; scale = s; c.style.width = (W*s) + 'px'; c.style.height = (H*s) + 'px'; }
+
+/* ================================================================== loop and boot */
+let bound = false, acc = 0;
+function frame(now){
+  const dt = Math.min(0.1, (now - lastT)/1000); lastT = now; const t = now/1000;
+  if (running()){ advance(dt*S.speed/CFG.MONTH_SEC); tickEnts(dt); if (S.obj.some(o => o.drilling)){ acc += dt; if (acc > 1.4){ acc = 0; sfx('drill'); } } }
+  const g = $('#game').getContext('2d'); g.imageSmoothingEnabled = false; if (view === 'map') drawMap(g, t); else drawSection(g, t); hud(); planBar();
+  requestAnimationFrame(frame);
+}
+function boot(fresh){
+  let hasSave = false; try { const d = JSON.parse(localStorage.getItem('jf3_save')); hasSave = !!(d && d.v === 3 && !fresh); } catch (e) {}
+  newGame((Date.now() ^ (Math.random()*1e9)) >>> 0); view = 'map'; line = null; cutLine = null; baseMap = null;
+  tool = anchor = plan = sel = null; $('#card').hidden = true; $('#loans').hidden = true;
+  if (!bound){ buildPalette(); bind(); bound = true; requestAnimationFrame(tt => { lastT = tt; frame(tt); }); }
+  fit(); showContract(hasSave);
+}
+window.JF = {get S(){ return S; }, tick:tickEnts, rockL, place, research, borrow, commitPlan, stimulate, advance, forecast, byId, tip, planCost, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, cased) => { plan = {rig, pts, cased:!!cased, err:''}; }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, SURF + UGH - SH); }, select:s => { sel = s; renderCard(); },
+  newGame:seed => { newGame(seed); S.started = true; S.paused = false; view = 'map'; cutLine = null; baseMap = null; fit(); $('#overlay').hidden = true; }, setCut:li => { cutLine = li; }, get cutLine(){ return cutLine; }};
+const ready = document.fonts && document.fonts.load ? document.fonts.load('12px "Pixelify Sans"').catch(() => {}) : Promise.resolve();
+ready.then(() => boot(false));
 })();
 </script>
 </body>
