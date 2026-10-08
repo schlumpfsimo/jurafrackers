@@ -206,12 +206,12 @@ const DEF = {
   suit:{g:'Persuade',n:'Man in a suit',up:15,c:'CHF 15k a month',h:'Click near a village. He arrives by car and talks to people.'},
   stand:{g:'Persuade',n:'Information stand',cost:20,up:3,h:'Click near a village. Brochures and a parasol.'},
   lobby:{g:'Persuade',n:'Lobby outpost',cost:400,up:30,h:'Click the ground. A prefab glass office, trucked in, for the whole valley. Builds go faster.'},
-  fest:{g:'Persuade',n:'Village fest',cost:80,h:'Click a village. Carousel, sausages, damassine. In November it is Saint-Martin.'},
+  fest:{g:'Persuade',n:'Village fest',cost:80,h:'Click a village. Carousel, sausages, damassine. In November it is the Saint-Martin feast: boudin, totché, six hours at the table.'},
   congress:{g:'Persuade',n:'Congress',cost:200,now:1,h:'Held in town right away. Lanyards are pre-printed.'},
   school:{g:'Persuade',n:'School funding',cost:2500,build:6,c:'CHF 2.5 M',h:'Click a village. A new sports hall with your name on it.'},
   chair:{g:'Persuade',n:'University chair',cost:3000,up:25,build:12,h:'Click the ground. Research gets cheaper, the papers get friendlier, and only a university can run a second seismic survey.'},
   police:{g:'Force',n:'Police patrol',up:60,c:'CHF 60k a month',h:'Click near a blockade or site. The van drives in, a word is had, the tractors leave.'},
-  riot:{g:'Force',n:'Riot unit',up:400,c:'CHF 400k a month',h:'Click near a protest camp. A bus of helmets.'},
+  riot:{g:'Force',n:'Public-order unit',up:400,c:'CHF 400k a month',h:'Click near a protest camp. Switzerland has no standing riot police: these are public-order officers pooled from several cantons. A bus of helmets.'},
   heli:{g:'Force',n:'Helicopter',cost:150,now:1,last:1,h:'The last resort: circles the town and the sites and clears every blockade and camp at once. Every village resents it, now and later.'}
 };
 const RES = {deep:{n:'Deep drilling',cost:1500,t:6}, dir:{n:'Directional drilling',cost:2000,t:8}, noise:{n:'Noise control',cost:600,t:4}};
@@ -448,7 +448,7 @@ function place(type, x, y){
       if (!v) return 'Click a village.'; S.cash -= def.cost; sfx('jingle');
       if (v.festYear === year()){ bump(v, 'Fest seen as a bribe', -8); const f = freeSpot(v.x, v.y + v.h/2 + 14, 20, i => hash(S.month, i, 4, S.seed)) || {x:v.x, y:v.y + v.h/2 + 12}; add('counterfest', f.x, f.y, {v:v.id, opp:1, until:S.t + 1, w:7, hh:8}); news('Second fest this year in ' + v.name + '. "We are not for sale," say people eating the free sausages. Mood −8, and a counter-fest.'); return 'ok'; }
       v.festYear = year(); v.festUntil = S.t + 2; v.festMult = S.month % 12 === 10 ? 2 : 1;
-      news('Fête de la Saint-Géothermie in ' + v.name + ': heated carousel, free sausages' + (v.festMult === 2 ? ', and it is Saint-Martin.' : '.') + ' Mood +' + 5*v.festMult + ' a month there for two months.'); return 'ok';
+      news('Fête de la Saint-Géothermie in ' + v.name + ': heated carousel, free sausages' + (v.festMult === 2 ? ', and it is Saint-Martin: boudin, atriaux, totché, a damassine between courses.' : '.') + ' Mood +' + 5*v.festMult + ' a month there for two months.'); return 'ok';
     }
     case 'school': {
       if (!v) return 'Click a village.'; S.cash -= def.cost;
@@ -464,7 +464,7 @@ function place(type, x, y){
       for (const [cx, cy, r] of spots) for (let a = 0; a <= 6.3; a += 0.7) wp.push([cx + Math.cos(a)*r, cy + Math.sin(a)*r*0.8]); wp.push([MW + 50, 20]); S.ents.push({k:'heli', x:wp[0][0], y:wp[0][1], wp, i:1, ang:0});
       const n = S.obj.filter(b => b.type === 'tractor' || b.type === 'camp').length; S.obj.filter(b => b.type === 'tractor' || b.type === 'camp').forEach(b => { if (b.type === 'tractor') spawnLeave(b); rm(b); });
       for (const vv of S.vil){ bump(vv, 'Helicopter', -6); vv.rel += 3; vv.relRate = vv.rel/4; } S.sinceForce = 0; S.forceM = Math.max(S.forceM, 3); sfx('heli');
-      news('A police helicopter circles ' + town.name + ' and the sites. ' + (n ? n + ' blockade' + (n > 1 ? 's and camps are' : ' is') + ' cleared at once. ' : '') + 'Everyone films it. Mood −6 in every village, and the anger will come back.'); return 'ok';
+      news('An Air Force helicopter, lent to the cantonal police, circles ' + town.name + ' and the sites. ' + (n ? n + ' blockade' + (n > 1 ? 's and camps are' : ' is') + ' cleared at once. ' : '') + 'Everyone films it. Mood −6 in every village, and the anger will come back.'); return 'ok';
     }
   }
   return 'Cannot place that here.';
@@ -492,7 +492,7 @@ function campaign(k, vid){ S.camp = S.camp || {done:{}, run:[]}; const d = CAMP[
   if (!campOpen()) return 'The campaign starts six months before the vote.'; if (S.camp.done[key]) return 'Already done.'; if (!canPay(d.c)) return d.n + ' costs ' + fmt(d.c) + '.';
   S.cash -= d.c; S.camp.done[key] = 1; S.camp.run.push({k, vid, at:S.month + d.mo}); sfx('coin'); return 'ok'; }
 function campaignTick(){
-  if (S.month === CFG.END - 6){ news('Six months to the vote. The campaign begins: posters, ads, a debate, doors to knock on. Open Campaign at the top.'); for (const p of ['#loans', '#research', '#polls', '#wire']) $(p).hidden = true; $('#camp').hidden = false; renderCampaign(); }
+  if (S.month === CFG.END - 6){ news('Six months to the vote. The campaign begins: posters, ads, a debate, doors to knock on. Open Campaign at the top. In 2010 St. Gallen voted 83% yes to its geothermal credit; three years later the well shook the town.'); for (const p of ['#loans', '#research', '#polls', '#wire']) $(p).hidden = true; $('#camp').hidden = false; renderCampaign(); }
   if (!S.camp) return;
   for (const r of S.camp.run.slice()){ if (r.at > S.month) continue; S.camp.run.splice(S.camp.run.indexOf(r), 1); const town = S.vil[0];
     if (r.k === 'posters'){ S.camp.posters = S.month; news('Posters go up in every village: a smiling family in front of a rig. Someone draws a moustache on the rig.'); }
@@ -520,7 +520,7 @@ const ALL = 'all', LK = 5;
 /* each generator returns {from, title, text, opts}; an option: {l, c (cost k), g (gain k), m [[village|'all', n]], why, p (odds of the good outcome), bad {m, c, g, news}, news, fn} */
 const fmtL = k => fmt(k*LK);                                            // letter amounts are written in letter units
 const LETTERS = [
-  () => { const v = evVil(), [item, c, m] = pick([['the fire brigade’s new ladder truck',40,5],['the church bells',25,3],['the football club’s jerseys',12,2],['a new roof for the bus shelter',8,1],['the carnival float',15,2],['the brass band’s uniforms',20,3],['the retirement home’s minibus',35,4],['a defibrillator at the post office',10,2],['the village library',18,2],['the swimming pond’s diving board',14,2],['the Saint-Martin pig roast',22,3],['Christmas lights on the main street',16,3],['a new piano for the school',20,3],['the bakery’s wood oven',24,3],['the youth club’s table football',6,1]]), tone = pick(['writes politely','writes, underlining “politely” twice','calls at seven in the morning','sends her deputy with a cake','writes on paper with the village crest']);
+  () => { const v = evVil(), [item, c, m] = pick([['the fire brigade’s new ladder truck',40,5],['the church bells',25,3],['the football club’s jerseys',12,2],['a new roof for the bus shelter',8,1],['the carnival float',15,2],['the brass band’s uniforms',20,3],['the retirement home’s minibus',35,4],['a defibrillator at the post office',10,2],['the village library',18,2],['the swimming pond’s diving board',14,2],['the Saint-Martin feast in the village hall',22,3],['Christmas lights on the main street',16,3],['a new piano for the school',20,3],['the bakery’s wood oven',24,3],['the youth club’s table football',6,1]]), tone = pick(['writes politely','writes, underlining “politely” twice','calls at seven in the morning','sends her deputy with a cake','writes on paper with the village crest']);
     return {from:'The mayor of ' + v.name, title:'A small favour', text:'The mayor of ' + v.name + ' ' + tone + ' to ask whether the Company would pay for ' + item + '.', opts:[
       {l:'Pay for it', c, m:[[v, m]], why:'Sponsorship', news:'The Company pays for ' + item + ' in ' + v.name + '. A small plaque is unveiled.'},
       {l:'Pay half', c:Math.round(c/2), m:[[v, Math.round(m/2)]], why:'Sponsorship', p:0.6, bad:{m:[[v, -1]], news:'Half of ' + item + '. ' + v.name + ' calls it “typical”.'}, news:'Half of ' + item + ' is paid for. ' + v.name + ' raises the rest at a bake sale.'},
@@ -724,7 +724,7 @@ function stepDrill(o, dm){
   }
   if (dr.seg >= dr.pts.length){ o.drilling = null; const tb = tip(o), wT = openIn(o, ROCK.WARM) ? aqT(o.line, tb.x, wellPts(o).find(p => rockL(o.line, p.x, p.d) === ROCK.WARM).d) : tempAt(o.line, tb.x, tb.d), ok = wT >= 60, back = ok ? Math.round(o.spent*DRILL.subsidy) : 0;
     S.cash += back; if (back) acct('Federal exploration contribution', back); o.cost = (o.cost || 0) + o.spent;
-    news('Well finished near ' + nearestVillage(o.x, o.y).name + ' at ' + M(tb.d) + ', water or rock at about ' + wT + ' °C. It cost ' + fmt(o.spent) + '. ' + (ok ? 'The Confederation refunds 60%: ' + fmt(back) + '.' : 'The federal energy office refunds nothing: water below 60 °C needs heat pumps, and heat-pump projects are not eligible. A motion to change that is in parliament.')); o.spent = 0; }
+    news('Well finished near ' + nearestVillage(o.x, o.y).name + ' at ' + M(tb.d) + ', water or rock at about ' + wT + ' °C. It cost ' + fmt(o.spent) + '. ' + (ok ? 'The Confederation refunds 60%: ' + fmt(back) + '.' : 'The federal energy office refunds nothing: water below 60 °C needs heat pumps, and heat-pump projects are not eligible. A motion to change that is before the federal parliament.')); o.spent = 0; }
 }
 /* surprises at the bit: the odds are never shown; the facts and the costs of each answer are */
 function drillEvent(o, t, dr){
@@ -816,7 +816,7 @@ function continuous(dm){
       o.talked = true; bump(v, 'Talked it through', 0.5); news('The protesters from ' + v.name + ' listen politely and stay. They noted you came to talk. Mood +0.5.'); }
     if (o.type === 'camp' && !o.warn2){ const s2 = byId(o.target); if (s2 && o.t0 + (s2.fenced ? 6 : 3) - S.t <= 0.3){ o.warn2 = 1; news('Torches are lit at the camp near ' + S.vil[o.v].name + '. The ' + (RIG[s2.type] ? 'rig' : DEF[s2.type].n.toLowerCase()) + ' burns within days unless someone acts.'); toast('Torches lit: a site is about to burn'); S.paused = true; } }
     if ((o.type === 'tractor' || o.type === 'camp') && o.arrived){ const s = byId(o.target), cop = s && S.obj.find(p => p.type === (o.type === 'tractor' ? 'police' : 'riot') && p.on && (Math.hypot(p.x - o.x, p.y - o.y) <= 26 || Math.hypot(p.x - s.x, p.y - s.y) <= 26));
-      if (!cop) o.faceoff = undefined; else if (o.faceoff === undefined) o.faceoff = S.t; else if (S.t - o.faceoff >= 0.3){ const v = S.vil[o.v]; if (o.type === 'tractor'){ spawnLeave(o); news('The police have a word. The manure spreader leaves ' + v.name + ', slowly.'); } else news('Riot police clear the camp near ' + v.name + '. The yurt is confiscated as evidence.'); rm(o); } }
+      if (!cop) o.faceoff = undefined; else if (o.faceoff === undefined) o.faceoff = S.t; else if (S.t - o.faceoff >= 0.3){ const v = S.vil[o.v]; if (o.type === 'tractor'){ spawnLeave(o); news('The police have a word. The manure spreader leaves ' + v.name + ', slowly.'); } else news('Public-order police clear the camp near ' + v.name + '. The yurt is confiscated as evidence.'); rm(o); } }
   }
 }
 function onReady(o){
@@ -885,10 +885,10 @@ function monthTick(){
       if (RIG[o.type] && o.on && d <= 40) { if (!o.off && !o.released) put('Rig noise', -1*(1 - d/44)*(o.quiet ? 0.5 : 1)*(o.drilling ? 1.3 : 0.7)*(o.inVillage === v.id ? 2 : 1)); }
       if (SITE[o.type] && near){ if (o.fenced) put('Fence', -0.2); if (o.inc > 0 || o.drilling) put('Local jobs', 0.4); }
       if (o.type === 'police' && near && o.on){ put('Police presence', -0.8); v.stored += 0.8; }
-      if (o.type === 'riot' && near && o.on){ put('Riot unit', -2.5); v.stored += 2; }
+      if (o.type === 'riot' && near && o.on){ put('Public-order unit', -2.5); v.stored += 2; }
       if (o.v === v.id){ if (o.type === 'banner') put('Banner in the field', -0.3); if (o.type === 'rumour') put('Rumour', -1); if (o.type === 'counterfest') put('Counter-fest', -2); }
     }
-    if (riots.length) put('Riot police in the valley', -0.4*riots.length);
+    if (riots.length) put('Police buses in the valley', -0.4*riots.length);
     if (v.kept > S.month) put('Kept its wish', 0.4);
     if (S.camp && S.camp.posters && S.month >= S.camp.posters) put('Campaign posters', 0.8);
     if (v.rel > 0.01){ put('Stored anger', -v.relRate); v.rel -= v.relRate; }
@@ -914,7 +914,7 @@ function monthTick(){
     else if (b && (S.t >= b.until || S.obj.some(o => o.type === 'suit' && o.on && vdist(v, o.x, o.y) <= 26))) rm(b);
     const sites = S.obj.filter(o => SITE[o.type] && o.on && vdist(v, o.x, o.y) <= 150).sort((a,b2) => vdist(v,a.x,a.y) - vdist(v,b2.x,b2.y));
     if (v.mood < 33 && ch(0.15, 4) && !S.obj.some(t => t.type === 'tractor' && t.v === v.id)){ const s = sites.find(s => !isBlocked(s) && !guarded(s)); if (s){ const rp = roadPos(roadS(s.x, s.y).s); const tr = add('tractor', rp.x, rp.y, {v:v.id, opp:1, target:s.id, until:S.t + 2, w:8, hh:6}); spawnArrival(tr, v); news('A manure spreader parks across the road near ' + v.name + '. The driver has gone for lunch. The site is blocked for two months, or until police arrive.'); } }
-    if (v.mood < 25 && ch(0.3, 5)){ const s = sites.find(s => vdist(v,s.x,s.y) <= 90 && !S.obj.some(c => c.type === 'camp' && c.target === s.id)); if (s){ add('camp', s.x + (s.x < v.x ? 12 : -12), s.y + 6, {v:v.id, opp:1, target:s.id, w:9, hh:7}); news('A protest camp goes up at the site near ' + v.name + '. The yurt is better insulated than the village hall. If it stays ' + (s.fenced ? 6 : 3) + ' months, the site burns; a riot unit clears it.'); } }
+    if (v.mood < 25 && ch(0.3, 5)){ const s = sites.find(s => vdist(v,s.x,s.y) <= 90 && !S.obj.some(c => c.type === 'camp' && c.target === s.id)); if (s){ add('camp', s.x + (s.x < v.x ? 12 : -12), s.y + 6, {v:v.id, opp:1, target:s.id, w:9, hh:7}); news('A protest camp goes up at the site near ' + v.name + '. The yurt is better insulated than the village hall. If it stays ' + (s.fenced ? 6 : 3) + ' months, the site burns; a public-order unit clears it.'); } }
   });
   if (avg < 35 && !S.obj.some(o => o.type === 'march') && rnd(7) < 0.15*k){ const t = S.vil[0]; add('march', t.x, t.y + t.h/2 + 8, {opp:1, until:S.t + 1, w:1, hh:1}); const s0 = roadS(t.x, t.y).s; for (let i = 0; i < 12; i++) S.ents.push({k:'marcher', s:s0 - 60 - i*5, vs:6, sign:i%2 ? 'NON' : 'STOP', until:S.t + 1, idx:i}); bump(t, 'Protest march', -4); news('March in ' + t.name + ': a thousand people, twelve tractors, one alphorn. Mood −4 in town.'); }
   for (const o of S.obj.slice()){
@@ -1404,23 +1404,23 @@ function hud(){
 }
 const VOICE = {'Felt quake':'The plates fell off the dresser. Again.', 'Rig noise':'You hear it at night, like a fridge the size of a church.', 'Polluted spring':'The fountain is brown. My grandmother washed in it.', 'Survey trucks':'Three trucks shaking the road at seven in the morning.',
   'Village fest':'Free sausages. I am not saying I changed my mind. I am saying they were good.', 'Cheap heat':'Our heating bill halved. I still do not like the rig, but I like the bill.', 'Men in suits':'The young man in the suit was very polite. Very.', 'Police presence':'Since when do we need police at the bakery?',
-  'Riot unit':'Helmets. In our village. On a Tuesday.', 'Riot police in the valley':'My nephew saw the riot bus on the main road.', 'Helicopter':'Who pays for that helicopter? We do.', 'Out-of-canton money':'Zurich money. Of course it is.', 'School funding':'The new sports hall is lovely. Their logo is on the floor.',
+  'Public-order unit':'Helmets. In our village. On a Tuesday.', 'Police buses in the valley':'My nephew saw the police bus on the main road. Plates from three cantons.', 'Helicopter':'Who pays for that helicopter? We do.', 'Out-of-canton money':'Zurich money. Of course it is.', 'School funding':'The new sports hall is lovely. Their logo is on the floor.',
   'Information stand':'I took a brochure. For the stove.', 'Old habits':'We have always heated with wood. My father did too.', 'Rumour':'My cousin says the hens stopped laying.', 'Protest march':'Everybody was at the march. Even the priest.', 'Banner in the field':'Have you seen the banner at the Juillerat field?',
   'Local jobs':'My son works on the rig now. He comes home tired and happy.', 'Congress':'A congress in our town! With lanyards!', 'Dug-up road':'The road has been dug up since spring.', 'Fest seen as a bribe':'Another fest? We are not for sale.', 'Buying our children':'They put their name on our children’s sports hall.',
-  'Stored anger':'Nobody has forgotten the riot police.', 'Counter-fest':'The counter-fest had better music.', 'Field leased over their heads':'They leased the field. Nobody asked the neighbours.', 'Test rig':'There is a tower in the field now.', 'Fence':'A fence round a hole in the ground. Very welcoming.'};
+  'Stored anger':'Nobody has forgotten the helmets.', 'Counter-fest':'The counter-fest had better music.', 'Field leased over their heads':'They leased the field. Nobody asked the neighbours.', 'Test rig':'There is a tower in the field now.', 'Fence':'A fence round a hole in the ground. Very welcoming.'};
 function voice(v, cs){ const c = cs[0]; return VOICE[c && c[0]] || (v.mood >= 50 ? 'Heat from under our feet. Why not.' : 'We will see. We always see.'); }
 function advice(v, cs){ const t = [], has = k => (v.causes[k] || 0);
   if (v.mute > 0) t.push('Not listening for ' + v.mute + ' more month' + (v.mute > 1 ? 's' : '') + ' after the quake: persuasion has no effect.');
-  if (v.mood < 25) t.push('<span class="neg">Below 25: protest camps. A site burns after 3 months, 6 if fenced. A riot unit clears camps.</span>');
+  if (v.mood < 25) t.push('<span class="neg">Below 25: protest camps. A site burns after 3 months, 6 if fenced. A public-order unit clears camps.</span>');
   else if (v.mood < 33) t.push('<span class="neg">Below 33: tractors may block your nearest site. A police patrol sends them home.</span>');
   if (has('Rig noise') < -1) t.push('Rig noise: research noise control and fit quiet upgrades, or drill further away.');
   if (v.heat !== 'on' && !polluted(v)) t.push('Nothing wins hearts like a cheaper heating bill: pipe a heat station here (+0.8 a month).');
   if (v.festYear !== year()) t.push('A fest this year: +5 a month for two months (doubled at Saint-Martin, November).');
-  if (has('Riot unit') < -1 || has('Police presence') < -1) t.push('Uniforms cost mood every month, and the anger comes back after they leave.');
+  if (has('Public-order unit') < -1 || has('Police presence') < -1) t.push('Uniforms cost mood every month, and the anger comes back after they leave.');
   if (polluted(v)) t.push('The fountain stays brown. Case your wells through groundwater.');
   return t.slice(0, 3); }
 const WISH = {
-  football:{t:'new jerseys for the football club', cost:60}, fountain:{t:'the old fountain on the square restored', cost:250, ok:v => !polluted(v)}, bus:{t:'an evening PostAuto to town for a year', cost:300},
+  football:{t:'new jerseys for the football club', cost:60}, fountain:{t:'the old fountain on the square restored', cost:250, ok:v => !polluted(v)}, bus:{t:'an evening CarPostal to town for a year', cost:300},
   bench:{t:'heated benches at the bus stop', cost:40}, choir:{t:'the choir’s trip to the cantonal festival paid for', cost:60}, pool:{t:'the swimming pond reopened for summer', cost:200},
   heat:{t:'geothermal heat before next winter', months:14, ok:v => v.heat !== 'on', done:v => v.heat === 'on'},
   fest:{t:'a village fest this year', months:10, done:v => v.festYear === year() && v.festUntil > S.t - 2},
@@ -1488,13 +1488,13 @@ function renderCard(){
     if (o.burnt) s = '<span class="neg">Burnt out.</span> Only the ruin is left.';
     else if (!o.on) s = o.arrived ? 'Being built, ready in ' + Math.max(1, Math.ceil(o.ready - S.t)) + ' month(s).' : 'On its way.';
     else if (o.type === 'tractor' || o.type === 'camp'){ const vv = S.vil[o.v];
-      s = o.type === 'tractor' ? 'Blocks the road to a site. Leaves after two months, or when a police patrol arrives.' : 'Stops the site. If it stays ' + ((byId(o.target) || {}).fenced ? 'six' : 'three') + ' months, the site burns. It leaves when the village calms down, or when a riot unit arrives.';
+      s = o.type === 'tractor' ? 'Blocks the road to a site. Leaves after two months, or when a police patrol arrives.' : 'Stops the site. If it stays ' + ((byId(o.target) || {}).fenced ? 'six' : 'three') + ' months, the site burns. It leaves when the village calms down, or when a public-order unit arrives.';
       if (o.talking !== undefined) s += '<div class="sub">Your liaison officer is talking to them…</div>'; else if (o.talked) s += '<div class="sub">They listened once and stayed. They will not talk again.</div>';
       else { s += '<div class="sub">A liaison officer goes over with coffee. Whether they pack up depends on them. Talking stores no anger.</div>'; acts += '<button class="btn main" data-a="talk">Talk to them (' + fmt(20) + ')</button>'; } }
     else if (opp) s = {banner:'Lowers the mood nearby until the village warms up.', oppstand:'Cancels one of your suits or your stand here.', rumour:'Blames you for something unrelated. Fades, or a suit nearby ends it.', march:'A month of bad press in town.', activists:'Double the pace of the opposition. They leave three months after the last police unit.', counterfest:'Cancels your second fest.'}[o.type];
     else if (SITE[o.type]){
       if (isBlocked(o)) s = '<span class="neg">Blocked by protesters.</span> ';
-      { const camp = S.obj.find(c => c.type === 'camp' && c.target === o.id); if (camp){ const left = camp.t0 + (o.fenced ? 6 : 3) - S.t; s += '<span class="neg"><b>Threatened:</b> the camp will set it on fire in about ' + (left >= 1 ? Math.ceil(left) + ' month' + (Math.ceil(left) > 1 ? 's' : '') : Math.max(1, Math.ceil(left*4.3)) + ' week' + (Math.ceil(left*4.3) > 1 ? 's' : '')) + '. Talk to them, send riot police, or, last resort, the helicopter.</span> '; } }
+      { const camp = S.obj.find(c => c.type === 'camp' && c.target === o.id); if (camp){ const left = camp.t0 + (o.fenced ? 6 : 3) - S.t; s += '<span class="neg"><b>Threatened:</b> the camp will set it on fire in about ' + (left >= 1 ? Math.ceil(left) + ' month' + (Math.ceil(left) > 1 ? 's' : '') : Math.max(1, Math.ceil(left*4.3)) + ' week' + (Math.ceil(left*4.3) > 1 ? 's' : '')) + '. Talk to them, send public-order police, or, last resort, the helicopter.</span> '; } }
       if (o.halt > S.t) s += '<span class="neg">Work stopped by the canton until next month.</span> ';
       if (RIG[o.type]){ const tp = tip(o), role = S.obj.find(st => st.prod === o.id || st.inj === o.id);
         if (o.drilling){ const dr = o.drilling, here = rockL(o.line, dr.pos.x, dr.pos.d), goal = dr.pts[dr.pts.length - 1], rest = planEst(Object.assign({}, o, {well:[{x:dr.pos.x, d:dr.pos.d}]}), Object.assign({}, dr, {pts:dr.pts.slice(dr.seg)}));
@@ -1571,8 +1571,8 @@ function planBar(){
 function showContract(hasSave){
   $('#overlay').hidden = false;
   $('#overlay').innerHTML = '<div class="contract"><h1>Concession agreement</h1><div class="sub">between the Republic and Canton and ' + COMPANY + ' · ref. ' + S.seed + '</div>' +
-    '<p><b>Preamble.</b> Whereas the Canton wishes to heat its valleys without importing oil, and whereas the Company, founded by three engineers and a former cantonal councillor, holds a brochure that says the granite beneath the valley is hot; the parties agree as follows.</p>' +
-    '<ol><li><b>Term.</b> Ten years from signature. On the last day the population of the valley votes on continuation. Below 50.1% yes, the Company dismantles everything at its own cost.</li>' +
+    '<p><b>Preamble.</b> Whereas the Canton wishes to heat its valleys without importing oil, and whereas the Company, founded by three engineers and a former member of the Parlement jurassien, holds a brochure that says the granite beneath the valley is hot; the parties agree as follows.</p>' +
+    '<ol><li><b>Term.</b> Ten years from signature. On the last day the population of the valley votes on continuation. A simple majority of the ballots cast decides; there is no quorum, and foreign residents vote too, as everywhere in the canton. Below 50.1% yes, the Company dismantles everything at its own cost.</li>' +
     '<li><b>Exploration.</b> The Company receives the Canton’s seismic archive of the 1970s petroleum campaign, in the state in which it was found in the basement of the Office of the Environment. New surveys and test drillings are at the Company’s expense and the population’s patience.</li>' +
     '<li><b>Capital.</b> The Company starts with 400,000 francs. Its bank lends against what it builds and earns, and no further. Eight months of insolvency end this agreement.</li>' +
     '<li><b>Seismicity.</b> Felt earthquakes are to be reported as "micro-seismic adjustments". The Comité de patronage reports yearly and is always globally positive.</li>' +
