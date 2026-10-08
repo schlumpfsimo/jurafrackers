@@ -302,7 +302,7 @@ function seisCanvas(li, q){
   const wav = q === 1 ? [-0.25, -0.35, 0, 0.6, 1, 0.6, 0, -0.35, -0.25] : [-0.4, 0, 1, 0, -0.4], half = (wav.length - 1)/2, noise = q === 1 ? 0.55 : 0.18;
   const traces = []; for (let x = 0; x < SW; x += 2){ const tr = new Float32Array(UGH);
     let prev = IMP[rockL(li, x, 0)]; for (let d = 1; d < UGH - 1; d++){ const t = rockL(li, x, d + 1), fz = t === ROCK.FAULT;   // a fault zone scatters energy: no clean reflector, just a break
-      const z = fz ? prev : IMP[t]; tr[d] = fz ? (hash(x, d, li + 90, seed) - 0.5)*0.5 : (z - prev)*0.35; if (!fz) prev = z; }
+      const z = fz ? prev : IMP[t]; tr[d] = fz ? (hash(x, d, li + 90, seed) - 0.5)*0.5 : (z - prev)*0.35*(t === ROCK.COAL && prev !== IMP[ROCK.COAL] ? 3 : 1); if (!fz) prev = z; }   // gas in the coal: a bright spot
     const out = new Float32Array(UGH); for (let d = 0; d < UGH; d++){ let a = 0; for (let k = 0; k < wav.length; k++){ const dd = d + k - half; if (dd >= 0 && dd < UGH) a += tr[dd]*wav[k]; }
       out[d] = a + (hash(x >> 2, d >> (q === 1 ? 1 : 0), li + 70 + q, seed) - 0.5)*noise*(1 + d/UGH) + (q === 1 ? (vn(x/30, d/6, li + 80, seed) - 0.5)*0.5 : 0); }
     traces.push(out); }
@@ -689,6 +689,7 @@ function pathRead(o, pl){
     if (k >= 4){ if (!prev || prev.rock !== t){ prev = {rock:t, from:p.d, to:p.d}; out.push(prev); } else prev.to = p.d; continue; } prev = null;
     if (k < 2) continue;
     if (t === ROCK.FAULT){ if (brk && p.d - brk.to < 6) brk.to = p.d; else { brk = {brk:1, from:p.d, to:p.d}; out.push(brk); } continue; }
+    if (t2 === ROCK.COAL && t !== ROCK.COAL && t !== ROCK.FAULT){ out.push({bright:1, at:p.d + 1}); continue; }
     const c = Math.abs(IMP[t2] - IMP[t]); if (c >= 2 && t2 !== ROCK.FAULT && !out.some(r => r.refl && Math.abs(r.at - p.d) < 3)) out.push({refl:1, at:p.d + 1, strong:c >= 4}); }
   return out; }
 const wellPts = o => { const out = []; let p = {x:sx(o.x), d:0}; for (const q of o.well){ const n = Math.max(1, Math.hypot(q.x - p.x, q.d - p.d)|0); for (let i = 1; i <= n; i++) out.push({x:p.x + (q.x - p.x)*i/n, d:p.d + (q.d - p.d)*i/n}); p = q; } return out; };
@@ -704,10 +705,11 @@ function commitPlan(){
   const e = planEst(o, plan); if (!canPay(e.upfront + e.dayRate*DPM*0.5)) return 'You need ' + fmt(e.upfront) + ' now for casing and extras, plus money for the day rate.';
   S.cash -= e.upfront; acct('Casing, cement and extras', -e.upfront); S.assets += e.upfront; o.off = false; o.test = null;
   if (o.guarantee){ S.cash -= o.guarantee; acct('Federal risk guarantee', -o.guarantee); news('The well near ' + nearestVillage(o.x, o.y).name + ' is deepened, so it no longer counts as failed: the risk guarantee of ' + fmt(o.guarantee) + ' is paid back.'); o.guarantee = 0; }
-  if (!o.well.length){ o.shoe = plan.shoe; o.cbl = plan.cbl; o.top = plan.top; o.cementOk = plan.cbl || hash(o.id, 3, 3, S.seed) < 0.7; o.spent = 0;
-    if (plan.cbl && hash(o.id, 3, 3, S.seed) >= 0.7){ S.cash -= DRILL.squeeze; acct('Casing, cement and extras', -DRILL.squeeze); news('The cement bond log shows gaps behind the casing near ' + nearestVillage(o.x, o.y).name + '. A cement squeeze closes them: ' + fmt(DRILL.squeeze) + '.'); } }
+  if (!o.well.length){ o.shoe = plan.shoe; o.cbl = plan.cbl; o.top = plan.top; o.spent = 0; const cav = pathPts(o, plan.pts).some(p => p.d <= plan.shoe && rockL(o.line, p.x, p.d) === ROCK.WATER); o.cementOk = plan.cbl || !cav; o.cav = cav;
+    if (plan.cbl && cav){ S.cash -= DRILL.squeeze; acct('Casing, cement and extras', -DRILL.squeeze); news('The cement bond log shows gaps behind the casing near ' + nearestVillage(o.x, o.y).name + '. A cement squeeze closes them: ' + fmt(DRILL.squeeze) + '.'); } }
   o.spent = (o.spent || 0) + e.upfront;
   o.drilling = {pts:plan.pts.slice(), seg:0, f:0, pos:Object.assign({}, tip(o)), bit:plan.bit, mud:plan.mud, saltMud:plan.saltMud, zones:{}};
+  if (!o.pad && !o.spilled) o.spillAt = S.t + 0.5;
   if (o.halt === undefined) o.halt = 0; plan = null; sfx('drill'); return 'ok'; }
 function stepDrill(o, dm){
   const dr = o.drilling; if (S.event || S.offer) return;
@@ -722,7 +724,8 @@ function stepDrill(o, dm){
     dr.pos = {x:from.x + (to.x - from.x)*dr.f, d:from.d + (to.d - from.d)*dr.f};
     const pt = rockL(o.line, dr.pos.x, dr.pos.d); reveal(o.line, dr.pos.x - 6, dr.pos.x + 6, dr.pos.d - 4, dr.pos.d + 3, 4);   // cuttings tell the rock at the bit
     o.hit = o.hit || {}; if (!o.hit[pt]){ o.hit[pt] = 1; onHit(o, pt, dr.pos.d); if (S.offer) return; }
-    if (o.shoe && !o.cased && dr.pos.d >= o.shoe){ o.cased = true; o.halt = S.t + 0.15; news('Casing run to ' + M(o.shoe) + ' near ' + nearestVillage(o.x, o.y).name + ' and cemented to surface' + (o.cbl ? ', bond log checked.' : '. No bond log was run.')); return; }
+    if (pt === ROCK.WATER && dr.mud === 'light' && o.top === 'polymer' && !dr.zones.poly){ dr.zones.poly = 1; contaminate(o, 1, 'polymer mud seeping into the karst'); }
+    if (o.shoe && !o.cased && dr.pos.d >= o.shoe){ o.cased = true; o.halt = S.t + 0.15; news('Casing run to ' + M(o.shoe) + ' near ' + nearestVillage(o.x, o.y).name + ' and cemented to surface' + (o.cbl ? ', bond log checked.' : o.cav ? '. The casing crosses karst cavities and no bond log was run: cement has run off into them. Until a squeeze closes the gaps, salty water will rise behind the casing once the well produces.' : '. No bond log was run; the casing crosses no karst cavity.')); return; }
     if (drillEvent(o, pt, dr)) return;
     if (dr.f >= 0.999){ o.well.push({x:to.x, d:to.d, c:to.d <= (o.shoe || 0)}); dr.seg++; dr.f = 0; }
   }
@@ -730,45 +733,67 @@ function stepDrill(o, dm){
     S.cash += back; if (back) acct('Federal exploration contribution', back); o.sub = (o.sub || 0) + back; o.cost = (o.cost || 0) + o.spent;
     news('Well finished near ' + nearestVillage(o.x, o.y).name + ' at ' + M(tb.d) + ', water or rock at about ' + wT + ' °C. It cost ' + fmt(o.spent) + '. ' + (ok ? 'The Confederation refunds 60%: ' + fmt(back) + '.' : !target ? 'The federal energy office refunds nothing: the open hole reaches neither the Muschelkalk nor the granite.' : 'The federal energy office refunds nothing: water below 60 °C needs heat pumps, and heat-pump projects are not eligible. A motion to change that is before the federal parliament.')); o.spent = 0; }
 }
-/* surprises at the bit: the odds are never shown; the facts and the costs of each answer are */
+/* trouble at the bit follows fixed rules. Each hazard has a cause the section can show and a setting that avoids it:
+   karst swallows normal or heavy mud; gas sits in the coal trough and deep fault zones and kicks unless the mud is heavy;
+   fault zones cave in on light or normal mud; shallow fault zones take heavy mud; salt needs salt-saturated mud */
+const HZ = {
+  loss:(t, d, mud) => (t === ROCK.WATER && mud !== 'light') || (t === ROCK.FAULT && d < 100 && mud === 'heavy'),
+  gas:(t, d, mud) => (t === ROCK.COAL || (t === ROCK.FAULT && d >= 130)) && mud !== 'heavy',
+  stuck:(t, d, mud) => t === ROCK.FAULT && d < 130 && mud !== 'heavy',
+  salt:(t, d, mud, salt) => t === ROCK.SALT && !salt };
+const faultIdx = (o, x, d) => { let best = 0, bd = 1e9; faultsFor(o.line).forEach((f, i) => { const dd = Math.abs(x - (f.x + d*f.s)); if (dd < bd){ bd = dd; best = i; } }); return best; };
 function drillEvent(o, t, dr){ if (S.event || S.offer) return false;
-  const d = dr.pos.d, zone = t + ':' + ((d/25)|0), v = nearestVillage(o.x, o.y), r = hash(o.id, (d/25)|0, t, S.seed), here = 'the rig near ' + v.name;
+  const d = dr.pos.d, key = t === ROCK.FAULT ? 'F' + faultIdx(o, dr.pos.x, d) : 'R' + t; if (dr.zones[key]) return false; dr.zones[key] = 1;   // each layer and each fault zone is judged once per stage, on entry
+  const v = nearestVillage(o.x, o.y), here = 'the rig near ' + v.name, mudN = {light:'light', normal:'normal', heavy:'heavy'}[dr.mud];
   const ask = (title, text, opts) => { S.event = {from:'Drilling supervisor, ' + here + ', ' + M(d), title, text, opts, rig:o.id}; S.paused = true; showEvent(); return true; };
-  if (t === ROCK.SALT && !dr.saltMud && !dr.zones.salt){ dr.zones.salt = 1;
-    return ask('Salt and anhydrite', 'The cuttings show salt and anhydrite at ' + M(d) + '. Water-based mud dissolves salt and lets anhydrite take on water. Anhydrite that swells turns into gypsum and lifts the ground (Staufen, 2007).', [
+  if (HZ.salt(t, d, dr.mud, dr.saltMud))
+    return ask('Salt and anhydrite', 'The cuttings show salt and anhydrite at ' + M(d) + ', and the programme has no salt-saturated mud. Water-based mud dissolves salt and lets anhydrite take on water. Anhydrite that swells turns into gypsum and lifts the ground (Staufen, 2007).', [
       {l:'Switch to salt-saturated mud', c:DRILL.saltMud, fn:() => { dr.saltMud = true; }, news:'Salt-saturated mud near ' + v.name + '. The layer is crossed cleanly.'},
-      {l:'Carry on with the mud we have', note:'water-based mud on salt and anhydrite: the ground can swell later', fn:() => { o.swell = S.month + 10 + ((hash(o.id, 4, 4, S.seed)*14)|0); }, news:'The crew carries on through the salt near ' + v.name + '.'}]); }
-  if (dr.zones[zone]) return false; dr.zones[zone] = 1;          // each stretch of each layer is judged once
-  const lossy = (t === ROCK.WATER || (t === ROCK.FAULT && d < 100)) && d < (o.shoe || 999) + 40, kicky = (t === ROCK.COAL || (t === ROCK.FAULT && d >= 130));
-  const mw = dr.mud === 'heavy' ? 1.5 : dr.mud === 'light' ? 0.6 : 1;
-  if (lossy && r < 0.3*mw){ const sev = (o.top === 'clean' ? 1 : 2) + (inZone(o) === 3 ? 1 : 0);
-    return ask('Mud losses', 'Returns dropped at ' + M(d) + ': the mud is flowing into open fractures or karst. Every hour of losses puts drilling fluid into the groundwater.' + (o.top === 'clean' ? ' The top hole runs on clean water and bentonite.' : ' The mud contains polymers.'), [
-      {l:'Pump lost-circulation material', c:DRILL.lcm, note:'if the plug does not hold, mud reaches the groundwater', fn:() => { if (hash(o.id, (d*3)|0, 41, S.seed) < 0.6) news('The plug of fibres and chalk holds near ' + v.name + '. Returns are back.'); else { contaminate(o, sev, 'mud losses'); news('The fibres do not hold near ' + v.name + '. Mud keeps disappearing into the rock.'); } }},
-      {l:'Set a cement plug and redrill', c:DRILL.plug, note:'a week lost, day rate runs on', fn:() => { o.halt = S.t + 0.25; }, news:'A cement plug seals the zone near ' + v.name + '. A week lost.'},
-      {l:'Drill on with losses', note:'drilling mud goes into the groundwater and the springs it feeds', fn:() => contaminate(o, sev, 'mud losses'), news:'The crew drills on near ' + v.name + ', pumping mud into the ground as it goes.'}]); }
-  if (kicky && r < 0.3/mw){ return ask('Gas kick', 'The pit volume rises at ' + M(d) + ': gas from the ' + (t === ROCK.COAL ? 'coal beds' : 'fault zone') + ' is pushing mud out of the well. The blowout preventer is closed.', [
-      {l:'Kill the well with heavy mud', c:DRILL.kill, note:'a week lost; pumping near a fault can set off a quake', fn:() => { o.halt = S.t + 0.25; if (faultNear(o, d) && hash(o.id, (d*5)|0, 43, S.seed) < 0.5) doQuake(o, 'Pumping heavy mud to kill the gas kick near ' + v.name + ' sets off a felt earthquake, as in St. Gallen in 2013.', dr.pos); }, news:'Heavy mud kills the kick near ' + v.name + '. A week lost.'},
-      {l:'Flare the gas', c:DRILL.flare, fn:() => { bump(v, 'Gas flare at night', -3); o.flare = S.t + 0.5; }, news:'A gas flare burns over the rig near ' + v.name + ' for days. It smells of eggs.'}]); }
-  if ([ROCK.MARL, ROCK.SALT, ROCK.FAULT].includes(t) && r > 0.9){ return ask('Stuck pipe', 'The drill string is stuck at ' + M(d) + '. The pipe will not turn or pull free.', [
-      {l:'Fish for it', c:DRILL.fish, note:'if the fish fails, a sidetrack costs ' + fmt(DRILL.sidetrack) + ' more', fn:() => { o.halt = S.t + 0.5; if (hash(o.id, (d*9)|0, 47, S.seed) < 0.4){ S.cash -= DRILL.sidetrack; acct('Bits, mud and cuttings', -DRILL.sidetrack); dr.back = 10; news('The fishing job fails near ' + v.name + '. The well is sidetracked around the stuck pipe, ' + fmt(DRILL.sidetrack) + ' more.'); } else news('The stuck pipe near ' + v.name + ' comes free after two weeks of fishing.'); }},
-      {l:'Sidetrack around it', c:DRILL.sidetrack, fn:() => { o.halt = S.t + 0.3; dr.back = 10; }, news:'The well near ' + v.name + ' is sidetracked around the stuck pipe. A hundred metres redrilled.'}]); }
+      {l:'Carry on with the mud we have', note:'the ground under ' + v.name + ' starts to rise in a year: CHF 6.0 M of repairs', fn:() => { o.swell = S.month + 12; }, news:'The crew carries on through the salt near ' + v.name + '.'}]);
+  if (HZ.loss(t, d, dr.mud)){ const karst = t === ROCK.WATER, sev = (o.top === 'clean' ? 1 : 2) + (inZone(o) === 3 ? 1 : 0), what = sev >= 2 ? 'a boil-water notice' : 'a cloudy fountain';
+    return ask('Mud losses', 'Returns dropped at ' + M(d) + ': the ' + mudN + ' mud is flowing into ' + (karst ? 'karst cavities' : 'the fractures of a shallow fault zone, pressed in by the heavy mud') + '. The top hole runs on ' + (o.top === 'clean' ? 'clean water and bentonite' : 'polymer mud') + '.', [
+      {l:'Pump lost-circulation material', c:DRILL.lcm, note:karst ? 'fibres seal fractures, not cavities: in karst the mud keeps going, ' + what + ' for any spring it feeds' : 'fibres seal fault fractures: the losses stop', fn:() => { if (karst) contaminate(o, sev, 'mud losses'); }, news:karst ? 'The fibres vanish into the karst near ' + v.name + '. Mud keeps disappearing.' : 'The plug of fibres and chalk holds near ' + v.name + '. Returns are back.'},
+      {l:'Set a cement plug and redrill', c:DRILL.plug, note:'stops the losses; a week lost, the day rate runs on', fn:() => { o.halt = S.t + 0.25; }, news:'A cement plug seals the zone near ' + v.name + '. A week lost.'},
+      {l:'Drill on with losses', note:'the mud goes into the groundwater: ' + what + ' for any spring it feeds', fn:() => contaminate(o, sev, 'mud losses'), news:'The crew drills on near ' + v.name + ', pumping mud into the ground as it goes.'}]); }
+  if (HZ.gas(t, d, dr.mud)){ const fn = faultNear(o, d);
+    return ask('Gas kick', 'The pit volume rises at ' + M(d) + ': gas from the ' + (t === ROCK.COAL ? 'coal beds' : 'fault zone') + ' pushes the ' + mudN + ' mud out of the well. Only heavy mud holds it back. The blowout preventer is closed.', [
+      {l:'Kill the well with heavy mud', c:DRILL.kill, note:'a week lost; ' + (fn ? 'a fault lies close by: the pressure will set off a felt quake' : 'no fault close by'), fn:() => { o.halt = S.t + 0.25; dr.mud = 'heavy'; if (fn) doQuake(o, 'Pumping heavy mud to kill the gas kick near ' + v.name + ' sets off a felt earthquake, as in St. Gallen in 2013.', dr.pos); }, news:'Heavy mud kills the kick near ' + v.name + '. The rest of this stage is drilled heavy. A week lost.'},
+      {l:'Flare the gas', c:DRILL.flare, note:v.name + ' −3: a flame over the rig for days', fn:() => { bump(v, 'Gas flare at night', -3); o.flare = S.t + 0.5; }, news:'A gas flare burns over the rig near ' + v.name + ' for days. It smells of eggs.'}]); }
+  if (HZ.stuck(t, d, dr.mud))
+    return ask('Stuck pipe', 'The fault zone at ' + M(d) + ' caves in around the drill string: ' + mudN + ' mud does not hold broken rock. The pipe will not turn or pull free.', [
+      {l:'Fish for it', c:DRILL.fish, note:'a month of fishing, the day rate runs on', fn:() => { o.halt = S.t + 1; }, news:'After a month of fishing, the stuck pipe near ' + v.name + ' comes free.'},
+      {l:'Sidetrack around it', c:DRILL.sidetrack, note:'a week; a hundred metres redrilled', fn:() => { o.halt = S.t + 0.25; dr.back = 10; }, news:'The well near ' + v.name + ' is sidetracked around the stuck pipe. A hundred metres redrilled.'}]);
   return false; }
+/* what the programme will run into along the path, judged only from what the player can see */
+function pathHazards(o, pl){
+  const pts = pathPts(o, pl.pts), out = [], seen = {}, first = !o.well.length;
+  const add = (k, d, txt) => { if (!seen[k]){ seen[k] = 1; out.push({d, txt}); } };
+  if (!o.pad && !o.spilled) add('pad', 0, 'The pad is not sealed: diesel and mud wash off in the first weeks of drilling' + (o.traced ? (S.vil.some(v => linked(o, v)) ? ', into the springs the tracer found.' : ', but the tracer found no spring downstream.') : (inZone(o) === 3 ? ', straight into the protection zone of a spring.' : '; a tracer test shows where they go.')));
+  if (first && pts.some(p => p.d < 55) && pl.mud !== 'light') add('karst', 5, 'Karst in the top 400–550 m swallows ' + pl.mud + ' mud wherever the bit meets a cavity. Light mud passes.');
+  if (first && pl.mud === 'light' && pl.top === 'polymer') add('poly', 5, 'Light mud passes the karst, but polymers in it still reach the groundwater: a cloudy fountain for any spring the site feeds.');
+  for (const p of pts){ const k = knownAt(o.line, p.x, p.d); if (k < 2) continue; const t = rockL(o.line, p.x, p.d), t2 = rockL(o.line, p.x, p.d + 1);
+    if (t === ROCK.FAULT){ const key = 'F' + faultIdx(o, p.x, p.d);
+      if (HZ.loss(t, p.d, pl.mud)) add(key, p.d, 'Fault zone at ' + M(p.d) + ': shallow fractures take heavy mud.');
+      else if (HZ.gas(t, p.d, pl.mud)) add(key, p.d, 'Fault zone at ' + M(p.d) + ': deep fault zones carry gas; ' + pl.mud + ' mud lets it kick.');
+      else if (HZ.stuck(t, p.d, pl.mud)) add(key, p.d, 'Fault zone at ' + M(p.d) + ': broken rock caves in on ' + pl.mud + ' mud.'); }
+    if ((t2 === ROCK.COAL && t !== ROCK.COAL || t === ROCK.COAL) && HZ.gas(ROCK.COAL, p.d, pl.mud)) add('gas', p.d, 'Bright spot at ' + M(p.d) + ': gas shows like this. ' + pl.mud[0].toUpperCase() + pl.mud.slice(1) + ' mud lets it kick.');
+    if ((t2 === ROCK.SALT && t !== ROCK.SALT || t === ROCK.SALT) && HZ.salt(ROCK.SALT, p.d, pl.mud, pl.saltMud)) add('salt', p.d, 'Quiet, reflection-free layer at ' + M(p.d) + ': salt and anhydrite. Without salt-saturated mud the ground swells a year later.'); }
+  return out.sort((a, b) => a.d - b.d); }
 const faultNear = (o, d) => faultsFor(o.line).some(f => Math.abs(sx(o.x) - (f.x + d*f.s)) < 40);
 function onHit(o, t, d){ const v = nearestVillage(o.x, o.y), T = tempAt(o.line, sx(o.x), d);
   if (t === ROCK.WARM){ news('The mud logger near ' + v.name + ' reports porous Muschelkalk limestone at ' + M(d) + ', water at about ' + aqT(o.line, sx(o.x), d) + ' °C. Only a flow test will tell how much water it gives.'); offerInvest('warm'); }
   if (t === ROCK.GRANITE){ news('Crystalline basement under ' + v.name + ' at ' + M(d) + ', about ' + T + ' °C.'); if (T >= 100) offerInvest('plant'); }
   if (t === ROCK.COAL) news('Coal fragments in the cuttings near ' + v.name + ' at ' + M(d) + '. The mud logger watches the gas readings.');
   if (t === ROCK.WATER) news('Karst water near ' + v.name + ' at ' + M(d) + '. Above the casing shoe this is the drinking water.'); }
-function doQuake(o, text, pos){ S.quakes.push({line:o.line, x:pos.x, d:pos.d, m:S.month}); const n = nearestVillage(o.x, o.y);
-  const soft = S.seismo ? 0.7 : 1; for (const v of S.vil){ bump(v, 'Felt quake', (v === n ? CFG.QUAKE_NEAR : CFG.QUAKE_FAR)*soft); v.mute = CFG.QUAKE_MUTE; } S.quakeBoost = 6; shake = 1; sfx('quake'); const claims = Math.round(2500*soft); S.cash -= claims; acct('Earthquake damage claims', -claims);
+function doQuake(o, text, pos, small){ S.quakes.push({line:o.line, x:pos.x, d:pos.d, m:S.month}); const n = nearestVillage(o.x, o.y);
+  const soft = (S.seismo ? 0.7 : 1)*(small ? 0.3 : 1); for (const v of S.vil){ bump(v, 'Felt quake', (v === n ? CFG.QUAKE_NEAR : CFG.QUAKE_FAR)*soft); v.mute = CFG.QUAKE_MUTE; } S.quakeBoost = 6; shake = 1; sfx('quake'); const claims = Math.round(2500*soft); S.cash -= claims; acct('Earthquake damage claims', -claims);
   news(text + ' Cracked plaster and fallen chimneys: about ' + Math.round(claims*1.1) + ' damage claims, ' + fmt(claims) + ' paid.' + ' Mood −' + Math.round(Math.abs(CFG.QUAKE_NEAR)*soft) + ' in ' + n.name + ', −' + Math.round(Math.abs(CFG.QUAKE_FAR)*soft) + ' elsewhere; nobody listens to your people for ' + CFG.QUAKE_MUTE + ' months.'); }
 /* stimulation of a power-plant doublet: pumping water into hot granite to open its fractures */
-const STIM = [{n:'Single large injection', c:1500, mo:0.5, out:1, d:'Two weeks. About 11,500 cubic metres in one go, as in Basel in 2006 (magnitude 3.4, some 2,700 damage claims, project cancelled).'},
-              {n:'Staged, with a traffic light', c:4000, mo:2, out:0.85, d:'Two months. Thirty small stages per well under a four-step traffic light: yellow at magnitude 2.3 slows the pumps, orange stops them, red at 2.9 opens the well to release the pressure. Haute-Sorne tested this in 2025. Even after a stop the rock can still move, as in Basel.'}];
+const STIM = [{n:'Single large injection', c:1500, mo:0.5, out:1, d:'Two weeks. About 11,500 cubic metres in one go, as in Basel in 2006 (magnitude 3.4, some 2,700 damage claims, project cancelled). A felt quake follows.'},
+              {n:'Staged, with a traffic light', c:4000, mo:2, out:0.85, d:'Two months. Thirty small stages per well under a four-step traffic light: yellow at magnitude 2.3 slows the pumps, orange stops them, red at 2.9 opens the well to release the pressure. Haute-Sorne tested this in 2025. If a fault lies within reach of the wells, it still moves: a felt quake. Away from faults, nobody feels a thing.'}];
 function stimulate(pl, i){ if (!pl.on || pl.stim >= 0) return 'Not now.'; const P0 = byId(pl.prod), I0 = byId(pl.inj); if (!P0 || !I0 || !openIn(P0, ROCK.GRANITE) || !openIn(I0, ROCK.GRANITE)) return 'Link two wells with open hole in the granite first.'; const st = STIM[i]; if (!canPay(st.c)) return st.n + ' costs ' + fmt(st.c) + '.';
   S.cash -= st.c; acct('Stimulation', -st.c); pl.stim = i; pl.age = 0; pl.stimUntil = S.t + st.mo; const w = byId(pl.prod) || byId(pl.inj), pos = w ? tip(w) : {x:sx(pl.x), d:380};
-  const risk = (i === 0 ? 0.45 : 0.08) + (w && faultNear(w, pos.d) ? 0.2 : 0);
-  if (hash(pl.id, S.month, i, S.seed) < risk) doQuake(w || pl, (i === 0 ? 'The large injection' : 'One stage of the stimulation') + ' near ' + nearestVillage(pl.x, pl.y).name + ' sets off a felt earthquake. "Within the expected envelope," says the operator.', pos);
+  if (i === 0 || (w && faultNear(w, pos.d))) doQuake(w || pl, (i === 0 ? 'The large injection' : 'One stage of the stimulation') + ' near ' + nearestVillage(pl.x, pl.y).name + ' sets off a felt earthquake. "Within the expected envelope," says the operator.', pos);
   else news('Stimulation ' + (i === 0 ? 'done' : 'under way') + ' near ' + nearestVillage(pl.x, pl.y).name + '. The seismometers record tiny tremors; nobody feels them.'); return 'ok'; }
 function offerInvest(k){ if (S.invest[k] || S.offer) return; S.offer = k; S.paused = true; showOffer(k); }
 const aqT = (li, x, d) => tempAt(li, x, d) + 14;   // Muschelkalk water comes up warmer than the rock around it (Schlattingen, Riehen)
@@ -848,11 +873,11 @@ function monthTick(){
         const pipeOn = pipe && S.t >= pipe.ready, demand = pipeOn ? S.vil[pipe.to].pop/1000*2.5 : 0, heatMW = pipeOn ? Math.min(r.mwTh, demand)*(1 - 0.015*pipe.len/1000) : 0;
         const heatMWh = heatMW*730*(winter > 1 ? 0.6 : 0.25), elecMWh = lnk && S.t >= lnk.ready ? r.mwE*730*0.9 : 0;
         inc = heatMWh*CFG.HEAT_PRICE + elecMWh*CFG.POWER_PRICE; if (heatMW > 0) S.vil[pipe.to].heat = 'on'; S.sold += (heatMWh + elecMWh)/1000; o.mwh = heatMWh + elecMWh;
-        const I = byId(o.inj); if (I && openIn(I, ROCK.FAULT) && rnd(400 + o.id) < (o.type === 'plant' ? 0.03 : 0.012)) doQuake(I, 'Reinjection at the ' + d.n.toLowerCase() + ' near ' + nearestVillage(o.x, o.y).name + ' presses water into a fault zone. A felt tremor.', tip(I));
-        for (const W of [byId(o.prod), I]) if (W){ if (!W.cementOk && rnd(410 + W.id) < 0.03) contaminate(W, 2, 'salty water rising behind a bad cement job');
-          if (openIn(W, ROCK.WATER) && rnd(420 + W.id) < 0.05) contaminate(W, 2, 'geothermal water leaking into the karst through open hole'); } } }
+        const I = byId(o.inj), due = (n, first) => n === first || (n > first && (n - first) % 12 === 0); if (I){ I.injM = (I.injM || 0) + 1; } if (I && openIn(I, ROCK.FAULT) && due(I.injM, 4)) doQuake(I, 'Reinjection at the ' + d.n.toLowerCase() + ' near ' + nearestVillage(o.x, o.y).name + ' presses water into a fault zone. A felt tremor.', tip(I), true);
+        for (const W of [byId(o.prod), I]) if (W){ W.flowM = (W.flowM || 0) + 1; if (!W.cementOk && due(W.flowM, 6)) contaminate(W, 2, 'salty water rising behind a bad cement job');
+          if (openIn(W, ROCK.WATER) && due(W.flowM, 3)) contaminate(W, 2, 'geothermal water leaking into the karst through open hole'); } } }
     if ((o.type === 'station' || o.type === 'plant') && o.off) o.scale = Math.max(0, (o.scale || 0) - 0.06);
-    if (RIG[o.type] && o.drilling && !o.pad && rnd(430 + o.id) < 0.03) contaminate(o, inZone(o) === 3 ? 2 : 1, 'a diesel and mud spill on the drill pad');
+    if (RIG[o.type] && o.spillAt && S.month >= o.spillAt && !o.pad){ o.spillAt = null; o.spilled = true; contaminate(o, inZone(o) === 3 ? 2 : 1, 'diesel and mud washing off the unsealed drill pad'); }
     if (o.swell && S.month >= o.swell){ const v = nearestVillage(o.x, o.y); o.swell = null; bump(v, 'Houses cracking', -10); S.cash -= 6000; acct('Fines and compensation', -6000);
       news('The ground under ' + v.name + ' is rising: anhydrite around the well is taking on water and swelling into gypsum. Cracks in forty houses. The Company pays ' + fmt(6000) + ' for repairs, as Staufen had to. Mood −10.'); }
     if (o.onRoad && !o.burnt) bump(nearestVillage(o.x, o.y), 'Road closed by the Company', -0.5);
@@ -1242,6 +1267,7 @@ function drawMap(g, t){
   for (const l of S.plines){ const on = S.t >= l.ready; let prev = null; for (let s = l.s0; s <= l.s1; s += 12){ const q = roadPos(s); if (q.y > yc) continue; const base = [q.x - q.dy*4.5, q.y + q.dx*4.5]; const a = P(base[0], base[1], 0), b = P(base[0], base[1], 9); g.strokeStyle = on ? '#3a3f47' : '#8a8f93'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); const c = P(base[0] - 1.2, base[1], 8), d2 = P(base[0] + 1.2, base[1], 8); g.beginPath(); g.moveTo(c[0], c[1]); g.lineTo(d2[0], d2[1]); g.stroke(); if (prev && on){ g.strokeStyle = 'rgba(40,40,50,.6)'; g.lineWidth = 0.4; g.beginPath(); g.moveTo(prev[0], prev[1]); g.lineTo(b[0], b[1]); g.stroke(); } prev = b; } }
   { const gx = S.gridX, gy = S.road[S.road.length-1][1] - 8; if (gy <= yc){ const a = P(gx - 2, gy, 0), b = P(gx - 2, gy, 12), c = P(gx + 2, gy, 0), d2 = P(gx + 2, gy, 12); g.strokeStyle = '#3a3f47'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.moveTo(c[0], c[1]); g.lineTo(d2[0], d2[1]); g.moveTo(b[0] - 2, b[1] + 1); g.lineTo(d2[0] + 2, d2[1] + 1); g.stroke(); T(g, 'GRID', b[0] + 2, b[1] - 1, '#15181c', 5.5, 'center', 'rgba(255,255,255,.9)'); } }
   const st = S.rail.station; if (S.rail.y + 4 <= yc){ draws.push({k:K(st, S.rail.y + 3), f:() => { box(g, st - 7, S.rail.y + 2.2, 14, 3.5, 3, '#e9e3d3', {top:'#7a4a3a'}); const p = P(st, S.rail.y + 6.5, 0); T(g, 'GARE', p[0], p[1] + 5, '#3a3028', 5, 'center'); }}); }
+  for (const o of S.obj) if (o.traced && o.y <= yc) for (const v of S.vil) if (linked(o, v) && v.spring.y <= yc){ const a = P(o.x, o.y, 0), b = P(v.spring.x, v.spring.y, 0); g.strokeStyle = 'rgba(31,95,168,.85)'; g.lineWidth = 0.8; g.setLineDash([2, 1.5]); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.setLineDash([]); }   // tracer test: where the dye came out
   for (const v of S.vil){ if (v.y - v.h/2 > yc) continue; for (const h of v.houses) if (h.y <= yc) draws.push({k:K(h.x + 4, h.y + 3), f:() => house(g, h.x, h.y, h.k, v.town && h.big, winter)}); if (v.town) draws.push({k:K(v.x, v.y + 4), f:() => church(g, v.x - 5, v.y, winter)}); else if (v.chapel) draws.push({k:K(v.x, v.y + 2), f:() => chapel(g, v.x - 3, v.y - 1, winter)});
     if (v.spring.y <= yc){ const zr = [[25, 'rgba(61,127,191,.35)'], [9, 'rgba(61,127,191,.55)'], [3, 'rgba(31,95,168,.8)']]; for (const [r, c] of zr){ const pts = []; for (let a = 0; a < 6.3; a += 0.35) pts.push(P(v.spring.x + Math.cos(a)*r, v.spring.y + Math.sin(a)*r*0.8, 0)); g.setLineDash(r > 3 ? [1.5, 1.5] : []); poly(g, pts, null, c, 0.5); g.setLineDash([]); } }
     if (v.spring.y <= yc) draws.push({k:K(v.spring.x, v.spring.y), f:() => { box(g, v.spring.x - 1.5, v.spring.y - 1.5, 3, 3, 1, '#9aa0aa', {top:['#3d7fbf', '#8aa7b5', '#8a6a3a', PAL.mud][v.spring.lvl || 0]}); }});
@@ -1369,8 +1395,8 @@ function drawSection(g, t){
   for (let d = 50; d < UGH; d += 50){ R(g, 'rgba(255,255,255,.4)', 0, SURF + d, 12, 1); T(g, (d*10).toLocaleString('en-US') + ' m', 14, SURF + d + 3, showPaper ? '#5a4a2a' : '#fff', 9, 'left', showPaper ? null : 'rgba(11,15,31,.6)'); }
   g.restore();
   /* legend strip */
-  if (!showPaper){ const lx = SW - 250, ly = SH - 40; R(g, 'rgba(11,15,31,.25)', lx + 2, ly + 2, 242, 34); R(g, '#f2f3f5', lx, ly, 242, 34); T(g, 'Reflection seismic', lx + 6, ly + 11, '#15181c', 9);
-    R(g, '#1e1e1e', lx + 6, ly + 16, 10, 6); T(g, 'harder rock below', lx + 19, ly + 22, '#15181c', 8); R(g, '#f5f2ec', lx + 106, ly + 16, 10, 6); g.strokeStyle = '#999'; g.strokeRect(lx + 106.5, ly + 16.5, 9, 5); T(g, 'softer below', lx + 119, ly + 22, '#15181c', 8); T(g, 'breaks = faults', lx + 180, ly + 22, '#15181c', 8); }
+  if (!showPaper){ const lx = SW - 250, ly = SH - 50; R(g, 'rgba(11,15,31,.25)', lx + 2, ly + 2, 242, 44); R(g, '#f2f3f5', lx, ly, 242, 44); T(g, 'Reflection seismic', lx + 6, ly + 11, '#15181c', 9);
+    R(g, '#1e1e1e', lx + 6, ly + 16, 10, 6); T(g, 'harder rock below', lx + 19, ly + 22, '#15181c', 8); R(g, '#f5f2ec', lx + 106, ly + 16, 10, 6); g.strokeStyle = '#999'; g.strokeRect(lx + 106.5, ly + 16.5, 9, 5); T(g, 'softer below', lx + 119, ly + 22, '#15181c', 8); T(g, 'breaks = faults', lx + 180, ly + 22, '#15181c', 8); T(g, 'very strong soft reflector = bright spot: gas', lx + 6, ly + 34, '#15181c', 8); }
   if (sel && sel.id){ const o = byId(sel.id); if (o && o.line === li){ g.strokeStyle = PAL.warn; g.lineWidth = 1; g.strokeRect(sx(o.x) - 9.5, SURF - 36.5 - cy, 19, 34); } }
 }
 /* ================================================================== HUD, palette, cards */
@@ -1505,8 +1531,8 @@ function renderCard(){
       if (o.halt > S.t) s += '<span class="neg">' + (o.cantonHalt === o.halt ? 'Work stopped by the canton until next month.' : 'Work paused on the rig: casing, cement or a repair.') + '</span> ';
       if (RIG[o.type]){ const tp = tip(o), role = S.obj.find(st => st.prod === o.id || st.inj === o.id);
         if (o.drilling){ const dr = o.drilling, here = rockL(o.line, dr.pos.x, dr.pos.d), goal = dr.pts[dr.pts.length - 1], rest = planEst(Object.assign({}, o, {well:[{x:dr.pos.x, d:dr.pos.d}]}), Object.assign({}, dr, {pts:dr.pts.slice(dr.seg)}));
-          s += 'Drilling at <b>' + M(dr.pos.d) + '</b> in ' + RNAME[here] + '. Day rate ' + fmt(DRILL.dayRate[o.type] || 20) + '; spent on this well so far ' + fmt(o.spent || 0) + '. ' + M(Math.max(0, goal.d - dr.pos.d)) + ' to go, about ' + (rest.days/DPM).toFixed(1) + ' months if nothing happens.<div class="meter"><i style="width:' + clamp(dr.pos.d/Math.max(1, goal.d)*100, 0, 100) + '%"></i></div>'; }
-        else if (o.well.length) s += 'Well <b>' + M(tp.d) + '</b> deep, about ' + tempAt(o.line, tp.x, tp.d) + ' °C at the bottom. Casing to ' + M(o.shoe || 0) + ', cement ' + (o.cbl ? 'checked by bond log' : 'not logged') + '.' + (openIn(o, ROCK.WATER) ? ' <span class="neg">The open hole crosses the karst groundwater: while the well flows, deep water can leak into the springs.</span>' : '');
+          s += 'Drilling at <b>' + M(dr.pos.d) + '</b> in ' + RNAME[here] + '. Day rate ' + fmt(DRILL.dayRate[o.type] || 20) + '; spent on this well so far ' + fmt(o.spent || 0) + '. ' + M(Math.max(0, goal.d - dr.pos.d)) + ' to go, about ' + (rest.days/DPM).toFixed(1) + ' months of drilling left.<div class="meter"><i style="width:' + clamp(dr.pos.d/Math.max(1, goal.d)*100, 0, 100) + '%"></i></div>'; }
+        else if (o.well.length) s += 'Well <b>' + M(tp.d) + '</b> deep, about ' + tempAt(o.line, tp.x, tp.d) + ' °C at the bottom. Casing to ' + M(o.shoe || 0) + ', cement ' + (o.cbl ? 'checked by bond log' : 'not logged') + '.' + (openIn(o, ROCK.WATER) ? ' <span class="neg">The open hole crosses the karst groundwater: three months after it starts flowing, deep water leaks into the springs it feeds, and again every year.</span>' : '') + (!o.cementOk ? ' <span class="neg">Cement gaps in the karst: six months after it starts flowing, salty water rises behind the casing, and again every year.</span>' : '') + (openIn(o, ROCK.FAULT) ? ' <span class="neg">Open hole in a fault zone: injecting here sets off a small felt tremor after four months and every year (about CHF 750k of claims each); stopping the pumps does too.</span>' : '');
         else s += (o.released ? 'A capped wellhead, no rig.' : 'No well yet. This rig reaches ' + M(maxDepth(o)) + (maxBend(o) ? ' and may bend 30°.' : ', straight down.'));
         const seen = Object.keys(o.hit || {}).map(Number).filter(t => t !== ROCK.SOIL).map(t => RNAME[t]); if (seen.length && !o.drilling) s += '<div class="sub">Cuttings showed: ' + seen.join(', ') + '.</div>';
         if (o.test) s += '<div><b>Flow test:</b> ' + o.test + '</div>';
@@ -1515,6 +1541,8 @@ function renderCard(){
         else if (!o.drilling){ acts += '<button class="btn main" data-a="plan">' + (o.well.length ? 'Extend well' : 'Draw well') + '</button>'; if (o.well.length) acts += '<button class="btn" data-a="release">Release the rig, keep the well</button>'; }
         if (o.well.length && !o.drilling && !o.test) acts += '<button class="btn" data-a="flowtest">Flow test (' + fmt(DRILL.flowTest) + ')</button>';
         if (!o.pad && !o.released) acts += '<button class="btn" data-a="pad">Seal the drill pad (' + fmt(DRILL.pad) + ')</button>';
+        if (o.well.length && !o.cementOk && !o.drilling) acts += '<button class="btn" data-a="squeeze">Cement squeeze (' + fmt(DRILL.squeeze) + ')</button>';
+        if (!o.traced) acts += '<button class="btn" data-a="tracer">Tracer test (' + fmt(DRILL.tracer) + ')</button>';
         if (!o.drilling && !o.released) acts += '<button class="btn" data-a="onoff">' + (o.off ? 'Switch on' : 'Switch off') + '</button>'; }
       if (o.type === 'testrig') s += o.log ? 'Drilled to ' + M(o.depth || 200) + '. The log is shown in the section.' : 'Drilling.';
       if (o.type === 'station' || o.type === 'plant'){ const r = o.status || doublet(o), P = byId(o.prod), I = byId(o.inj), nm = w => w ? 'rig on ' + S.lines[w.line].name + ' near ' + nearestVillage(w.x, w.y).name : 'none';
@@ -1525,7 +1553,7 @@ function renderCard(){
         if ((o.scale || 0) > 0.05) s += '<div class="sub">Scale in the heat exchanger costs ' + Math.round(o.scale*100) + '% of the output. A month switched off lets the crew clean it.</div>';
         if (!S.pipes.some(p => p.from === o.id) && !(o.type === 'plant' && S.plines.some(l => l.from === o.id))) s += '<div class="sub">No heat pipe' + (o.type === 'plant' ? ' or power line' : '') + ' yet: nothing can be sold.</div>';
         if (o.type === 'plant' && o.stim < 0 && o.on) acts += STIM.map((p, i) => '<button class="btn" data-a="stim" data-v="' + i + '" title="' + p.d + '">' + p.n + ' (' + fmt(p.c) + ')</button>').join('');
-        if (o.on) acts += '<button class="btn" data-a="onoff">' + (o.off ? 'Switch on' : 'Switch off') + '</button>'; }
+        if (o.on) acts += '<button class="btn" data-a="onoff">' + (o.off ? 'Switch on' : 'Switch off' + ([P, I].some(w => w && openIn(w, ROCK.FAULT)) ? ' (a well is open in a fault: felt tremor)' : '')) + '</button>'; }
       if (view === 'map' && o.line !== undefined) acts += '<button class="btn" data-a="open">Open section</button>';
       if (!o.drilling) acts += '<button class="btn" data-a="rm">Dismantle</button>';
     } else { s = DEF[o.type].h; if (o.type !== 'congress') acts += '<button class="btn" data-a="rm">' + (o.type === 'police' || o.type === 'riot' ? 'Withdraw' : 'Remove') + '</button>'; }
@@ -1562,11 +1590,12 @@ function planBar(){
   h += '<div class="pl">' + (first ? '<span class="grp">Casing shoe <button class="btn" data-a="shoe" data-v="-1">−</button> <b>' + M(plan.shoe) + '</b> <button class="btn" data-a="shoe" data-v="1">+</button></span>'
     + '<span class="grp">Top hole ' + tg('ptop', 'polymer', plan.top, 'Polymer mud') + tg('ptop', 'clean', plan.top, 'Clean water + bentonite (' + fmt(DRILL.cleanMud) + ')') + '</span>'
     + '<span class="grp"><button class="btn" data-a="pcbl" aria-pressed="' + plan.cbl + '">' + (plan.cbl ? '☑' : '☐') + ' Cement bond log (' + fmt(DRILL.cbl) + ')</button></span>' : '')
-    + '<span class="grp">Bit ' + tg('pbit', 'tricone', plan.bit, 'Tricone') + tg('pbit', 'pdc', plan.bit, 'PDC') + '</span><span class="grp">Mud weight ' + tg('pmud', 'light', plan.mud, 'Light') + tg('pmud', 'normal', plan.mud, 'Normal') + tg('pmud', 'heavy', plan.mud, 'Heavy') + '</span></div>';
-  h += '<div class="sub">' + (first ? 'Above the shoe the hole is cased and cemented to surface; below it stays open: that is where water flows in, and where things can leak out. Karst groundwater sits in the top 400–550 m. ' : '') + 'PDC bits cut faster and wear more; tricone bits are slower and steady. Light mud drills faster but holds gas back less; heavy mud holds gas but pushes mud into fractures.</div>';
+    + '<span class="grp">Bit ' + tg('pbit', 'tricone', plan.bit, 'Tricone') + tg('pbit', 'pdc', plan.bit, 'PDC') + '</span><span class="grp">Mud weight ' + tg('pmud', 'light', plan.mud, 'Light') + tg('pmud', 'normal', plan.mud, 'Normal') + tg('pmud', 'heavy', plan.mud, 'Heavy') + '</span><span class="grp"><button class="btn" data-a="psalt" aria-pressed="' + plan.saltMud + '">' + (plan.saltMud ? '☑' : '☐') + ' Salt-saturated mud (' + fmt(DRILL.saltMud) + ')</button></span></div>';
+  if (!plan.pts.length) h += '<div class="sub">' + (first ? 'Above the shoe the hole is cased and cemented to surface; below it stays open: that is where water flows in, and where things can leak out. Karst groundwater sits in the top 400–550 m. ' : '') + 'PDC bits cut faster and wear more; tricone bits are slower and steady. Mud weight is set per stage: light mud passes the karst but lets gas kick and fault zones cave in; heavy mud holds gas and broken rock but is lost in karst and shallow faults. Drill in stages: commit a top hole, then extend with other mud.</div>';
   if (plan.pts.length){ const end = plan.pts[plan.pts.length - 1];
-    h += '<div class="pl"><b>' + M(e.len) + '</b> of hole, bottom at <b>' + M(end.d) + '</b> · estimate <b>' + fmt(e.total) + '</b> (' + fmt(e.upfront) + ' now for casing and extras, the rest as it is drilled) · about <b>' + (e.days/DPM).toFixed(1) + ' months</b> if nothing goes wrong · the Confederation refunds 60% when finished, if the water is at least 60 °C.</div>';
-    h += '<div class="strata">' + rd.slice(0, 14).map(r => r.rock !== undefined ? '<span class="k">' + M(r.from) + '–' + M(r.to) + ' ' + RNAME[r.rock] + '</span>' : r.brk ? '<span class="b">broken reflections ' + M(r.from) + '–' + M(r.to) + '</span>' : '<span class="g">' + (r.strong ? 'strong ' : '') + 'reflector at ' + M(r.at) + '</span>').join('') + (e.blind ? '<span class="u">' + M(e.blind) + ' unsurveyed</span>' : '') + '</div>';
+    { const hz = pathHazards(o, plan); h += '<div class="' + (hz.length ? 'neg' : 'sub') + '"><b>With this programme:</b> ' + (hz.length ? hz.map(z => z.txt).join(' ') : 'nothing on the surveyed part of the path calls for trouble.') + (e.blind ? ' ' + M(e.blind) + ' of the path is unsurveyed: no warning is possible there.' : '') + '</div>'; }
+    h += '<div class="pl"><b>' + M(e.len) + '</b> of hole, bottom at <b>' + M(end.d) + '</b> · estimate <b>' + fmt(e.total) + '</b> (' + fmt(e.upfront) + ' now for casing and extras, the rest as it is drilled) · about <b>' + (e.days/DPM).toFixed(1) + ' months</b> of drilling, plus any stops the programme runs into · the Confederation refunds 60% when finished, if the water is at least 60 °C.</div>';
+    h += '<div class="strata">' + rd.slice(0, 14).map(r => r.rock !== undefined ? '<span class="k">' + M(r.from) + '–' + M(r.to) + ' ' + RNAME[r.rock] + '</span>' : r.brk ? '<span class="b">broken reflections ' + M(r.from) + '–' + M(r.to) + '</span>' : r.bright ? '<span class="b">bright spot at ' + M(r.at) + '</span>' : '<span class="g">' + (r.strong ? 'strong ' : '') + 'reflector at ' + M(r.at) + '</span>').join('') + (e.blind ? '<span class="u">' + M(e.blind) + ' unsurveyed</span>' : '') + '</div>';
     h += '<div>Regional gradient about 31.5 °C per km: roughly ' + Math.round(11 + end.d*0.315) + ' °C at the bottom. The Muschelkalk aquifer lies at about 1.0–1.2 km here, granite from about 1.8–2.6 km.</div>';
     if (first && plan.shoe < 45) h += '<div class="neg">The shoe at ' + M(plan.shoe) + ' is above the usual base of the karst (400–550 m).</div>'; }
   if (plan.err) h += '<div class="neg">' + plan.err + '</div>';
@@ -1663,14 +1692,16 @@ function act(a, v){
   if (a === 'borrow'){ const r = borrow(); if (r !== 'ok') toast(r); return; } if (a === 'repay'){ const r = repayAll(); if (r !== 'ok') toast(r); return; }
   if (a === 'commit'){ const r = commitPlan(); if (r !== 'ok') toast(r); else toast('Committed. The drill cannot be stopped now.'); return; }
   if (a === 'undo'){ if (plan && plan.pts.length) plan.pts.pop(); return; } if (a === 'cancelplan'){ plan = null; return; }
-  if (plan){ if (a === 'shoe'){ plan.shoe = clamp(plan.shoe + Number(v)*10, 10, 200); return; } if (a === 'ptop'){ plan.top = v; return; } if (a === 'pbit'){ plan.bit = v; return; } if (a === 'pmud'){ plan.mud = v; return; } if (a === 'pcbl'){ plan.cbl = !plan.cbl; return; } }
+  if (plan){ if (a === 'shoe'){ plan.shoe = clamp(plan.shoe + Number(v)*10, 10, 200); return; } if (a === 'ptop'){ plan.top = v; return; } if (a === 'pbit'){ plan.bit = v; return; } if (a === 'pmud'){ plan.mud = v; return; } if (a === 'pcbl'){ plan.cbl = !plan.cbl; return; } if (a === 'psalt'){ plan.saltMud = !plan.saltMud; return; } }
   if (a === 'open'){ if (sel && sel.line !== undefined) openSection(sel.line); else if (sel && sel.id){ const o = byId(sel.id); if (o && o.line !== undefined){ const id = o.id; openSection(o.line); sel = {id}; renderCard(); } } return; }
   const o = sel && byId(sel.id); if (!o) return;
   if (a === 'plan'){ if (view !== 'section') openSection(o.line); plan = newPlan(o); tool = null; sel = null; $('#card').hidden = true; cam.y = clamp(SURF + tip(o).d - 80, 0, SURF + UGH - SH); return; }
   if (a === 'talk'){ if (o.talking === undefined && !o.talked){ if (!canPay(20)){ toast('Talking costs ' + fmt(20) + '.'); return; } S.cash -= 20; acct('Liaison officers', -20); o.talking = S.t; sfx('click'); } return; }
   if (a === 'stim'){ const r = stimulate(o, Number(v)); if (r !== 'ok') toast(r); return; }
   if (a === 'link'){ linking = {st:o.id, role:v}; tool = null; toast('Click a rig to use it as the ' + (v === 'prod' ? 'production' : 'injection') + ' well.'); return; }
-  if (a === 'onoff'){ o.off = !o.off; if (o.off && (o.type === 'station' || o.type === 'plant')){ const W = [byId(o.prod), byId(o.inj)].find(w => w && openIn(w, ROCK.FAULT)); if (W && hash(o.id, S.month, 61, S.seed) < 0.2) doQuake(W, 'The pumps at the ' + DEF[o.type].n.toLowerCase() + ' near ' + nearestVillage(o.x, o.y).name + ' stop; the pressure in the fault shifts. A felt tremor.', tip(W)); } news(DEF[o.type].n + ' near ' + nearestVillage(o.x, o.y).name + ' switched ' + (o.off ? 'off' : 'on') + '.'); return; }
+  if (a === 'onoff'){ o.off = !o.off; if (o.off && (o.type === 'station' || o.type === 'plant')){ const W = [byId(o.prod), byId(o.inj)].find(w => w && openIn(w, ROCK.FAULT)); if (W) doQuake(W, 'The pumps at the ' + DEF[o.type].n.toLowerCase() + ' near ' + nearestVillage(o.x, o.y).name + ' stop; the pressure in the fault shifts. A felt tremor.', tip(W), true); } news(DEF[o.type].n + ' near ' + nearestVillage(o.x, o.y).name + ' switched ' + (o.off ? 'off' : 'on') + '.'); return; }
+  if (a === 'squeeze'){ if (!canPay(DRILL.squeeze)) return toast('A squeeze costs ' + fmt(DRILL.squeeze) + '.'); S.cash -= DRILL.squeeze; acct('Casing, cement and extras', -DRILL.squeeze); o.cementOk = true; o.halt = S.t + 0.25; news('A cement squeeze closes the gaps behind the casing near ' + nearestVillage(o.x, o.y).name + '.'); renderCard(); return; }
+  if (a === 'tracer'){ if (!canPay(DRILL.tracer)) return toast('A tracer test costs ' + fmt(DRILL.tracer) + '.'); S.cash -= DRILL.tracer; acct('Casing, cement and extras', -DRILL.tracer); o.traced = true; const hit = S.vil.filter(vv => linked(o, vv)); news('Dye poured in at the site near ' + nearestVillage(o.x, o.y).name + (hit.length ? ' comes out at the spring' + (hit.length > 1 ? 's' : '') + ' of ' + hit.map(vv => vv.name).join(' and ') + '. Whatever leaks here goes there.' : ' turns up at no spring in the valley. Leaks here reach no drinking water.')); renderCard(); return; }
   if (a === 'pad'){ if (!canPay(DRILL.pad)) return toast('Sealing the pad costs ' + fmt(DRILL.pad) + '.'); S.cash -= DRILL.pad; acct('Casing, cement and extras', -DRILL.pad); o.pad = true; return; }
   if (a === 'release'){ o.released = true; spawnLeave(o); news('The rig near ' + nearestVillage(o.x, o.y).name + ' is driven away. A capped wellhead stays.'); return; }
   if (a === 'rerig'){ const c = DEF[o.type].cost; if (!canPay(c)) return toast('Mobilisation costs ' + fmt(c) + '.'); S.cash -= c; acct(DEF[o.type].n, -c); o.released = false; o.arrived = true; spawnArrival(o); return; }
@@ -1726,7 +1757,7 @@ function boot(fresh){
   if (!bound){ buildPalette(); bind(); bound = true; requestAnimationFrame(tt => { lastT = tt; frame(tt); }); }
   zoom = $('#stage').clientWidth < 700 ? 2 : 1; fit(); showContract(hasSave);
 }
-window.JF = {pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, research, borrow, commitPlan, stimulate, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, SURF + UGH - SH); }, select:s => { sel = s; renderCard(); },
+window.JF = {pathRead, pathHazards, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, research, borrow, commitPlan, stimulate, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, SURF + UGH - SH); }, select:s => { sel = s; renderCard(); },
   newGame:seed => { newGame(seed); S.started = true; S.paused = false; view = 'map'; cutLine = null; baseMap = null; fit(); $('#overlay').hidden = true; }, setCut:li => { cutLine = li; }, get cutLine(){ return cutLine; }};
 const ready = document.fonts && document.fonts.load ? document.fonts.load('12px "Pixelify Sans"').catch(() => {}) : Promise.resolve();
 ready.then(() => boot(false));
