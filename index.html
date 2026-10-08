@@ -78,6 +78,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #loans td,#loans th{padding:2px 4px;border-top:1px dotted var(--line);text-align:right;font-weight:400}
 #loans td:first-child,#loans th:first-child{text-align:left}
 #research,#polls,#wire,#camp,#ledger{top:10px;left:10px;width:340px;max-width:calc(100% - 20px);z-index:2}
+.trend{width:100%;height:auto;display:block;margin:2px 0 8px;font:9px Helvetica,Arial,sans-serif}.trend .hv line{opacity:0}.trend .hv:hover line{opacity:1}.trend .hv:hover rect.b{opacity:.8}.lg{display:flex;gap:10px;font-size:11px;color:var(--muted)}.lg i{display:inline-block;width:10px;height:2px;vertical-align:middle;margin-right:4px}
 #ledger table.acc{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 #ledger td{padding:2px 0;border-top:1px dotted var(--line)}
 #ledger td+td{text-align:right}
@@ -862,7 +863,7 @@ const polluted = v => (v.spring.lvl || 0) >= 2;
 
 /* ================================================================== time */
 function running(){ return S.started && !S.paused && !S.over && !S.secret; }
-function advance(dm){ while (dm > 1e-9 && !S.over){ const step = Math.min(dm, S.month + 1 - S.t); S.t += step; dm -= step; continuous(step); if (S.t >= S.month + 1 - 1e-9){ S.month++; S.t = S.month; monthTick(); } } }
+function advance(dm){ while (dm > 1e-9 && !S.over){ const step = Math.min(dm, S.month + 1 - S.t); S.t += step; dm -= step; continuous(step); if (S.t >= S.month + 1 - 1e-9){ S.month++; S.t = S.month; monthTick(); (S.hist = S.hist || []).push({m:S.month, cash:S.cash, debt:debt(), net:S.last.income - S.last.costs, fc:forecast()}); } } }
 function continuous(dm){
   for (const l of S.lines) for (const sg of l.segs) if (sg.active && sg.arrived){ sg.prog += dm*CFG.SURVEY_SPEED; const n = sg.x1 - sg.x0; reveal(l.id, sx(sg.x0), sx(sg.x0 + Math.min(n, sg.prog)), 0, UGH, Math.min(3, sg.pass + 1)); if (sg.prog >= n){ sg.active = false; for (const e of S.ents) if (e.seg === sg.id){ e.leaving = true; e.vs = e.vs > 0 ? 40 : -40; e.seg = null; } } }
   for (const o of S.obj.slice()){
@@ -898,7 +899,7 @@ function monthTick(){
   for (const l of S.loans.slice()){ const i = l.bal*CFG.LOAN_RATE/12; interest += i; const princ = Math.min(l.bal, l.pay - i); l.bal -= princ; l.left--; costs += l.pay; acct('Loan repayments', -l.pay); if (l.bal <= 0.5) S.loans.splice(S.loans.indexOf(l), 1); }
   for (const o of S.obj){
     const d = DEF[o.type] || {}, up = upkeepOf(o);
-    if (up){ costs += up; acct('Upkeep: ' + d.n.toLowerCase(), -up); }
+    if (up){ costs += up; acct('Running costs: ' + d.n, -up); }
     const pipe = S.pipes.find(p => p.from === o.id), lnk = S.plines.find(l => l.from === o.id), blocked = isBlocked(o);
     if (pipe && S.t < pipe.ready) S.vil[pipe.to].heat = 'build';
     let inc = 0; o.mw = null;
@@ -1576,11 +1577,25 @@ function sectionReading(li){ const l = S.lines[li], out = [];
       put(d, (Math.abs(c) >= 4 ? 'Strong reflector' : 'Reflector') + ' at ' + rd(d) + ', ' + (c > 0 ? 'harder' : 'softer') + ' rock below: ' + (r3 ? 'top of the ' + RNAME[t2] + (t2 === ROCK.WARM ? ', porous, may hold warm water' : '') : 'probably ' + GUESS(d + 2)) + '.'); }
     out.push({where:(m(sg.x0)/1000).toFixed(1) + '–' + (m(sg.x1)/1000).toFixed(1) + ' km', pass:sg.pass, items}); }
   return out; }
+/* business trajectory: small multiples, one unit per chart (never two y-scales) */
+function trendSVG(hist, series, o){ o = o || {}; const W = 300, H = o.h || 78, L = 34, Rt = 30, T = 6, B = 14, n = hist.length; if (n < 2) return '';
+  let lo = o.min !== undefined ? o.min : Infinity, hi = o.max !== undefined ? o.max : -Infinity; for (const sr of series) for (const h of hist){ const v = sr.v(h); lo = Math.min(lo, v); hi = Math.max(hi, v); } if (o.bars){ lo = Math.min(lo, 0); hi = Math.max(hi, 0); } if (hi - lo < 1e-6) hi = lo + 1;
+  const X = i => L + i*(W - L - Rt)/(n - 1), Y = v => T + (hi - v)*(H - T - B)/(hi - lo), fv = o.fmt || (v => fmt(v));
+  let g = '<svg class="trend" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + o.label + '">';
+  for (const v of [hi, lo, ...(lo < 0 && hi > 0 ? [0] : [])]) g += '<line x1="' + L + '" x2="' + (W - Rt) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="#c5cad0" stroke-width="' + (v === 0 ? 1 : 0.5) + '"/><text x="' + (L - 3) + '" y="' + (Y(v) + 3) + '" text-anchor="end" fill="#5b6670">' + fv(v).replace('CHF ', '') + '</text>';
+  if (o.ref !== undefined) g += '<line x1="' + L + '" x2="' + (W - Rt) + '" y1="' + Y(o.ref) + '" y2="' + Y(o.ref) + '" stroke="#5b6670" stroke-dasharray="3 2" stroke-width="0.8"/><text x="' + (W - Rt + 3) + '" y="' + (Y(o.ref) + 3) + '" fill="#5b6670">' + o.refLabel + '</text>';
+  for (let i = 0; i < n; i++) if (hist[i].m % 12 === 0) g += '<text x="' + X(i) + '" y="' + (H - 3) + '" text-anchor="middle" fill="#5b6670">yr ' + (hist[i].m/12 + 1) + '</text>';
+  if (o.bars){ const bw = Math.max(1, (W - L - Rt)/n - 1); for (let i = 0; i < n; i++){ const v = series[0].v(hist[i]); g += '<rect class="b" x="' + (X(i) - bw/2) + '" y="' + Math.min(Y(v), Y(0)) + '" width="' + bw + '" height="' + Math.max(0.5, Math.abs(Y(v) - Y(0))) + '" fill="' + (v >= 0 ? '#3f8f4e' : '#b3261e') + '"/>'; } }
+  else for (const sr of series){ g += '<polyline fill="none" stroke="' + sr.c + '" stroke-width="2" stroke-linejoin="round" points="' + hist.map((h, i) => X(i).toFixed(1) + ',' + Y(sr.v(h)).toFixed(1)).join(' ') + '"/>'; const lv = sr.v(hist[n - 1]); g += '<circle cx="' + X(n - 1) + '" cy="' + Y(lv) + '" r="2.5" fill="' + sr.c + '" stroke="#f2f3f5" stroke-width="1.5"/>' + (series.length > 1 ? '<text x="' + (X(n - 1) + 5) + '" y="' + (Y(lv) + 3) + '" fill="#15181c">' + sr.n + '</text>' : ''); }
+  const cw = (W - L - Rt)/Math.max(1, n - 1);
+  for (let i = 0; i < n; i++){ const h = hist[i]; g += '<g class="hv"><rect x="' + (X(i) - cw/2) + '" y="0" width="' + cw + '" height="' + H + '" fill="transparent"/><line x1="' + X(i) + '" x2="' + X(i) + '" y1="' + T + '" y2="' + (H - B) + '" stroke="#15181c" stroke-width="0.6"/><title>' + MONTHS[(h.m - 1 + 12) % 12] + ', year ' + (((h.m - 1)/12|0) + 1) + ': ' + series.map(sr => sr.n + ' ' + fv(sr.v(h))).join(' · ') + '</title></g>'; }
+  return g + '</svg>'; }
 function renderLedger(){ const el = $('#ledger'), A = (S.acct && S.acct.last) || {}, rows = Object.entries(A).filter(r => Math.abs(r[1]) >= 0.5).sort((a, b) => a[1] - b[1]);
   const tab = (k, n) => '<button class="btn" data-a="otab" data-v="' + k + '" aria-pressed="' + (officeTab === k) + '">' + n + '</button>';
   let h = '<button class="x" data-a="closeledger" aria-label="Close">×</button><h4>Office</h4><div class="acts" style="margin:4px 0 6px">' + tab('fin', 'Finance') + tab('sec', 'Sections') + tab('dec', 'Decisions') + tab('net', 'Network') + '</div>';
   if (officeTab === 'fin'){
-    h += '<div class="sub">Last month’s money, line by line.</div><table class="acc">' + (rows.length ? rows.map(r => '<tr><td>' + r[0] + '</td><td class="' + (r[1] < 0 ? 'neg' : 'pos') + '">' + (r[1] > 0 ? '+' : '') + fmt(r[1]) + '</td></tr>').join('') : '<tr><td>No money moved last month.</td><td></td></tr>') + '<tr><td><b>Net</b></td><td><b>' + fmt(rows.reduce((a, r) => a + r[1], 0)) + '</b></td></tr></table>';
+    { const hi = (S.hist || []).slice(-60); h += '<h4>Business trajectory</h4>' + (hi.length < 2 ? '<div class="sub">The curves start after the first two months.</div>' : '<div class="sub">Last ' + hi.length + ' months. Hover for the numbers.</div><div class="lg"><span><i style="background:#2f6fb0"></i>Cash</span><span><i style="background:#c8571b"></i>Debt</span></div>' + trendSVG(hi, [{n:'Cash', c:'#2f6fb0', v:x => x.cash}, {n:'Debt', c:'#c8571b', v:x => x.debt}], {label:'Cash and debt by month'}) + '<div class="sub" style="margin:0">Monthly result (income minus costs)</div>' + trendSVG(hi, [{n:'Result', v:x => x.net}], {bars:1, h:62, label:'Monthly result'}) + '<div class="sub" style="margin:0">Vote forecast</div>' + trendSVG(hi, [{n:'Yes', c:'#2f6fb0', v:x => x.fc}], {min:0, max:100, ref:50.1, refLabel:'50.1%', h:62, fmt:v => v.toFixed(0) + '%', label:'Vote forecast by month'})); }
+    h += '<h4 style="margin-top:6px">Last month</h4><div class="sub">Money, line by line.</div><table class="acc">' + (rows.length ? rows.map(r => '<tr><td>' + r[0] + '</td><td class="' + (r[1] < 0 ? 'neg' : 'pos') + '">' + (r[1] > 0 ? '+' : '') + fmt(r[1]) + '</td></tr>').join('') : '<tr><td>No money moved last month.</td><td></td></tr>') + '<tr><td><b>Net</b></td><td><b>' + fmt(rows.reduce((a, r) => a + r[1], 0)) + '</b></td></tr></table>';
     h += '<h4 style="margin-top:8px">Loans</h4><div class="sub">Credit line ' + fmt(creditLimit()) + ': a base amount, 60% of what you have built, and two years of net income. Loans are ' + fmt(CFG.LOAN_STEP) + ' at ' + (CFG.LOAN_RATE*100) + '%, repaid over ' + CFG.LOAN_TERM/12 + ' years.</div>';
     h += '<table><tr><th>Loan</th><th>Balance</th><th>Per month</th><th>Left</th></tr>' + (S.loans.length ? S.loans.map(l => '<tr><td>#' + l.id + '</td><td>' + fmt(l.bal) + '</td><td>' + fmt(l.pay) + '</td><td>' + l.left + ' mo.</td></tr>').join('') : '<tr><td colspan="4">No loans.</td></tr>') + '</table>';
     h += '<div>Debt service <b>' + fmt(loanPay()) + '</b> a month. Running costs of sites, offices and forces: <b>' + fmt(S.obj.reduce((a, o) => a + upkeepOf(o), 0)) + '</b> a month.</div><div class="acts"><button class="btn main" data-a="borrow">Borrow ' + fmt(CFG.LOAN_STEP) + '</button><button class="btn" data-a="repay">Repay what you can</button></div>'; }
