@@ -18,15 +18,15 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #app{height:100%;box-sizing:border-box;display:grid;grid-template:auto minmax(0,1fr) auto / 214px minmax(0,1fr);gap:8px;padding-block:8px;padding-inline:16px}
 .box{background:var(--panel);border:1px solid var(--lo2);box-shadow:inset 1px 1px 0 var(--hi),inset -1px -1px 0 var(--lo)}
 #top{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:6px 10px}
-.title{font-weight:700;font-size:18px;line-height:1;letter-spacing:.01em;padding-right:8px}
-.title small{display:block;font-size:9.5px;letter-spacing:.22em;color:var(--muted);margin-top:3px;font-weight:600}
+.title{font:700 22px/1 var(--px);letter-spacing:.02em;padding-right:8px;color:var(--ink);text-shadow:2px 2px 0 #f2c230}
+.title small{display:block;font:600 10px/1 var(--px);letter-spacing:.3em;color:var(--accent);margin-top:4px;text-shadow:none}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border:1px solid var(--lo);background:#fff;box-shadow:inset 1px 1px 0 #cfd4d9;font-variant-numeric:tabular-nums;white-space:nowrap}
-.chip b{font-size:14px}
+.chip b{font:600 15px/1 var(--px)}
 .chip.neg b,.neg{color:var(--warn)} .pos{color:var(--ok)}
 .chip button,.sp button,.btn,.it{border:1px solid var(--lo2);background:var(--panel);box-shadow:inset 1px 1px 0 var(--hi),inset -1px -1px 0 var(--lo);border-radius:0}
 .chip button{padding:0 7px;line-height:17px;font-size:12px}
 .sp{display:flex;gap:3px}
-.sp button{padding:3px 9px;font-weight:700;min-width:30px}
+.sp button{padding:3px 9px;font:700 13px/1.2 var(--px);min-width:30px}
 .sp button[aria-pressed="true"],.it[aria-pressed="true"],.btn[aria-pressed="true"]{box-shadow:inset 1px 1px 0 var(--lo),inset -1px -1px 0 var(--hi);background:#e2e5e9}
 .btn{padding:4px 10px;font-weight:600}
 .btn:active,.sp button:active{box-shadow:inset 1px 1px 0 var(--lo),inset -1px -1px 0 var(--hi)}
@@ -39,17 +39,21 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .bar i{position:absolute;inset:0 auto 0 0;background:var(--ok)}
 .bar u{position:absolute;left:50.1%;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
 #pal{overflow:auto;padding:6px;min-height:0;display:flex;flex-direction:column;gap:2px}
-#pal h3{margin:7px 2px 2px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-#pal h3:first-child{margin-top:0}
-.it{display:flex;align-items:center;gap:7px;width:100%;text-align:left;padding:2px 4px}
-.it canvas{width:30px;height:30px;image-rendering:pixelated;flex:none;background:#dfe6ea;border:1px solid var(--lo)}
+#pal h3{align-self:flex-start;margin:10px 2px 3px;padding:2px 7px 1px;font:600 12px/1.2 var(--px);letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--g);box-shadow:2px 2px 0 var(--lo2)}
+#pal h3:first-child{margin-top:2px}
+#pal .it{display:flex;align-items:center;gap:8px;width:calc(100% - 8px);margin:2px 4px 4px 2px;text-align:left;padding:3px 6px 3px 10px;border:0;background:#fff;
+  box-shadow:-2px 0 0 var(--lo2),2px 0 0 var(--lo2),0 -2px 0 var(--lo2),0 2px 0 var(--lo2),inset 5px 0 0 var(--g),4px 4px 0 rgba(0,0,0,.14);transition:transform .08s}
+#pal .it:hover{transform:translate(-1px,-1px)}
+#pal .it[aria-pressed="true"]{background:#fff3c4;transform:translate(2px,2px);box-shadow:-2px 0 0 var(--lo2),2px 0 0 var(--lo2),0 -2px 0 var(--lo2),0 2px 0 var(--lo2),inset 5px 0 0 var(--g)}
+.it canvas{width:36px;height:36px;image-rendering:pixelated;flex:none;background:#cfe9f7;box-shadow:0 0 0 1px var(--lo2)}
 .it span{display:flex;flex-direction:column;min-width:0;line-height:1.15}
-.it b{font-size:12px}
+.it b{font:600 13px/1.1 var(--px)}
 .it small{color:var(--muted);font-size:10.5px}
 .it.off{opacity:.5}
 .it .lock{color:var(--warn)}
 #stage{position:relative;min-width:0;min-height:0;overflow:hidden;background:linear-gradient(#f6f8fa,#dbe1e7);display:flex;align-items:center;justify-content:center}
-#game{image-rendering:pixelated;image-rendering:crisp-edges;display:block;cursor:crosshair;touch-action:none}
+#scroll{position:absolute;inset:0;overflow:auto;display:flex}
+#game{margin:auto;image-rendering:pixelated;image-rendering:crisp-edges;display:block;cursor:crosshair;touch-action:none}
 .pane{position:absolute;box-sizing:border-box;padding:9px 11px;background:var(--panel);border:1px solid var(--lo2);box-shadow:inset 1px 1px 0 var(--hi),inset -1px -1px 0 var(--lo),3px 3px 0 rgba(0,0,0,.15);max-height:calc(100% - 20px);overflow:auto}
 .pane h4{margin:0 22px 2px 0;font-size:14px;padding-bottom:3px;border-bottom:1px solid var(--line)}
 #card{top:10px;right:10px;width:300px;max-width:calc(100% - 20px)}
@@ -62,6 +66,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .meter i{position:absolute;inset:0 auto 0 0;background:var(--ok)}
 #hint{position:absolute;left:10px;bottom:10px;max-width:min(62%,620px);box-sizing:border-box;padding:5px 10px;background:rgba(242,243,245,.96);border:1px solid var(--lo2);box-shadow:inset 1px 1px 0 var(--hi),inset -1px -1px 0 var(--lo);font-size:12.5px}
 #toast{position:absolute;top:10px;left:50%;transform:translateX(-50%);max-width:calc(100% - 20px);box-sizing:border-box;padding:5px 12px;background:#fff;border:1px solid var(--warn);color:var(--warn);font-weight:700;text-align:center}
+#uncutbtn{position:absolute;right:10px;bottom:10px;z-index:1}
+#zoombar{position:absolute;right:10px;bottom:46px;display:flex;flex-direction:column;gap:4px;z-index:1}
+#zoombar .btn{width:30px;padding:2px 0;font:700 16px/1.2 var(--px)}
 #viewbar{position:absolute;top:10px;left:10px;display:flex;gap:6px;align-items:center}
 #viewbar span{font-weight:700;padding:0 4px}
 #loans{top:10px;left:10px;width:330px;max-width:calc(100% - 20px);z-index:2}
@@ -70,11 +77,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #loans td:first-child,#loans th:first-child{text-align:left}
 #research{top:10px;left:10px;width:330px;max-width:calc(100% - 20px);z-index:2}
 #research .row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-top:1px dotted var(--line)}
-#steps{position:absolute;top:10px;left:10px;width:230px;padding:8px 10px;font-size:12px}
-#steps ol{margin:4px 0 0;padding-left:18px}
-#steps li{margin:2px 0}
-#steps li.done{color:var(--muted);text-decoration:line-through}
-#steps li.now{font-weight:700}
+#steps{position:absolute;top:10px;left:10px;max-width:calc(100% - 20px);padding:4px 10px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#steps span{color:var(--muted)}
 #overlay{position:absolute;inset:0;background:rgba(40,45,52,.55);display:flex;align-items:flex-start;justify-content:center;padding:12px;overflow:auto;z-index:3;box-sizing:border-box}
 .contract{margin:auto;background:var(--paper);color:#2b2318;border:1px solid #5a4a2a;max-width:560px;padding:16px 22px;font-size:13.5px;line-height:1.4;position:relative;box-shadow:4px 4px 0 rgba(0,0,0,.25)}
 .contract:before{content:"";position:absolute;inset:5px;border:1px solid #8a7a55;pointer-events:none}
@@ -91,10 +95,10 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .contract .btn{background:#fffdf7;border-color:#5a4a2a;color:#2b2318;box-shadow:none}
 .contract .btn.main{background:#2b2318;color:#fffdf7}
 #news{grid-column:1/-1;padding:5px 10px;display:flex;gap:10px;min-width:0;align-items:baseline}
-#news b{color:var(--warn);letter-spacing:.14em;font-size:10.5px;flex:none}
+#news b{color:#fff;background:var(--warn);padding:1px 6px;font:600 11px/1.3 var(--px);letter-spacing:.14em;flex:none}
 #news span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #readout{position:absolute;right:10px;bottom:10px;width:300px;max-width:calc(100% - 20px);background:var(--paper);color:#2b2318;border:1px solid #5a4a2a;padding:8px 10px;box-sizing:border-box;font:11.5px/1.4 "Courier New",monospace;max-height:40%;overflow:auto;white-space:pre-wrap}
-@media (max-width:820px){ #app{grid-template:auto minmax(0,1fr) auto auto / minmax(0,1fr)} #top{grid-row:1} #stage{grid-row:2} #pal{grid-row:3;flex-direction:row;overflow-x:auto} #news{grid-row:4} #pal h3{writing-mode:vertical-rl;transform:rotate(180deg);margin:0 2px;flex:none} .it{flex:none;width:auto;flex-direction:column;min-width:64px;text-align:center;padding:2px} .it span{align-items:center} #steps{display:none} }
+@media (max-width:820px){ #app{grid-template:auto minmax(0,1fr) auto auto / minmax(0,1fr)} #top{grid-row:1} #stage{grid-row:2} #pal{grid-row:3;flex-direction:row;overflow-x:auto} #news{grid-row:4} #pal h3{writing-mode:vertical-rl;transform:rotate(180deg);margin:0 4px;flex:none;align-self:stretch;text-align:center} #pal .it{flex:none;width:auto;flex-direction:column;min-width:68px;text-align:center;padding:4px 4px 3px 7px} .it span{align-items:center} #steps{font-size:11px} }
 </style>
 </head>
 <body>
@@ -110,13 +114,15 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   </header>
   <nav id="pal" class="box" aria-label="Objects"></nav>
   <main id="stage" class="box">
-    <canvas id="game" width="480" height="270"></canvas>
+    <div id="scroll"><canvas id="game" width="480" height="270"></canvas></div>
     <div id="viewbar" hidden><button class="btn" data-a="map">&larr; Block</button><span id="linename"></span><button class="btn" data-a="toggle" id="togglebtn">1970s paper</button></div>
     <aside id="card" class="pane" hidden></aside>
     <aside id="loans" class="pane" hidden></aside>
     <aside id="research" class="pane" hidden></aside>
     <aside id="steps" class="pane" hidden></aside>
     <pre id="readout" hidden></pre>
+    <div id="zoombar" hidden><button class="btn" data-a="zin" title="Zoom in" aria-label="Zoom in">+</button><button class="btn" data-a="zout" title="Zoom out" aria-label="Zoom out">&minus;</button></div>
+    <button class="btn" id="uncutbtn" data-a="uncut" hidden title="Show the whole block (Esc)">&times; Close cut</button>
     <div id="hint" hidden></div>
     <div id="toast" hidden></div>
     <div id="overlay"></div>
@@ -194,7 +200,7 @@ const sx = x => x*SW/MW;                                            // map x -> 
 const mx = x => x*MW/SW;
 
 /* ================================================================== state */
-let S, cam = {y:0}, view = 'map', line = null, cutLine = null, tool = null, anchor = null, sel = null, plan = null, hover = null, toastT = 0, shake = 0, lastT = 0, scale = 1, showPaper = false;
+let zoom = 1, S, cam = {y:0}, view = 'map', line = null, cutLine = null, tool = null, anchor = null, sel = null, plan = null, hover = null, toastT = 0, shake = 0, lastT = 0, scale = 1, showPaper = false;
 const GEO = new Map(), KN = new Map(), CANV = new Map(), DIRTY = new Map(), VELS = new Map();
 
 /* ------------------------------------------------------------------ geology per grid line (a slice through a 3D noise field) */
@@ -554,7 +560,7 @@ function monthTick(){
     if (v.mood < 33 && ch(0.15, 4) && !S.obj.some(t => t.type === 'tractor' && t.v === v.id)){ const s = sites.find(s => !isBlocked(s) && !guarded(s)); if (s){ const rp = roadPos(roadS(s.x, s.y).s); const tr = add('tractor', rp.x, rp.y, {v:v.id, opp:1, target:s.id, until:S.t + 2, w:8, hh:6}); spawnArrival(tr, v); news('A manure spreader parks across the road near ' + v.name + '. The driver has gone for lunch.'); } }
     if (v.mood < 25 && ch(0.3, 5)){ const s = sites.find(s => vdist(v,s.x,s.y) <= 90 && !S.obj.some(c => c.type === 'camp' && c.target === s.id)); if (s){ add('camp', s.x + (s.x < v.x ? 12 : -12), s.y + 6, {v:v.id, opp:1, target:s.id, w:9, hh:7}); news('A protest camp goes up at the site near ' + v.name + '. The yurt is better insulated than the village hall.'); } }
   });
-  if (avg < 45 && !S.obj.some(o => o.type === 'march') && rnd(7) < 0.15*k){ const t = S.vil[0]; add('march', t.x, t.y + t.h/2 + 8, {opp:1, until:S.t + 1, w:1, hh:1}); const s0 = roadS(t.x, t.y).s; for (let i = 0; i < 12; i++) S.ents.push({k:'marcher', s:s0 - 60 - i*5, vs:6, sign:i%2 ? 'NON' : 'STOP', until:S.t + 1}); bump(t, 'Protest march', -4); news('March in ' + t.name + ': a thousand people, twelve tractors, one alphorn.'); }
+  if (avg < 45 && !S.obj.some(o => o.type === 'march') && rnd(7) < 0.15*k){ const t = S.vil[0]; add('march', t.x, t.y + t.h/2 + 8, {opp:1, until:S.t + 1, w:1, hh:1}); const s0 = roadS(t.x, t.y).s; for (let i = 0; i < 12; i++) S.ents.push({k:'marcher', s:s0 - 60 - i*5, vs:6, sign:i%2 ? 'NON' : 'STOP', until:S.t + 1, idx:i}); bump(t, 'Protest march', -4); news('March in ' + t.name + ': a thousand people, twelve tractors, one alphorn.'); }
   for (const o of S.obj.slice()){
     if (o.until !== undefined && S.t >= o.until && ['tractor','march','counterfest','congress','rumour'].includes(o.type)){ if (o.type === 'tractor') spawnLeave(o); rm(o); continue; }
     if (o.type === 'tractor'){ const s = byId(o.target); if (!s || S.obj.some(p => p.type === 'police' && p.on && (Math.hypot(p.x - o.x, p.y - o.y) <= 18 || Math.hypot(p.x - s.x, p.y - s.y) <= 18))){ spawnLeave(o); rm(o); } }
@@ -646,10 +652,30 @@ function chapel(g, x, y, snow){ shadowAt(g, x, y, 6, 5); box(g, x, y, 6, 5, 3, '
 function tree(g, x, y, s, fir, snow, autumn){ const p = P(x, y, 0); R(g, 'rgba(0,0,0,.14)', p[0] - 2*s, p[1] - 0.5, 4*s, 1.5); R(g, '#5a3d2a', p[0] - 0.5, p[1] - 3*s, 1, 3*s);
   if (fir){ g.fillStyle = snow ? '#5e8a68' : '#2f6b3a'; g.beginPath(); g.moveTo(p[0] - 2.5*s, p[1] - 2.5*s); g.lineTo(p[0] + 2.5*s, p[1] - 2.5*s); g.lineTo(p[0], p[1] - 9*s); g.closePath(); g.fill(); g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 0.4; g.stroke(); if (snow){ g.fillStyle = '#f4f6f8'; g.beginPath(); g.moveTo(p[0] - 1.2*s, p[1] - 5.5*s); g.lineTo(p[0] + 1.2*s, p[1] - 5.5*s); g.lineTo(p[0], p[1] - 9*s); g.closePath(); g.fill(); } }
   else { g.fillStyle = autumn ? '#c47a2c' : '#3f8f4e'; g.beginPath(); g.arc(p[0], p[1] - 5*s, 3*s, 0, 7); g.fill(); g.fillStyle = autumn ? '#dc9b45' : '#58a862'; g.beginPath(); g.arc(p[0] - 0.8*s, p[1] - 5.8*s, 1.6*s, 0, 7); g.fill(); g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 0.4; g.beginPath(); g.arc(p[0], p[1] - 5*s, 3*s, 0, 7); g.stroke(); } }
-function person(g, x, y, f, shirt, sign, hat){ const p = P(x, y, 0), step = f ? (Math.floor(f*2) % 2) : 0; R(g, 'rgba(0,0,0,.18)', p[0] - 1, p[1] - 0.4, 2.5, 1);
-  R(g, '#2b313c', p[0] - 0.8, p[1] - 2, 0.7, 2); R(g, '#2b313c', p[0] + 0.3, p[1] - 2 + step*0.4, 0.7, 2); R(g, shirt, p[0] - 1, p[1] - 4.6, 2.2, 2.8); R(g, '#f0d2b4', p[0] - 0.8, p[1] - 6.4, 1.8, 1.8); R(g, hat || '#4a3220', p[0] - 0.9, p[1] - 6.8, 2, 0.6);
-  if (sign){ R(g, '#5a4632', p[0] + 1.3, p[1] - 10, 0.5, 6); g.font = '4.5px "Pixelify Sans"'; const w = g.measureText(sign).width + 2; R(g, '#2b2b2b', p[0] + 0.3, p[1] - 13.5, w + 1, 4.6); R(g, '#f6f6f2', p[0] + 0.8, p[1] - 13, w, 3.6); T(g, sign, p[0] + 1.8, p[1] - 10, '#b3261e', 4.5); } }
-function policeman(g, x, y, riot){ person(g, x, y, 0, riot ? '#1c2225' : '#2a4fa0', null, riot ? '#1c2225' : '#152a5e'); }
+/* little pixel people: o = {wave (sign phase), face (+1 looks right on screen, -1 left), shield, sit} */
+function person(g, x, y, f, shirt, sign, hat, o){ o = o || {}; const p = P(x, y, 0), X = p[0], Y = p[1] + (o.sit ? 1.5 : 0), step = f ? (Math.floor(f*2) % 2) : 0, face = o.face || 1, ink = '#1c2225', skin = '#f2d2b6';
+  R(g, 'rgba(0,0,0,.2)', X - 1.5, p[1] - 0.5, 3.5, 1);
+  if (o.sit) R(g, '#2b313c', X - 1, Y - 1.5, 2.8, 1); else { R(g, '#2b313c', X - 1, Y - 2, 0.8, 2 - step*0.5); R(g, '#2b313c', X + 0.3, Y - 2, 0.8, 2 - (f ? (1 - step)*0.5 : 0)); }
+  R(g, ink, X - 1.5, Y - 5.3, 3.3, 3.5); R(g, shirt, X - 1.2, Y - 5, 2.7, 3);
+  R(g, ink, X - 1.3, Y - 7.8, 2.9, 2.9); R(g, skin, X - 1, Y - 7.5, 2.3, 2.3); R(g, ink, face > 0 ? X + 0.6 : X - 0.6, Y - 6.7, 0.5, 0.6); R(g, '#f0a8a0', face > 0 ? X - 0.3 : X + 0.3, Y - 6, 0.5, 0.5);
+  R(g, hat || '#4a3220', X - 1.3, Y - 8.3, 2.9, 1);
+  if (o.shield){ const sx0 = face > 0 ? X + 1.3 : X - 2.9; R(g, ink, sx0, Y - 6, 1.6, 4.4); R(g, '#a9bccd', sx0 + 0.3, Y - 5.7, 1, 3.8); }
+  if (sign){ const wv = Math.round(Math.sin(o.wave || 0)*2)/2; R(g, skin, X + 1.5, Y - 6.5 + wv, 0.6, 2); R(g, '#5a4632', X + 1.8, Y - 12 + wv, 0.5, 7);
+    g.font = '4px "Pixelify Sans"'; const w = g.measureText(sign).width + 2; R(g, ink, X + 0.3, Y - 15.8 + wv, w + 1, 4.6); R(g, '#f6f6f2', X + 0.8, Y - 15.3 + wv, w, 3.6); T(g, sign, X + 1.8, Y - 12.4 + wv, '#b3261e', 4); } }
+function policeman(g, x, y, riot, face){ person(g, x, y, 0, riot ? '#2a2d33' : '#2a4fa0', null, riot ? '#1c2225' : '#152a5e', {face, shield:riot}); }
+/* speech bubbles are queued while the scene draws and painted on top */
+const BUB = [];
+function say(x, y, z, s){ const p = P(x, y, 0); BUB.push({x:p[0], y:p[1] - z, s}); }
+function drawBubbles(g){ g.font = '4px "Pixelify Sans"'; for (const b of BUB){ const w = Math.ceil(g.measureText(b.s).width) + 3, x0 = Math.round(b.x - w/2), y0 = Math.round(b.y - 6);
+  R(g, '#1c2225', x0 - 0.5, y0 - 0.5, w + 1, 6); R(g, '#fff', x0, y0, w, 5); R(g, '#1c2225', b.x - 0.5, y0 + 5.5, 1, 1); T(g, b.s, b.x, y0 + 4, '#1c2225', 4, 'center'); } BUB.length = 0; }
+const faceTo = (x, y, tx, ty) => ((tx - ty) - (x - y)) >= 0 ? 1 : -1;     // screen-left or screen-right
+const copNear = o => S.obj.find(c => (c.type === 'police' || c.type === 'riot') && c.on && Math.hypot(c.x - o.x, c.y - o.y) <= 26);
+/* a protest object talks; with cops nearby it becomes a four-line exchange */
+function chatter(o, px, py, t, lines){ if (o.id === undefined) return; const c = copNear(o), ph = (t + o.id*1.3) % 6, slot = (ph/1.5)|0, show = ph - slot*1.5 < 1.2;
+  if (!show) return;
+  if (!c){ if (slot === 0) say(px, py, 17, lines[((t/6 + o.id)|0) % lines.length]); return; }
+  const riot = c.type === 'riot', talk = riot ? ['NON!', 'Dispersez!', 'Hou!', '...'] : ['NON!', 'Circulez!', 'Café?', '...merci.'];
+  if (slot % 2 === 0) say(px, py, 17, talk[slot]); else say(c.x, c.y, 10, talk[slot]); }
 /* vehicles: oriented boxes. dir: 'x' (east-west) or 'y' (north-south). x,y = centre of footprint */
 function vehicle(g, k, x, y, dir, col, anim){
   const spec = {car:[6.5,3.2,1.6,col || '#2f4f7a'], blackcar:[6.5,3.2,1.6,'#15171b'], postauto:[11,3.6,2.6,'#e8b923'], lorry:[11,3.6,3,'#d8d8d3'], tractor:[5.5,3.2,2.2,'#3f7a4a'], policevan:[8.5,3.4,2.6,'#eeeeea'], riotbus:[11.5,3.6,2.8,'#2a2d33'], van:[8.5,3.4,2.6,'#f1f1ee'], vib:[9,3.6,2.8,'#2f3f8a']}[k] || [6.5,3.2,1.6,'#888'];
@@ -689,19 +715,25 @@ function obj(g, o, t){
     case 'stand': { const p = P(x, y, 0); R(g, 'rgba(0,0,0,.14)', p[0] - 3, p[1] - 0.5, 6, 1.2); R(g, '#555', p[0] - 0.3, p[1] - 7, 0.7, 7); g.fillStyle = '#2a6fb0'; g.beginPath(); g.ellipse(p[0], p[1] - 7, 4.5, 1.6, 0, 0, 7); g.fill(); R(g, '#f2f2f2', p[0] - 2.5, p[1] - 2.5, 5, 2); break; }
     case 'oppstand': { const p = P(x, y, 0); R(g, 'rgba(0,0,0,.14)', p[0] - 3, p[1] - 0.5, 6, 1.2); R(g, '#555', p[0] - 0.3, p[1] - 7, 0.7, 7); g.fillStyle = '#b3261e'; g.beginPath(); g.ellipse(p[0], p[1] - 7, 4.5, 1.6, 0, 0, 7); g.fill(); R(g, '#f2f2f2', p[0] - 3, p[1] - 2.5, 6, 2); T(g, 'NON', p[0], p[1] - 0.9, '#b3261e', 3.2, 'center'); break; }
     case 'suit': person(g, x, y, t, '#1d2743', null, '#1c2225'); break;
-    case 'police': policeman(g, x - 1.5, y, false); policeman(g, x + 1.5, y + 1, false); break;
-    case 'riot': for (let i = 0; i < 4; i++) policeman(g, x - 3 + i*2, y + (i%2), true); break;
+    case 'police': case 'riot': { const tg = o.id === undefined ? null : S.obj.find(b => b.opp && b.type !== 'march' && Math.hypot(b.x - x, b.y - y) <= 26), fc = tg ? faceTo(x, y, tg.x, tg.y) : 1;
+      if (o.type === 'police'){ policeman(g, x - 1.5, y, false, fc); policeman(g, x + 1.5, y + 1, false, fc); if (!tg && o.id !== undefined && ((t + o.id*2.1) % 14) < 1.4) say(x, y, 10, 'Bonjour!'); }
+      else for (let i = 0; i < 4; i++) policeman(g, x - 3 + i*2, y + (i%2), true, fc); break; }
     case 'school': shadowAt(g, x - 4.5, y - 3, 9, 6); box(g, x - 4.5, y - 3, 9, 6, 4, '#f3f3ef'); { const p = P(x + 5, y - 3, 0); R(g, '#555', p[0], p[1] - 11, 0.6, 11); R(g, '#b3261e', p[0] + 0.6, p[1] - 11, 3, 2); } break;
     case 'chair': shadowAt(g, x - 4.5, y - 3, 9, 6); box(g, x - 4.5, y - 3, 9, 6, 5, '#2b313c'); billboard(g, x, y + 3, 5.5, ['UNI'], 4, '#1c2225'); break;
     case 'congress': shadowAt(g, x - 5.5, y - 3.5, 11, 7); box(g, x - 5.5, y - 3.5, 11, 7, 5, '#f2f2f2', {top:'#2a6fb0'}); break;
     case 'banner': { const a = P(x - 6, y, 0), b = P(x + 6, y, 0); R(g, '#5a4632', a[0], a[1] - 8, 0.7, 8); R(g, '#5a4632', b[0], b[1] - 8, 0.7, 8); billboard(g, x, y, 4, ['JURA SANS', 'FRACKING'], 4, '#b3261e', 24); break; }
     case 'rumour': billboard(g, x, y, 6 + bob, ['?'], 6, '#1c2225'); break;
-    case 'tractor': vehicle(g, 'tractor', x, y, (roadPos(roadS(x, y).s).dx ? 'y' : 'x'), null); break;
+    case 'tractor': { const rp = roadPos(roadS(x, y).s), hz = Math.abs(rp.dx) > 0.5; vehicle(g, 'tractor', x, y, hz ? 'y' : 'x', null);
+      const c = o.id === undefined ? null : copNear(o), fc = c ? faceTo(x, y, c.x, c.y) : 1, f1 = hz ? [x - 3, y + 5] : [x + 5, y - 2], f2 = hz ? [x + 2.5, y + 5.5] : [x + 5.5, y + 2.5];
+      person(g, f1[0], f1[1], 0, '#3f7a4a', 'NON', '#c8a24a', {wave:t*4, face:fc}); person(g, f2[0], f2[1], 0, '#8c7a4a', 'STOP', '#7a4a3a', {wave:t*4 + 2, face:fc});
+      chatter(o, f1[0], f1[1], t, ['NON!', 'Pas ici!', 'Nos vaches!']); break; }
     case 'march': break;
-    case 'camp': shadowAt(g, x - 6, y - 2, 12, 5); wpoly(g, [[x - 6, y + 2, 0], [x - 1, y + 2, 0], [x - 3.5, y, 4]], '#6f7d3c', 'rgba(0,0,0,.4)'); wpoly(g, [[x - 6, y - 2, 0], [x - 1, y - 2, 0], [x - 3.5, y, 4]], '#879a4a', 'rgba(0,0,0,.4)'); wpoly(g, [[x + 1, y + 2.5, 0], [x + 6, y + 2.5, 0], [x + 3.5, y + 0.5, 4]], '#3d4a1c', 'rgba(0,0,0,.4)'); wpoly(g, [[x + 1, y - 1.5, 0], [x + 6, y - 1.5, 0], [x + 3.5, y + 0.5, 4]], '#556529', 'rgba(0,0,0,.4)'); { const p = P(x, y + 4, 0); R(g, '#ff7a00', p[0] - 1, p[1] - 2 + bob, 2, 2); } person(g, x + 7, y + 3, t, '#b3261e', 'NON'); break;
-    case 'activists': vehicle(g, 'van', x - 4, y, 'x', null); person(g, x + 4, y + 2, t, '#1c2225', 'STOP'); break;
+    case 'camp': shadowAt(g, x - 6, y - 2, 12, 5); wpoly(g, [[x - 6, y + 2, 0], [x - 1, y + 2, 0], [x - 3.5, y, 4]], '#6f7d3c', 'rgba(0,0,0,.4)'); wpoly(g, [[x - 6, y - 2, 0], [x - 1, y - 2, 0], [x - 3.5, y, 4]], '#879a4a', 'rgba(0,0,0,.4)'); wpoly(g, [[x + 1, y + 2.5, 0], [x + 6, y + 2.5, 0], [x + 3.5, y + 0.5, 4]], '#3d4a1c', 'rgba(0,0,0,.4)'); wpoly(g, [[x + 1, y - 1.5, 0], [x + 6, y - 1.5, 0], [x + 3.5, y + 0.5, 4]], '#556529', 'rgba(0,0,0,.4)'); { const p = P(x, y + 4, 0); R(g, '#ff7a00', p[0] - 1, p[1] - 2 + bob, 2, 2); } person(g, x + 7, y + 3, 0, '#b3261e', 'NON', '#4a3220', {wave:t*3, face:-1}); person(g, x - 2, y + 5, 0, '#2f4f7a', null, '#c8a24a', {sit:true}); { const p = P(x - 2, y + 5, 0); R(g, '#a0612a', p[0] + 0.5, p[1] - 3.5, 2.2, 1.2); R(g, '#5a3d2a', p[0] + 2.5, p[1] - 4, 1.5, 0.5); T(g, '\u266a', p[0] + 3 + Math.sin(t*2), p[1] - 7 - ((t*5) % 6), '#1c2225', 5); }
+      chatter(o, x + 7, y + 3, t, ['On reste!', 'Jura libre!', 'NON!']); break;
+    case 'activists': vehicle(g, 'van', x - 4, y, 'x', null); person(g, x + 4, y + 2, 0, '#1c2225', 'STOP', '#b3261e', {wave:t*4}); if (o.id !== undefined && ((t + o.id) % 9) < 1.3) say(x + 4, y + 2, 17, 'Solidarité!'); break;
     case 'counterfest': wpoly(g, [[x - 3, y + 2, 0], [x + 3, y + 2, 0], [x, y, 4]], '#1c2225', 'rgba(0,0,0,.4)'); wpoly(g, [[x - 3, y - 2, 0], [x + 3, y - 2, 0], [x, y, 4]], '#2f343a', 'rgba(0,0,0,.4)'); break;
   }
+  if (SITE[o.type] && !o.burnt && o.id !== undefined){ const z = {testrig:11, light:16, deep:23, dir:23, station:7.5, plant:13}[o.type], fx0 = o.type === 'station' ? x + 2.6 : o.type === 'plant' ? x + 3.2 : x, fy0 = o.type === 'station' ? y - 1.9 : o.type === 'plant' ? y - 0.8 : y; const a = P(fx0, fy0, z), b = P(fx0, fy0, z + 5); g.strokeStyle = '#2b313c'; g.lineWidth = 0.4; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); poly(g, [[b[0], b[1]], [b[0] + 3.5, b[1] + 0.9 + 0.3*Math.sin(t*5 + o.id)], [b[0], b[1] + 2]], '#1f5fa8'); }
   if (o.fenced && SITE[o.type]){ g.strokeStyle = '#666'; g.lineWidth = 0.5; const w = o.type === 'plant' ? 9 : 6; const pts = [[x - w, y - w*0.7], [x + w, y - w*0.7], [x + w, y + w*0.7], [x - w, y + w*0.7]]; for (let i = 0; i < 4; i++){ const a = pts[i], b = pts[(i + 1)%4]; for (let f = 0; f <= 1; f += 0.2){ const px = a[0] + (b[0]-a[0])*f, py = a[1] + (b[1]-a[1])*f; const q = P(px, py, 0), q2 = P(px, py, 2); g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(q2[0], q2[1]); g.stroke(); } const a2 = P(a[0], a[1], 1.6), b2 = P(b[0], b[1], 1.6); g.beginPath(); g.moveTo(a2[0], a2[1]); g.lineTo(b2[0], b2[1]); g.stroke(); } }
   if (!o.on && !o.burnt && o.arrived){ const f = clamp((S.t - o.t0)/Math.max(0.01, o.ready - o.t0), 0, 1), p = P(x, y, 0); R(g, '#1c2225', p[0] - 4, p[1] + 2, 8.5, 1.8); R(g, '#f2c230', p[0] - 3.7, p[1] + 2.4, 7.9*f, 1); }
 }
@@ -717,6 +749,7 @@ function drawBase(cutY){
   const li = cutLine !== null ? cutLine : S.lines.length - 1; const col = x => rockL(li, x, 0);
   wpoly(g, [[MW, 0, 0], [MW, yc, 0], [MW, yc, -D], [MW, 0, -D]], '#c9c1b2', 'rgba(0,0,0,.5)');
   for (let d = 0; d < UGH; d += 10){ const t = rockL(li, SW - 2, d + 5), c = RCOL[t][0]; wpoly(g, [[MW, 0, -d*D/UGH], [MW, yc, -d*D/UGH], [MW, yc, -(d + 10)*D/UGH], [MW, 0, -(d + 10)*D/UGH]], shade(c, 0.85)); }
+  if (winter) wpoly(g, [[MW, 0, 0], [MW, yc, 0], [MW, yc, -2.2], [MW, 0, -2.2]], '#f4f7f9');
   g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 0.6; wpoly(g, [[MW, 0, 0], [MW, yc, 0], [MW, yc, -D], [MW, 0, -D]], null, 'rgba(0,0,0,.55)', 0.6);
   /* top face */
   wpoly(g, [[0, 0, 0], [MW, 0, 0], [MW, yc, 0], [0, yc, 0]], groundColor(winter));
@@ -754,7 +787,7 @@ function drawMap(g, t){
   faceTransform(g, yc); g.drawImage(showPaper ? paperCanvas(li) : knownCanvas(li), 0, 0);
   if (!showPaper){ for (const o of S.obj) if (o.line === li && o.well){ let p = {x:sx(o.x), d:0}; const pts = o.well.slice(); if (o.drilling) pts.push(o.drilling.pos); for (let i = 0; i < pts.length; i++){ const q = pts[i]; g.strokeStyle = (i < o.well.length ? o.well[i].c : o.drilling.cased) ? '#9aa0aa' : '#b8794b'; g.lineWidth = 5; g.beginPath(); g.moveTo(p.x, p.d); g.lineTo(q.x, q.d); g.stroke(); g.strokeStyle = '#0c1020'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(p.x, p.d); g.lineTo(q.x, q.d); g.stroke(); p = q; } }
     for (const q of S.quakes) if (q.line === li){ g.strokeStyle = '#111'; g.lineWidth = 1.5; g.beginPath(); g.arc(q.x, q.d, 6, 0, 7); g.stroke(); } }
-  g.setTransform(2, 0, 0, 2, 0, 0); wpoly(g, [[0, yc, 0], [MW, yc, 0], [MW, yc, -D], [0, yc, -D]], null, 'rgba(0,0,0,.6)', 0.7);
+  g.setTransform(2, 0, 0, 2, 0, 0); if (S.season >= 11 || S.season <= 1) wpoly(g, [[0, yc, 0], [MW, yc, 0], [MW, yc, -2.2], [0, yc, -2.2]], '#f4f7f9'); wpoly(g, [[0, yc, 0], [MW, yc, 0], [MW, yc, -D], [0, yc, -D]], null, 'rgba(0,0,0,.6)', 0.7);
   for (let d = 100; d < UGH; d += 100){ const p = P(0, yc, -d*D/UGH); T(g, (d*10).toLocaleString('en-US') + ' m', p[0] - 2, p[1] + 2, '#15181c', 5.5, 'right'); }
   /* surface drawables, sorted by depth */
   const mo = S.season, winter = mo >= 11 || mo <= 1, autumn = mo === 9 || mo === 10, draws = [], K = (x, y) => x + y;
@@ -770,7 +803,7 @@ function drawMap(g, t){
     draws.push({k:K(v.x, v.y + v.h/2) + 900, f:() => { const p = P(v.x, v.y + v.h/2 + 3, 0); T(g, v.name, p[0], p[1] + 6, '#15181c', 7, 'center', 'rgba(255,255,255,.9)'); }});
     if (v.festUntil > S.t) draws.push({k:K(v.x + v.w/2 + 8, v.y + v.h/2 + 4), f:() => festSprite(g, v.x + v.w/2 + 8, v.y + v.h/2 + 4, t)});
     const signs = v.mood < 50 ? Math.min(5, ((50 - v.mood)/8)|0) : 0;
-    for (let i = 0; i < 3 + signs; i++){ const ph = t*0.5 + i*1.3, px = v.x - v.w/2 + 4 + ((Math.sin(ph)*0.5 + 0.5)*(v.w - 8)), py = (v.streets[i % v.streets.length] || v.y) + 0.3; if (py > yc) continue; draws.push({k:K(px, py) + 0.5, f:() => person(g, px, py, t + i, ['#2f4f7a','#3f7a4a','#8c7a4a','#8a2b2b','#e9e3d3'][i%5], i < signs ? (i%2 ? 'NON' : 'STOP') : null)}); }
+    for (let i = 0; i < 3 + signs; i++){ const ph = t*0.5 + i*1.3, px = v.x - v.w/2 + 4 + ((Math.sin(ph)*0.5 + 0.5)*(v.w - 8)), py = (v.streets[i % v.streets.length] || v.y) + 0.3; if (py > yc) continue; draws.push({k:K(px, py) + 0.5, f:() => person(g, px, py, t + i, ['#2f4f7a','#3f7a4a','#8c7a4a','#8a2b2b','#e9e3d3'][i%5], i < signs ? (i%2 ? 'NON' : 'STOP') : null, null, {wave:t*3 + i*1.7, face:Math.cos(ph) > 0 ? 1 : -1})}); }
     if (v.heat === 'on') for (const h of v.houses.slice(0, 3)) draws.push({k:K(h.x + 4, h.y + 3) + 0.1, f:() => { const p = P(h.x + 7, h.y + 1, 8); R(g, '#f2f2f2', p[0], p[1] - (((t*6)|0)%3), 1.5, 1.5); }});
   }
   for (const tr of S.trees) if (tr.y <= yc) draws.push({k:K(tr.x, tr.y), f:() => tree(g, tr.x, tr.y, 1, tr.s === 2, winter, autumn)});
@@ -779,10 +812,10 @@ function drawMap(g, t){
   for (const e of S.ents){ if (e.k === 'heli') continue;
     if (e.k === 'train'){ if (S.rail.y <= yc) draws.push({k:K(e.x, S.rail.y), f:() => train(g, e.x, S.rail.y, t)}); continue; }
     if (e.k === 'vib'){ if (e.y <= yc) draws.push({k:K(e.x, e.y + 2), f:() => vehicle(g, 'vib', e.x, e.y + 2.5, 'x', null, S.lines[e.line].segs.some(s => s.id === e.seg && s.arrived) ? ((t*8)|0) : 0)}); continue; }
-    if (e.k === 'marcher'){ const q = roadPos(e.s); if (q.y > yc) continue; draws.push({k:K(q.x, q.y + 2), f:() => person(g, q.x, q.y + 2, e.anim, '#8a2b2b', e.sign)}); continue; }
+    if (e.k === 'marcher'){ const q = roadPos(e.s); if (q.y > yc) continue; draws.push({k:K(q.x, q.y + 2), f:() => { const i = e.idx || 0; person(g, q.x, q.y + 2, e.anim, ['#8a2b2b','#2f4f7a','#3f7a4a','#8c7a4a'][i % 4], e.sign, null, {wave:t*5 + i, face:Math.sign(q.dx - q.dy) || 1}); if (i % 4 === 0 && ((t + i) % 5) < 1.2) say(q.x, q.y + 2, 17, ['NON!', 'Hou!', 'Jura sans forage!'][(i/4) % 3]); }}); continue; }
     if (e.parked){ if (e.py <= yc) draws.push({k:K(e.px, e.py), f:() => vehicle(g, e.k, e.px, e.py, e.pdir, e.col)}); continue; }
     const q = roadPos(e.s); if (q.y > yc) continue; const off = (e.lane || 1)*1.7; const vx = q.x - q.dy*off, vy = q.y + q.dx*off; draws.push({k:K(vx, vy), f:() => vehicle(g, e.k, vx, vy, Math.abs(q.dx) > Math.abs(q.dy) ? 'x' : 'y', e.col, e.anim)}); }
-  draws.sort((a,b) => a.k - b.k); for (const d of draws) d.f();
+  BUB.length = 0; draws.sort((a,b) => a.k - b.k); for (const d of draws) d.f(); drawBubbles(g);
   for (const e of S.ents) if (e.k === 'heli'){ const p = P(e.x, 60, 30); R(g, 'rgba(0,0,0,.12)', p[0] - 3, p[1] + 30, 10, 2); R(g, '#3b3f45', p[0], p[1], 8, 3); R(g, '#3b3f45', p[0] - 4, p[1] + 1, 4, 1); R(g, '#3b3f45', p[0] - 3 + (((t*30)|0)%2), p[1] - 2, 13, 0.8); }
   /* interaction overlays */
   if (anchor && tool === 'survey' && hover && hover.x !== undefined){ const l = S.lines[anchor.line]; const a = P(Math.min(anchor.x, hover.x), l.y, 0), b = P(Math.max(anchor.x, hover.x), l.y, 0); g.strokeStyle = 'rgba(242,194,48,.9)'; g.lineWidth = 2; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
@@ -892,20 +925,21 @@ function drawSection(g, t){
   for (let d = 50; d < UGH; d += 50){ R(g, 'rgba(255,255,255,.4)', 0, SURF + d, 12, 1); T(g, (d*10).toLocaleString('en-US') + ' m', 14, SURF + d + 3, showPaper ? '#5a4a2a' : '#fff', 9, 'left', showPaper ? null : 'rgba(11,15,31,.6)'); }
   g.restore();
   /* legend strip */
-  if (!showPaper){ R(g, 'rgba(255,255,255,.85)', SW - 150, SH - 16, 142, 12); for (let i = 0; i < 100; i++) R(g, rainbow(-10 + i*0.2), SW - 146 + i, SH - 13, 1, 6); T(g, 'slow', SW - 146, SH - 5, '#0b1b2b', 7); T(g, 'fast', SW - 46, SH - 5, '#0b1b2b', 7, 'right'); T(g, 'Vs', SW - 36, SH - 5, '#0b1b2b', 7); }
+  if (!showPaper){ const lx = SW - 238, ly = SH - 46; R(g, 'rgba(11,15,31,.25)', lx + 2, ly + 2, 230, 40); R(g, '#f2f3f5', lx, ly, 230, 40); T(g, 'Shear-wave speed (Vs)', lx + 6, ly + 11, '#15181c', 9);
+    for (let i = 0; i < 218; i++) R(g, rainbow(-10 + i*20/218), lx + 6 + i, ly + 15, 1, 8); T(g, 'slow: water, faults, hot rock', lx + 6, ly + 35, '#15181c', 8); T(g, 'fast: dolomite, granite', lx + 224, ly + 35, '#15181c', 8, 'right'); }
   if (sel && sel.id){ const o = byId(sel.id); if (o && o.line === li){ g.strokeStyle = PAL.warn; g.lineWidth = 1; g.strokeRect(sx(o.x) - 9.5, SURF - 36.5 - cy, 19, 34); } }
 }
 /* ================================================================== HUD, palette, cards */
 function buildPalette(){
-  const pal = $('#pal'); let h = '', grp = '';
-  for (const k in DEF){ const d = DEF[k]; if (d.g !== grp){ grp = d.g; h += '<h3>' + grp + '</h3>'; }
-    h += '<button class="it" data-t="' + k + '" title="' + d.h.replace(/"/g, '&quot;') + '" aria-pressed="false"><canvas width="30" height="30"></canvas><span><b>' + d.n + '</b><small>' + (d.c || (d.cost ? fmt(d.cost) : '') + (d.up && d.cost ? ' + ' + d.up + 'k/mo' : '')) + '</small></span></button>'; }
+  const pal = $('#pal'), GC = {Explore:'#2f6fb0', Drill:'#c8571b', Connect:'#1f8a7a', Persuade:'#3f8f4e', Force:'#b3261e'}; let h = '', grp = '';
+  for (const k in DEF){ const d = DEF[k]; if (d.g !== grp){ grp = d.g; h += '<h3 style="--g:' + GC[grp] + '">' + grp + '</h3>'; }
+    h += '<button class="it" style="--g:' + GC[d.g] + '" data-t="' + k + '" title="' + d.h.replace(/"/g, '&quot;') + '" aria-pressed="false"><canvas width="36" height="36"></canvas><span><b>' + d.n + '</b><small>' + (d.c || (d.cost ? fmt(d.cost) : '') + (d.up && d.cost ? ' + ' + d.up + 'k/mo' : '')) + '</small></span></button>'; }
   pal.innerHTML = h;
-  pal.querySelectorAll('.it').forEach(b => { const g = b.querySelector('canvas').getContext('2d'), tk = b.dataset.t; g.fillStyle = PAL.grass1; g.fillRect(0, 18, 30, 12); g.save(); g.scale(1.5, 1.5);
+  pal.querySelectorAll('.it').forEach(b => { const g = b.querySelector('canvas').getContext('2d'), tk = b.dataset.t; g.fillStyle = '#7fb56b'; g.fillRect(0, 22, 36, 14); g.fillStyle = '#6aa35a'; for (let i = 0; i < 36; i += 4) g.fillRect(i + (i % 8 ? 1 : 3), 24 + (i % 3)*3, 1, 1); g.save(); g.scale(1.8, 1.8);
     const fake = {type:tk, x:0, y:0, on:true, stim:0, well:[], arrived:true, line:0};
     g.translate(10 - (OX), 12 - OY); // centre the iso origin in the icon
-    if (tk === 'survey' || tk === 'pass2') vehicle(g, 'vib', 0, 0, 'x', null, 1); else if (tk === 'pipe'){ g.setTransform(1.5,0,0,1.5,0,0); R(g, '#c8571b', 2, 11, 16, 3); } else if (tk === 'pline'){ g.setTransform(1.5,0,0,1.5,0,0); R(g, '#2b313c', 5, 3, 1, 14); R(g, '#2b313c', 14, 3, 1, 14); R(g, '#2b313c', 2, 6, 16, 1); } else if (tk === 'fence'){ g.setTransform(1.5,0,0,1.5,0,0); for (let i = 2; i < 19; i += 3) R(g, '#555', i, 8, 1, 9); R(g, '#555', 2, 10, 17, 1); R(g, '#555', 2, 14, 17, 1); }
-    else if (tk === 'fest') festSprite(g, 0, 2, 1); else if (tk === 'heli'){ g.setTransform(1.5,0,0,1.5,0,0); R(g, '#3b3f45', 5, 9, 8, 3); R(g, '#3b3f45', 1, 10, 4, 1); R(g, '#3b3f45', 2, 7, 13, 1); } else if (tk === 'quiet'){ g.setTransform(1.5,0,0,1.5,0,0); T(g, 'SH', 3, 14, '#0b1b2b', 10); } else if (tk) obj(g, Object.assign(fake, {x:0, y:0}), 0);
+    if (tk === 'survey' || tk === 'pass2') vehicle(g, 'vib', 0, 0, 'x', null, 1); else if (tk === 'pipe'){ g.setTransform(1.8,0,0,1.8,0,0); R(g, '#c8571b', 2, 11, 16, 3); } else if (tk === 'pline'){ g.setTransform(1.8,0,0,1.8,0,0); R(g, '#2b313c', 5, 3, 1, 14); R(g, '#2b313c', 14, 3, 1, 14); R(g, '#2b313c', 2, 6, 16, 1); } else if (tk === 'fence'){ g.setTransform(1.8,0,0,1.8,0,0); for (let i = 2; i < 19; i += 3) R(g, '#555', i, 8, 1, 9); R(g, '#555', 2, 10, 17, 1); R(g, '#555', 2, 14, 17, 1); }
+    else if (tk === 'fest') festSprite(g, 0, 2, 1); else if (tk === 'heli'){ g.setTransform(1.8,0,0,1.8,0,0); R(g, '#3b3f45', 5, 9, 8, 3); R(g, '#3b3f45', 1, 10, 4, 1); R(g, '#3b3f45', 2, 7, 13, 1); } else if (tk === 'quiet'){ g.setTransform(1.8,0,0,1.8,0,0); T(g, 'SH', 3, 14, '#0b1b2b', 10); } else if (tk) obj(g, Object.assign(fake, {x:0, y:0}), 0);
     g.restore(); });
 }
 function hud(){
@@ -920,9 +954,11 @@ function hud(){
       const base = d.c || (d.cost ? fmt(d.cost) : '') + (d.up && d.cost ? ' + ' + d.up + 'k/mo' : ''); const txt = locked ? base + ' \u00b7 needs research' : base; if (el.textContent !== txt){ el.textContent = txt; el.className = locked ? 'lock' : ''; }
       b.setAttribute('aria-pressed', tool === tk); } });
   const vb = $('#viewbar'); vb.hidden = view !== 'section'; if (view === 'section'){ const l = S.lines[line]; $('#linename').textContent = 'Line ' + l.name + (l.legacy ? '' : ' (no 1970s data)'); $('#togglebtn').textContent = showPaper ? 'Show survey' : '1970s paper'; $('#togglebtn').disabled = !l.legacy && !showPaper; }
+  $('#zoombar').hidden = !(view === 'map' && S.started && !S.over);
+  $('#uncutbtn').hidden = !(view === 'map' && cutLine !== null && S.started && !S.over);
   const hint = $('#hint'); let hs = '';
   if (plan) hs = ''; else if (tool) hs = anchor ? (tool === 'survey' ? 'Now click where the stretch ends on the same line.' : tool === 'pipe' ? 'Now click the village to heat.' : 'Now click the second deep rig.') : DEF[tool].n + ': ' + DEF[tool].h;
-  else if (view === 'map') hs = cutLine !== null ? 'The block is cut along line ' + S.lines[cutLine].name + '. Click the face to open it flat; Esc closes the cut.' : 'Click a dotted grid line to cut the block there. Click houses to hear how a village feels.';
+  else if (view === 'map') hs = cutLine !== null ? 'The block is cut along line ' + S.lines[cutLine].name + '. Click the face to open it flat.' : 'Click a dotted grid line to cut the block there. Click houses to hear how a village feels.';
   if (hs){ if (hint.textContent !== hs){ hint.textContent = hs; hint.dataset.plan = ''; } hint.hidden = false; } else if (!plan) hint.hidden = true;
   if (toastT && performance.now() > toastT){ $('#toast').hidden = true; toastT = 0; }
   const ro = $('#readout'); const tr = sel && sel.id && byId(sel.id); if (view === 'section' && tr && tr.type === 'testrig' && tr.log){ if (ro.textContent !== tr.log) ro.textContent = tr.log; ro.hidden = false; } else ro.hidden = true;
@@ -973,7 +1009,7 @@ function renderSteps(){
   const el = $('#steps'); if (!S.started || S.over || S.month > 48 || view !== 'map'){ el.hidden = true; return; }
   const st = [['Survey a stretch of a grid line', S.lines.some(l => l.segs.length)], ['Place a rig on the surveyed stretch', S.obj.some(o => RIG[o.type] || o.type === 'station' || o.type === 'plant')], ['Open the line and draw the well', S.obj.some(o => (o.well && o.well.length) || o.drilling)], ['Reach warm water, build a heat station', S.obj.some(o => o.type === 'station' || o.type === 'plant')], ['Lay a heat pipe to a village', S.pipes.length > 0]];
   if (st.every(x => x[1])){ el.hidden = true; return; }
-  let seen = false; let h = '<b>First well</b><ol>' + st.map(x => { const now = !x[1] && !seen; if (now) seen = true; return '<li class="' + (x[1] ? 'done' : now ? 'now' : '') + '">' + x[0] + '</li>'; }).join('') + '</ol>';
+  const i = st.findIndex(x => !x[1]); let h = '<span>First well, step ' + (i + 1) + ' of ' + st.length + ':</span> <b>' + st[i][0] + '</b>';
   if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } el.hidden = false;
 }
 function renderLoans(){
@@ -1064,6 +1100,7 @@ function clickWorld(p){
 function act(a, v){
   if (a === 'close'){ sel = null; $('#card').hidden = true; return; } if (a === 'closeloans'){ $('#loans').hidden = true; return; } if (a === 'closeres'){ $('#research').hidden = true; return; }
   if (a === 'research'){ const r = research(v); toast(r === 'ok' ? RES[v].n + ' started.' : r); return; } if (a === 'uncut'){ cutLine = null; sel = null; $('#card').hidden = true; return; }
+  if (a === 'zin'){ zoomStep(1.5); return; } if (a === 'zout'){ zoomStep(1/1.5); return; }
   if (a === 'map'){ closeSection(); return; } if (a === 'toggle'){ showPaper = !showPaper; return; }
   if (a === 'start'){ S.started = true; S.paused = false; $('#overlay').hidden = true; audio(); return; }
   if (a === 'continue'){ try { const d = JSON.parse(localStorage.getItem('jf3_save')); if (d && d.v === 3){ S = d; GEO.clear(); KN.clear(); CANV.clear(); DIRTY.clear(); VELS.clear(); for (const [k,arr] of (S.KN || [])) KN.set(k, Uint8Array.from(arr)); delete S.KN; baseMap = null; } } catch (e) {} S.paused = false; S.started = true; $('#overlay').hidden = true; return; }
@@ -1081,11 +1118,18 @@ function act(a, v){
 }
 function bind(){
   const c = $('#game'); let drag = null, moved = false;
-  c.addEventListener('pointerdown', e => { drag = {y:e.clientY, cy:cam.y}; moved = false; c.setPointerCapture(e.pointerId); });
-  c.addEventListener('pointermove', e => { hover = toWorld(e); if (drag && view === 'section'){ const dy = (e.clientY - drag.y)/scale; if (Math.abs(dy) > 4) moved = true; if (moved) cam.y = clamp(drag.cy - dy, 0, SURF + UGH - SH); } });
-  c.addEventListener('pointerup', e => { if (drag && !moved) clickWorld(toWorld(e)); drag = null; });
-  c.addEventListener('pointerleave', () => { hover = null; });
-  c.addEventListener('wheel', e => { if (view !== 'section') return; e.preventDefault(); cam.y = clamp(cam.y + e.deltaY*0.5, 0, SURF + UGH - SH); }, {passive:false});
+  const ptrs = new Map(), sc = $('#scroll'); let pinch = null;           // one finger drags (pans the block, scrolls the section), two fingers pinch-zoom the block
+  const two = () => { const [a, b] = [...ptrs.values()]; return {d:Math.hypot(a.x - b.x, a.y - b.y), x:(a.x + b.x)/2, y:(a.y + b.y)/2}; };
+  c.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY}); try { c.setPointerCapture(e.pointerId); } catch (err) {}
+    if (ptrs.size === 2){ pinch = {d:two().d, z:zoom}; drag = null; return; } drag = {x:e.clientX, y:e.clientY, cy:cam.y, sl:sc.scrollLeft, st:sc.scrollTop}; moved = false; });
+  c.addEventListener('pointermove', e => { if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY}); hover = toWorld(e);
+    if (pinch && ptrs.size === 2){ const m = two(); if (view === 'map') setZoom(pinch.z*m.d/Math.max(1, pinch.d), m.x, m.y); return; }
+    if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.hypot(dx, dy) > 6) moved = true; if (!moved) return;
+    if (view === 'section') cam.y = clamp(drag.cy - dy/scale, 0, SURF + UGH - SH); else { sc.scrollLeft = drag.sl - dx; sc.scrollTop = drag.st - dy; } });
+  const lift = e => { ptrs.delete(e.pointerId); if (pinch){ if (ptrs.size < 2) pinch = null; drag = null; return true; } return false; };
+  c.addEventListener('pointerup', e => { if (lift(e)) return; if (drag && !moved) clickWorld(toWorld(e)); drag = null; });
+  c.addEventListener('pointerleave', () => { hover = null; }); c.addEventListener('pointercancel', e => { lift(e); drag = null; });
+  c.addEventListener('wheel', e => { e.preventDefault(); if (view === 'section') cam.y = clamp(cam.y + e.deltaY*0.5, 0, SURF + UGH - SH); else setZoom(zoom*(e.deltaY < 0 ? 1.15 : 1/1.15), e.clientX, e.clientY); }, {passive:false});
   $('#pal').addEventListener('click', e => { const b = e.target.closest('.it'); if (!b || !S.started || S.over) return; if (b.dataset.t){ const d = DEF[b.dataset.t]; if (d.need && !resDone(d.need)){ $('#research').hidden = false; renderResearch(); toast(d.n + ' needs ' + RES[d.need].n.toLowerCase() + '. See Research.'); return; } pickTool(b.dataset.t); } });
   $('#stage').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) act(b.dataset.a, b.dataset.v); });
   $('#sp0').onclick = () => { S.paused = true; }; $('#sp1').onclick = () => { if (S.offer) return; S.paused = false; S.speed = 1; audio(); }; $('#sp4').onclick = () => { if (S.offer) return; S.paused = false; S.speed = 4; audio(); };
@@ -1095,8 +1139,12 @@ function bind(){
     if (view === 'section'){ if (k === 'ArrowUp'){ cam.y = clamp(cam.y - 24, 0, SURF + UGH - SH); e.preventDefault(); } if (k === 'ArrowDown'){ cam.y = clamp(cam.y + 24, 0, SURF + UGH - SH); e.preventDefault(); } } });
   window.addEventListener('resize', fit);
 }
-function fit(){ const st = $('#stage'), c = $('#game'); const W = view === 'map' ? CW*2 : SW, H = view === 'map' ? CH*2 : SH; if (c.width !== W){ c.width = W; c.height = H; }
-  const aw = st.clientWidth - 8, ah = st.clientHeight - 8; if (aw < 50 || ah < 50) return; let s = Math.min(aw/W, ah/H); if (s >= 1) s = Math.floor(s*8)/8; scale = s; c.style.width = (W*s) + 'px'; c.style.height = (H*s) + 'px'; }
+function setZoom(z, cx, cy){ z = clamp(z, 1, 5); if (Math.abs(z - zoom) < 1e-3) return; const c = $('#game'), sc = $('#scroll'), r0 = c.getBoundingClientRect(), fx = (cx - r0.left)/r0.width, fy = (cy - r0.top)/r0.height;
+  zoom = z; fit(true); const r1 = c.getBoundingClientRect(); sc.scrollLeft += r1.left + fx*r1.width - cx; sc.scrollTop += r1.top + fy*r1.height - cy; }
+function zoomStep(k){ const r = $('#stage').getBoundingClientRect(); setZoom(zoom*k, r.left + r.width/2, r.top + r.height/2); }
+function fit(keep){ const st = $('#stage'), c = $('#game'); const W = view === 'map' ? CW*2 : SW, H = view === 'map' ? CH*2 : SH; if (c.width !== W){ c.width = W; c.height = H; }
+  const aw = st.clientWidth - 8, ah = st.clientHeight - 8; if (aw < 50 || ah < 50) return; let s = Math.min(aw/W, ah/H); if (view === 'map') s *= zoom; if (s >= 1) s = Math.floor(s*8)/8; scale = s; c.style.width = (W*s) + 'px'; c.style.height = (H*s) + 'px';
+  if (!keep){ const sc = $('#scroll'); sc.scrollLeft = (sc.scrollWidth - sc.clientWidth)/2; sc.scrollTop = (sc.scrollHeight - sc.clientHeight)/2; } }
 
 /* ================================================================== loop and boot */
 let bound = false, acc = 0;
@@ -1111,7 +1159,7 @@ function boot(fresh){
   newGame((Date.now() ^ (Math.random()*1e9)) >>> 0); view = 'map'; line = null; cutLine = null; baseMap = null;
   tool = anchor = plan = sel = null; $('#card').hidden = true; $('#loans').hidden = true;
   if (!bound){ buildPalette(); bind(); bound = true; requestAnimationFrame(tt => { lastT = tt; frame(tt); }); }
-  fit(); showContract(hasSave);
+  zoom = $('#stage').clientWidth < 700 ? 2 : 1; fit(); showContract(hasSave);
 }
 window.JF = {get S(){ return S; }, tick:tickEnts, rockL, place, research, borrow, commitPlan, stimulate, advance, forecast, byId, tip, planCost, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, cased) => { plan = {rig, pts, cased:!!cased, err:''}; }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, SURF + UGH - SH); }, select:s => { sel = s; renderCard(); },
   newGame:seed => { newGame(seed); S.started = true; S.paused = false; view = 'map'; cutLine = null; baseMap = null; fit(); $('#overlay').hidden = true; }, setCut:li => { cutLine = li; }, get cutLine(){ return cutLine; }};
