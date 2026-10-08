@@ -411,7 +411,7 @@ const loanPay = () => S.loans.reduce((s,l) => s + l.pay, 0);
 function bankRate(){ const use = debt()/Math.max(1, creditLimit()), net = S.last.income - S.last.costs, fc = forecast(), dead = S.vil.some(v => (v.spring.lvl || 0) >= 3);
   return clamp(0.03 + 0.06*use + (net < 0 ? 0.015 : 0) + (fc < 35 ? 0.01 : 0) + (dead ? 0.01 : 0) + (S.cash < 0 ? 0.01 : 0), 0.03, 0.12); }
 function standing(){ const r = bankRate(); return r < 0.05 ? 'good' : r < 0.08 ? 'fair' : r < 0.1 ? 'strained' : 'poor'; }
-function addLoan(amt, rate, term, shady){ const r = rate/12, pay = amt*r/(1 - Math.pow(1 + r, -term)); S.loanN = (S.loanN || 0) + 1; S.loans.push({id:S.loanN, m:S.month, bal:amt, pay, left:term, rate, shady:!!shady}); S.cash += amt; sfx('coin'); }
+function addLoan(amt, rate, term, shady){ const r = rate/12, pay = amt*r/(1 - Math.pow(1 + r, -term)); S.loanN = (S.loanN || 0) + 1; S.loans.push({id:S.loanN, m:S.month, bal:amt, pay, left:term, rate, shady:!!shady}); S.cash += amt; acct(shady ? 'Private loan received' : 'Bank loans received', amt); sfx('coin'); }
 function borrow(){ if (debt() + CFG.LOAN_STEP > creditLimit()) return 'The bank will not go beyond ' + fmt(creditLimit()) + '. Build and earn to raise the line, or see the lender in town.';
   addLoan(CFG.LOAN_STEP, bankRate(), CFG.LOAN_TERM); return 'ok'; }
 /* when the bank says no: a man in town lends without questions, at a price, and people talk */
@@ -453,10 +453,10 @@ function place(type, x, y){
       if (!onGround) return 'Click on the ground.';
       if (def.bld && type !== 'chair' && S.obj.some(b => b.type === type && !b.burnt)) return 'You already have a ' + def.n.toLowerCase() + '.';
       if (def.near && !S.obj.some(b => b.type === def.near && BLD_ON(b) && Math.hypot(b.x - x, b.y - y) < 32)) return 'Place it next to your ' + DEF[def.near].n.toLowerCase() + '.';
+      if (type === 'chair' && S.obj.some(c => c.type === 'chair' && !c.burnt)){ for (const vv of S.vil) bump(vv, 'Second station looks bought', -2); news('The university declines a second field station: one is research, two look bought. The offer leaks to the press. Mood −2 everywhere.'); return 'ok'; }
       if (o && o.opp && ['banner','oppstand','rumour'].includes(o.type)){ rm(o); bump(S.vil[o.v], 'Field leased over their heads', -3); }
       else if (o && Math.hypot(o.x - x, o.y - y) < 5) return 'Something already stands there.';
       const onLine = RIG[type] || type === 'testrig', ln2 = onLine ? lineNear(y) : null, py = onLine ? ln2.y : y;
-      if (type === 'chair' && S.obj.some(c => c.type === 'chair' && !c.burnt)){ for (const vv of S.vil) bump(vv, 'Second chair looks bought', -2); news('The university declines a second endowed chair: one is research, two look bought. The offer leaks to the press. Mood −2 everywhere.'); return 'ok'; }
       S.cash -= def.cost || 0; if (def.cost) acct(def.n, -def.cost);
       const extra = RIG[type] ? {line:ln2.id, well:[], hit:{}, fenced:false, quiet:false, w:8, hh:16} : type === 'testrig' ? {line:ln2.id, w:6, hh:12} : (type === 'station' || type === 'plant') ? {stim:-1, age:0, scale:0, fenced:false, w:type === 'plant' ? 10 : 8, hh:type === 'plant' ? 14 : 10} : {w:7, hh:10};
       const no = add(type, x, py, extra); spawnArrival(no);
@@ -519,7 +519,7 @@ function withdraw(o){
     news(DEF[o.type].n + ' near ' + nearestVillage(o.x, o.y).name + ' is being dismantled' + (RIG[o.type] && o.well && o.well.length ? ', the well plugged first' : '') + '. Gone in about ' + (mo < 1 ? Math.round(mo*4.3) + ' weeks' : mo + ' months') + '; no running costs from now.'); return; }
   if (o.type === 'police' || o.type === 'riot'){ const v = nearestVillage(o.x, o.y); v.rel += v.stored; v.relRate = v.rel/3; v.stored = 0; }
   if (RIG[o.type] && o.well && o.well.length && !o.plugPaid){ o.plugPaid = true; S.cash -= 500; acct('Plugging wells (required by law)', -500); news('The well near ' + nearestVillage(o.x, o.y).name + ' is filled with cement, as the law requires: ' + fmt(500) + '.'); }
-  if (SITE[o.type]){ S.pipes = S.pipes.filter(p => p.from !== o.id); S.plines = S.plines.filter(l => l.from !== o.id); S.obj.filter(b => b.target === o.id).forEach(rm); S.assets = Math.max(0, S.assets - ((DEF[o.type] || {}).cost || 0)*0.5); }
+  if (SITE[o.type]){ for (const st of S.obj){ if (st.prod === o.id) st.prod = null; if (st.inj === o.id) st.inj = null; } const lost = S.pipes.filter(p => p.from === o.id).reduce((a, p) => a + Math.ceil(p.len/100)*CFG.PIPE_K, 0); S.pipes = S.pipes.filter(p => p.from !== o.id); S.plines = S.plines.filter(l => l.from !== o.id); S.obj.filter(b => b.target === o.id).forEach(rm); S.assets = Math.max(0, S.assets - ((DEF[o.type] || {}).cost || 0)*(o.everOn ? 0.5 : 1) - lost); }
   spawnLeave(o); rm(o);
 }
 
@@ -1114,7 +1114,7 @@ function drawSecret(g, t, yc){ const z = S.secret; if (!z) return;
   if (z.wreck && z.wreck[1] <= yc) helicopter(g, {x:z.wreck[0], y:z.wreck[1], ang:0.4}, 0);
   for (const b of z.booms){ const a = z.t - b.t0; if (a > 2.5) { const p = P(b.x, b.y, 0); R(g, 'rgba(40,40,40,.5)', p[0] - 4, p[1] - 14 - a*2, 8, 10); continue; } const p = P(b.x, b.y, 0), r = 4 + a*14; g.fillStyle = 'rgba(255,' + Math.round(220 - a*80) + ',80,' + (1 - a/2.5) + ')'; g.beginPath(); g.arc(p[0], p[1] - 6, r, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,230,' + Math.max(0, 1 - a*1.5) + ')'; g.beginPath(); g.arc(p[0], p[1] - 6, r*0.45, 0, 7); g.fill(); }
   for (const e of S.ents) if (e.k === 'jet'){ const p = P(e.x, e.y, 60); g.fillStyle = '#4a5058'; g.beginPath(); g.moveTo(p[0] + 7, p[1] + 3.5); g.lineTo(p[0] - 5, p[1] - 2); g.lineTo(p[0] - 7, p[1] + 2); g.lineTo(p[0] - 2, p[1] + 1.5); g.lineTo(p[0] - 3, p[1] + 5); g.closePath(); g.fill(); R(g, '#ffb347', p[0] - 8, p[1] - 0.5, 2, 1.5); } }
-function end(kind){ S.over = {kind, fc:forecast(), sold:S.sold}; plan = null; sel = null; $('#card').hidden = true; tool = null;
+function end(kind){ S.over = {kind, fc:forecast(), sold:S.sold}; plan = null; linking = null; sel = null; $('#card').hidden = true; tool = null;
   let best = 0; try { best = Number(localStorage.getItem('jf3_best') || 0); if (S.sold > best) localStorage.setItem('jf3_best', String(S.sold)); localStorage.removeItem('jf3_save'); } catch (e) {} S.over.best = Math.max(best, S.sold); showEnd(); }
 /* ================================================================== entities: everything that moves on the block */
 function spawnTraffic(init){
@@ -1455,7 +1455,7 @@ function drawMap(g, t){
     if (e.k === 'marcher'){ const q = roadPos(e.s); if (q.y > yc) continue; draws.push({k:K(q.x, q.y + 2), f:() => { const i = e.idx || 0; person(g, q.x, q.y + 2, e.anim, ['#8a2b2b','#2f4f7a','#3f7a4a','#8c7a4a'][i % 4], e.sign, null, {wave:t*5 + i, face:Math.sign(q.dx - q.dy) || 1}); if (i % 4 === 0 && ((t + i) % 5) < 1.2) say(q.x, q.y + 2, 17, ['NON!', 'Hou!', 'Jura sans forage!'][(i/4) % 3]); }}); continue; }
     if (e.parked){ if (e.py <= yc) draws.push({k:K(e.px, e.py), f:() => vehicle(g, e.k, e.px, e.py, e.pdir, e.col)}); continue; }
     const q = roadPos(e.s); if (q.y > yc) continue; const off = (e.lane || 1)*1.7; const vx = q.x - q.dy*off, vy = q.y + q.dx*off; const hz = Math.abs(q.dx) > Math.abs(q.dy), fw = Math.sign((hz ? q.dx : q.dy)*e.vs) || 1; draws.push({k:K(vx, vy), f:() => vehicle(g, e.k, vx, vy, hz ? 'x' : 'y', e.col, e.anim, fw)}); }
-  for (const st of S.obj) if ((st.type === 'station' || st.type === 'plant') && st.y <= yc) for (const [id, col] of [[st.prod, '#c8571b'], [st.inj, '#1f5fa8']]){ const w = byId(id); if (!w || w.y > yc) continue; const a = P(st.x, st.y, 0), b = P(w.x, w.y, 0); g.strokeStyle = col; g.lineWidth = 0.9; g.setLineDash([2, 1.2]); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.setLineDash([]);  const lb = P(w.x, w.y, 19); T(g, id === st.prod ? 'P' : 'I', lb[0] + 4, lb[1], '#fff', 6, 'center', col); }
+  for (const st of S.obj) if ((st.type === 'station' || st.type === 'plant') && !st.burnt && !st.dismantling && st.y <= yc) for (const [id, col] of [[st.prod, '#c8571b'], [st.inj, '#1f5fa8']]){ const w = byId(id); if (!w || w.y > yc) continue; const a = P(st.x, st.y, 0), b = P(w.x, w.y, 0); g.strokeStyle = col; g.lineWidth = 0.9; g.setLineDash([2, 1.2]); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.setLineDash([]);  const lb = P(w.x, w.y, 19); T(g, id === st.prod ? 'P' : 'I', lb[0] + 4, lb[1], '#fff', 6, 'center', col); }
   if (linking){ const st = byId(linking.st), pulse = 0.5 + 0.5*Math.sin(t*6); for (const w of S.obj) if (RIG[w.type] && !w.burnt && w.y <= yc) { wpoly(g, [[w.x - 7, w.y - 7], [w.x + 7, w.y - 7], [w.x + 7, w.y + 7], [w.x - 7, w.y + 7]], 'rgba(242,194,48,' + (0.25 + 0.35*pulse) + ')', '#b8860b', 1.4); const q = P(w.x, w.y, 24); T(g, w.well.length ? M(tip(w).d) : 'no well', q[0], q[1], '#15181c', 5.5, 'center', 'rgba(255,224,106,.95)'); }
     if (st && hover && hover.x !== undefined){ const a = P(st.x, st.y, 0), b = P(hover.x, hover.y, 0); g.strokeStyle = linking.role === 'prod' ? '#c8571b' : '#1f5fa8'; g.lineWidth = 1; g.setLineDash([2, 1.5]); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.setLineDash([]); } }
   BUB.length = 0; draws.sort((a,b) => a.k - b.k); for (const d of draws) d.f(); drawBubbles(g);
@@ -1609,7 +1609,7 @@ function hud(){
   $('#uncutbtn').hidden = !(view === 'map' && cutLine !== null && S.started && !S.over);
   const hint = $('#hint'); let hs = '';
   if (linking){ const st = byId(linking.st); hs = st ? 'Linking the ' + ROLE[linking.role] + ' of the ' + DEF[st.type].n.toLowerCase() + ' near ' + nearestVillage(st.x, st.y).name + ': click a rig on the map. Esc cancels.' : ''; }
-  else if (plan) hs = ''; else if (tool) hs = anchor ? (tool === 'survey' ? 'Now click where the stretch ends on the same line.' : tool === 'pipe' ? 'Now click the village to heat.' : 'Now click the second deep rig.') : DEF[tool].n + ': ' + DEF[tool].h;
+  else if (plan) hs = ''; else if (tool) hs = anchor ? 'Now click the village to heat.' : DEF[tool].n + ': ' + DEF[tool].h;
   else if (view === 'section') hs = 'Line ' + S.lines[line].name + '. Drag to move, + and − to zoom. Click a rig at the surface, then Draw well. Where the bands break there is probably a fault; only drilling shows the rock.';
   else if (view === 'map') hs = cutLine !== null ? 'The block is cut along line ' + S.lines[cutLine].name + '. Click the face to open it flat.' : 'Click a dotted grid line to cut the block. Click a village to hear it.';
   if (hs){ if (hint.textContent !== hs){ hint.textContent = hs; hint.dataset.plan = ''; } hint.hidden = false; } else if (!plan) hint.hidden = true;
@@ -1779,7 +1779,7 @@ function renderCard(){
         s += (o.off ? '<span class="neg">Switched off.</span> Nothing it unlocks works. Switching on means rehiring: ' + ((d.build || 0) < 1 ? Math.round((d.build || 0)*4.3) + ' weeks' : d.build + ' months') + '. ' : 'Running, ' + fmt(d.up || 0) + ' a month. ') + d.h + (opens.length ? '<div class="sub">Unlocks: ' + opens.join(', ') + '.</div>' : '');
         acts += '<button class="btn" data-a="onoff">' + (o.off ? 'Switch on (' + ((d.build || 0) < 1 ? Math.round((d.build || 0)*4.3) + ' weeks' : d.build + ' months') + ')' : 'Switch off') + '</button>'; }
       if (o.type === 'testrig') s += o.log ? 'Drilled to ' + M(o.depth || 200) + '. The log is shown in the section.' : 'Drilling.';
-      if (o.type === 'station' || o.type === 'plant'){ const r = o.off ? {why:'Switched off.'} : (o.status && o.status.flow) ? o.status : doublet(o), P = byId(o.prod), I = byId(o.inj), nm = w => w ? 'rig on ' + S.lines[w.line].name + ' near ' + nearestVillage(w.x, w.y).name : 'none';
+      if (o.type === 'station' || o.type === 'plant'){ const r = o.off ? {why:'Switched off.'} : isBlocked(o) ? {why:'Blocked by protesters.'} : doublet(o), P = byId(o.prod), I = byId(o.inj), nm = w => w ? 'rig on ' + S.lines[w.line].name + ' near ' + nearestVillage(w.x, w.y).name : 'none';
         s += r.flow ? 'Producing <b>' + r.flow.toFixed(0) + ' L/s</b> at <b>' + r.T + ' °C</b>: ' + r.mwTh.toFixed(1) + ' MW heat' + (o.type === 'plant' ? ', ' + r.mwE.toFixed(1) + ' MW electricity' : '') + '. Sold ' + ((o.mwh || 0)/1000).toFixed(2) + ' GWh last month for ' + fmt(o.inc || 0) + '.' : '<span class="neg">' + (r.why || 'Not producing.') + '</span>';
         if (r.cold) s += ' <span class="neg">The water is below 100 °C: too cold for the turbine.</span>';
         s += '<div style="margin-top:4px">' + wellLine(o, 'prod') + '</div><div>' + wellLine(o, 'inj') + '</div><div class="sub">A doublet: one well brings the hot water up, the other takes it back down. Pick a rig for each on the map, or from the rig’s card.</div>';
@@ -1790,7 +1790,7 @@ function renderCard(){
         if (o.on) acts += '<button class="btn" data-a="onoff">' + (o.off ? 'Switch on' : 'Switch off' ) + '</button>'; }
       if (view === 'map' && o.line !== undefined) acts += '<button class="btn" data-a="open">Open section</button>';
       if (!o.drilling) acts += '<button class="btn" data-a="rm">Dismantle (' + (DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0) < 1 ? Math.round((DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0))*4.3) + ' weeks' : (DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0)) + ' months') + ')</button>';
-    } else if (!SITE[o.type]){ s = DEF[o.type].h; if (o.type !== 'congress') acts += '<button class="btn" data-a="rm">' + (o.type === 'police' || o.type === 'riot' ? 'Withdraw' : 'Remove') + '</button>'; }
+    } else if (!opp && !SITE[o.type] && DEF[o.type]){ s = DEF[o.type].h; if (o.type !== 'congress') acts += '<button class="btn" data-a="rm">' + (o.type === 'police' || o.type === 'riot' ? 'Withdraw' : 'Remove') + '</button>'; }
     if (o.burnt) acts = '<button class="btn" data-a="rm">Clear the ruin</button>';
     if (o.dismantling){ const left = o.dismantling - S.t; s = '<span class="neg">Being dismantled: gone in about ' + (left < 1 ? Math.max(1, Math.round(left*4.3)) + ' week' + (Math.round(left*4.3) > 1 ? 's' : '') : left.toFixed(1) + ' months') + '.</span> ' + s; acts = ''; }
     h += '<div>' + s + '</div>' + (acts ? '<div class="acts">' + acts + '</div>' : '');
@@ -1875,15 +1875,15 @@ const secMaxY = () => Math.max(0, SURF + UGH - SH/cam.z), secMaxX = () => Math.m
 function secZoom(z, fx, fy){ z = clamp(z, 1, 4); fx = fx === undefined ? 0.5 : fx; fy = fy === undefined ? 0.5 : fy; const wx = cam.x + fx*SW/cam.z, wy = cam.y + fy*SH/cam.z; cam.z = z; cam.x = clamp(wx - fx*SW/z, 0, secMaxX()); cam.y = clamp(wy - fy*SH/z, 0, secMaxY()); }
 function openSection(li){ if (plan && (byId(plan.rig) || {}).line !== li) plan = null; if (view !== 'section'){ cam.z = 1; cam.x = 0; } view = 'section'; line = li; cutLine = li; sel = null; $('#card').hidden = true; anchor = null; if (tool && !['pass2'].includes(tool)) tool = null; cam.y = 0; fit(); }
 function closeSection(){ view = 'map'; plan = null; sel = null; $('#card').hidden = true; $('#readout').hidden = true; fit(); }
-function linkWell(st, role, w){ for (const o2 of S.obj){ if (o2.prod === w.id) o2.prod = null; if (o2.inj === w.id) o2.inj = null; }
-  if (st.type === 'plant' && st[role] !== w.id && st.stim >= 0){ st.stim = -1; news('The new well has not been stimulated: the granite needs another stimulation.'); }
+function linkWell(st, role, w){ const prev = st[role]; for (const o2 of S.obj){ if (o2.prod === w.id) o2.prod = null; if (o2.inj === w.id) o2.inj = null; }
+  if (st.type === 'plant' && prev !== w.id && st.stim >= 0){ st.stim = -1; news('The new well has not been stimulated: the granite needs another stimulation.'); }
   st[role] = w.id; sfx('click'); news((role === 'prod' ? 'Production' : 'Injection') + ' well linked to the ' + DEF[st.type].n.toLowerCase() + ' near ' + nearestVillage(st.x, st.y).name + '.'); }
 const ROLE = {prod:'production well (hot water up)', inj:'injection well (cooled water back down)'};
 function wellLine(st, role){ const w = byId(st[role]), plant = st.type === 'plant', rock = plant ? ROCK.GRANITE : ROCK.WARM;
   if (!w) return '<b>' + (role === 'prod' ? 'P' : 'I') + '</b> ' + ROLE[role] + ': <span class="neg">none</span>';
   const st8 = !w.well.length ? (w.drilling ? 'drilling' : 'not drilled yet') : openIn(w, rock) ? '<span class="pos">open in the ' + (plant ? 'granite' : 'Muschelkalk') + '</span>' : '<span class="neg">not open in the ' + (plant ? 'granite' : 'Muschelkalk') + '</span>';
   return '<b>' + (role === 'prod' ? 'P' : 'I') + '</b> ' + ROLE[role] + ': rig on ' + S.lines[w.line].name + ', ' + (w.well.length ? M(tip(w).d) + ', ' : '') + st8; }
-function autoLink(st){ const used = new Set(S.obj.filter(o => o !== st && (o.prod || o.inj)).flatMap(o => [o.prod, o.inj])), rigs = S.obj.filter(o => RIG[o.type] && !o.burnt && !o.dismantling && !used.has(o.id)).sort((a, b) => Math.hypot(a.x - st.x, a.y - st.y) - Math.hypot(b.x - st.x, b.y - st.y));
+function autoLink(st){ const used = new Set(S.obj.filter(o => o !== st && !o.burnt && (o.prod || o.inj)).flatMap(o => [o.prod, o.inj])), rigs = S.obj.filter(o => RIG[o.type] && o.on && !o.burnt && !o.dismantling && !used.has(o.id)).sort((a, b) => Math.hypot(a.x - st.x, a.y - st.y) - Math.hypot(b.x - st.x, b.y - st.y));
   if (rigs.length < 2) return 'Two free rigs are needed.'; linkWell(st, 'prod', rigs[0]); linkWell(st, 'inj', rigs[1]); return 'ok'; }
 function pickTool(tk){ anchor = null; plan = null; linking = null; if (tool === tk){ tool = null; return; } tool = tk; sel = null; $('#card').hidden = true; sfx('click');
   if (DEF[tk].now){ const r = place(tk, 0, 0); tool = null; toast(r === 'ok' ? DEF[tk].n + (tk === 'congress' ? ' booked.' : ' sent.') : r); return; }
@@ -1899,7 +1899,7 @@ function clickWorld(p){
   }
   if (p.face && !tool && !linking){ openSection(cutLine !== null ? cutLine : S.lines.length - 1); return; }
   if (p.x === undefined){ if (tool) toast('Place it on the top of the block.'); else { sel = null; $('#card').hidden = true; } return; }
-  if (linking){ const st = byId(linking.st), w = objAt(p.x, p.y); if (st && w && RIG[w.type]){ linkWell(st, linking.role, w); linking = null; sel = {id:st.id}; renderCard(); } else toast('Click a rig. Esc cancels.'); return; }
+  if (linking){ const st = byId(linking.st), w = objAt(p.x, p.y); if (!st || st.burnt || st.dismantling){ linking = null; return; } if (w && RIG[w.type] && !w.burnt && !w.dismantling){ linkWell(st, linking.role, w); linking = null; sel = {id:st.id}; renderCard(); } else toast('Click a rig. Esc cancels.'); return; }
   if (tool){ const tk = tool, r = place(tk, p.x, p.y); if (r === 'ok'){ tool = null; anchor = null; sfx('coin'); } else if (r){ toast(r); sfx('no'); if (tk !== 'survey' && tk !== 'pipe' && tk !== 'plant') anchor = null; } return; }
   const sign = S.obj.find(o => o.type === 'rumour' && Math.hypot(o.x - 7 - p.x, o.y - 7 - p.y) < 6);
   const o = sign || objAt(p.x, p.y); if (o){ sel = {id:o.id}; renderCard(); return; }
@@ -1921,7 +1921,7 @@ function act(a, v){
   if (a === 'start'){ S.started = true; S.paused = false; $('#overlay').hidden = true; audio(); return; }
   if (a === 'continue'){ try { const d = JSON.parse(localStorage.getItem('jf3_save')); if (d && d.v === 5){ S = d; GEO.clear(); KN.clear(); CANV.clear(); DIRTY.clear(); for (const [k,arr] of (S.KN || [])) KN.set(k, Uint8Array.from(arr)); delete S.KN; baseMap = null; } } catch (e) {} S.paused = false; S.started = true; $('#overlay').hidden = true; if (S.offer){ S.paused = true; showOffer(S.offer); } else if (S.event){ S.paused = true; showEvent(); } return; }
   if (a === 'again'){ boot(true); return; }
-  if (a === 'accept'){ const d = S.offerData; S.cash += d.c; S.invest[S.offer] = true; for (const vv of S.vil) bump(vv, 'Out-of-canton money', d.m); news('Investors from outside the canton take a stake. The logo on the rig changes overnight.'); S.offer = null; S.paused = false; $('#overlay').hidden = true; sfx('coin'); return; }
+  if (a === 'accept'){ const d = S.offerData; S.cash += d.c; acct('Investor money', d.c); S.invest[S.offer] = true; for (const vv of S.vil) bump(vv, 'Out-of-canton money', d.m); news('Investors from outside the canton take a stake. The logo on the rig changes overnight.'); S.offer = null; S.paused = false; $('#overlay').hidden = true; sfx('coin'); return; }
   if (a === 'decline'){ S.invest[S.offer] = true; news('The Company declines outside money. "We remain Jurassien," says the press release, printed in another canton.'); S.offer = null; S.paused = false; $('#overlay').hidden = true; return; }
   if (a === 'borrow'){ const r = borrow(); if (r !== 'ok') toast(r); return; } if (a === 'shady'){ const r = borrowShady(); if (r !== 'ok') toast(r); return; } if (a === 'repay1'){ const r = repayOne(v); if (r !== 'ok') toast(r); return; } if (a === 'repay'){ const r = repayAll(); if (r !== 'ok') toast(r); return; }
   if (a === 'commit'){ const r = commitPlan(); if (r !== 'ok') toast(r); else toast('Committed. The drill cannot be stopped now.'); return; }
@@ -1944,7 +1944,7 @@ function act(a, v){
   if (a === 'squeeze'){ if (!canPay(DRILL.squeeze)) return toast('A squeeze costs ' + fmt(DRILL.squeeze) + '.'); S.cash -= DRILL.squeeze; acct('Casing, cement and extras', -DRILL.squeeze); o.cementOk = true; o.halt = S.t + 0.25; news('A cement squeeze closes the gaps behind the casing near ' + nearestVillage(o.x, o.y).name + '.'); renderCard(); return; }
   if (a === 'tracer'){ if (!canPay(DRILL.tracer)) return toast('A tracer test costs ' + fmt(DRILL.tracer) + '.'); S.cash -= DRILL.tracer; acct('Casing, cement and extras', -DRILL.tracer); o.traced = true; const hit = S.vil.filter(vv => linked(o, vv)); news('Dye poured in at the site near ' + nearestVillage(o.x, o.y).name + (hit.length ? ' comes out at the spring' + (hit.length > 1 ? 's' : '') + ' of ' + hit.map(vv => vv.name).join(' and ') + '. Whatever leaks here goes there.' : ' turns up at no spring in the valley. Leaks here reach no drinking water.')); renderCard(); return; }
   if (a === 'pad'){ if (!canPay(DRILL.pad)) return toast('Sealing the pad costs ' + fmt(DRILL.pad) + '.'); S.cash -= DRILL.pad; acct('Casing, cement and extras', -DRILL.pad); o.pad = true; return; }
-  if (a === 'release'){ o.released = true; spawnLeave(o); news('The rig near ' + nearestVillage(o.x, o.y).name + ' is driven away. A capped wellhead stays.'); return; }
+  if (a === 'release'){ o.released = true; o.off = false; spawnLeave(o); news('The rig near ' + nearestVillage(o.x, o.y).name + ' is driven away. A capped wellhead stays.'); return; }
   if (a === 'rerig'){ const c = DEF[o.type].cost; if (!canPay(c)) return toast('Mobilisation costs ' + fmt(c) + '.'); S.cash -= c; acct(DEF[o.type].n, -c); o.released = false; o.arrived = true; spawnArrival(o); return; }
   if (a === 'flowtest'){ if (!canPay(DRILL.flowTest)) return toast('A flow test costs ' + fmt(DRILL.flowTest) + '.'); S.cash -= DRILL.flowTest; acct('Flow tests', -DRILL.flowTest); o.test = flowTest(o); news('Flow test near ' + nearestVillage(o.x, o.y).name + ': ' + o.test); return; }
   if (a === 'aroad'){ const r = buildRoad(o); if (r !== 'ok') toast(r); else sfx('coin'); renderCard(); return; }
@@ -1997,7 +1997,7 @@ function frame(now){
 function boot(fresh){
   let hasSave = false; try { const d = JSON.parse(localStorage.getItem('jf3_save')); hasSave = !!(d && d.v === 5 && !fresh); } catch (e) {}
   newGame((Date.now() ^ (Math.random()*1e9)) >>> 0); view = 'map'; line = null; cutLine = null; baseMap = null;
-  tool = anchor = plan = sel = null; $('#card').hidden = true; for (const p of ['#polls', '#wire', '#camp', '#ledger']) $(p).hidden = true;
+  tool = anchor = plan = sel = linking = null; $('#card').hidden = true; for (const p of ['#polls', '#wire', '#camp', '#ledger']) $(p).hidden = true;
   if (!bound){ buildPalette(); bind(); bound = true; requestAnimationFrame(tt => { lastT = tt; frame(tt); }); }
   zoom = $('#stage').clientWidth < 700 ? 2 : 1; fit(); showContract(hasSave);
 }
