@@ -813,9 +813,9 @@ function contaminate(o, sev, why){ const hit = S.vil.filter(v => linked(o, v)).s
 function spoil(v, sev, why){ const sp = v.spring, before = sp.lvl || 0; if (before === 3) return; let lvl = Math.max(before, sev); if (before >= 2 && sev >= 2) lvl = 3; sp.lvl = Math.min(3, lvl);
   if (sp.lvl === before){ sp.until = Math.max(sp.until || 0, S.month + (before === 1 ? 3 : 18)); return; }
   if (sp.lvl === 1) sp.until = S.month + 3; if (sp.lvl === 2) sp.until = S.month + 18;
-  const hitM = [0, -2, -8, -12][sp.lvl] - (before ? [0, -2, -8, -12][before] : 0); if (hitM) bump(v, ['', 'Turbid spring', 'Boil-water notice', 'Polluted spring'][sp.lvl], hitM);
+  const hitM = [0, -3, -12, -20][sp.lvl] - (before ? [0, -3, -12, -20][before] : 0); if (hitM) bump(v, ['', 'Turbid spring', 'Boil-water notice', 'Polluted spring'][sp.lvl], hitM);
   news(['', 'The fountain of ' + v.name + ' runs cloudy after ' + why + '. It should clear in a few months.', 'Boil-water notice in ' + v.name + ' after ' + why + '. The Company pays for bottled water, ' + fmt(30) + ' a month, until the spring is clean or treated.', 'The spring of ' + v.name + ' is polluted for good after ' + why + '. The canton fines the Company ' + fmt(500) + '.'][sp.lvl] + (hitM ? ' Mood −' + Math.abs(hitM) + '.' : ''));
-  if (sp.lvl === 3 && before < 3){ S.cash -= 500; acct('Fines and compensation', -500); } }
+  if (sp.lvl === 3 && before < 3){ S.cash -= 500; acct('Fines and compensation', -500); for (const u of S.vil) if (u !== v) bump(u, 'A village lost its spring', -4); news('Word travels: if it happened in ' + v.name + ', it can happen here. Mood −4 in every other village.'); } }
 const polluted = v => (v.spring.lvl || 0) >= 2;
 
 /* ================================================================== time */
@@ -892,7 +892,7 @@ function monthTick(){
     if (S.obj.some(o => o.type === 'school' && o.on && o.v === v.id)) put('School funding', 0.6*pm*sk);
     if (chairs === 1) put('University chair', 0.3*pm);
     if (v.heat === 'on') put('Cheap heat', 0.8); if (v.heat === 'build') put('Dug-up road', -1);
-    if (v.spring.lvl === 2) put('Boil-water notice', -1); if (v.spring.lvl === 3) put('Polluted spring', v.spring.treated ? -0.3 : -0.8);
+    if (v.spring.lvl === 2) put('Boil-water notice', -1.5); if (v.spring.lvl === 3) put('Polluted spring', v.spring.treated ? -0.6 : -1.5);
     for (const l of S.lines) for (const sg of l.segs) if (sg.active && sg.arrived){ const d = vdist(v, sg.x0 + sg.prog, l.y); if (d <= 36) put('Survey trucks', -1.5*(1 - d/40)); }
     for (const l of S.plines){ const rs = roadS(v.x, v.y); if (rs.s >= l.s0 - 10) put('Power line', -0.2); }
     for (const o of S.obj){
@@ -1419,7 +1419,7 @@ function hud(){
   const ro = $('#readout'); const tr = sel && sel.id && byId(sel.id); if (view === 'section' && tr && tr.type === 'testrig' && tr.log){ if (ro.textContent !== tr.log) ro.textContent = tr.log; ro.hidden = false; } else ro.hidden = true; hint.classList.toggle('withlog', !ro.hidden);
   if (sel) renderCard(); if (!$('#loans').hidden) renderLoans(); if (!$('#research').hidden) renderResearch(); if (!$('#polls').hidden) renderPolls(); if (!$('#wire').hidden) renderWire(); if (!$('#camp').hidden) renderCampaign(); if (!$('#ledger').hidden) renderLedger(); $('#campchip').hidden = !campOpen(); renderSteps();
 }
-const VOICE = {'Felt quake':'The plates fell off the dresser. Again.', 'Rig noise':'You hear it at night, like a fridge the size of a church.', 'Polluted spring':'The fountain is brown. My grandmother washed in it.', 'Survey trucks':'Three trucks shaking the road at seven in the morning.',
+const VOICE = {'A village lost its spring':'Their fountain is dead. Ours is next.', 'Felt quake':'The plates fell off the dresser. Again.', 'Rig noise':'You hear it at night, like a fridge the size of a church.', 'Polluted spring':'The fountain is brown. My grandmother washed in it.', 'Survey trucks':'Three trucks shaking the road at seven in the morning.',
   'Village fest':'Free sausages. I am not saying I changed my mind. I am saying they were good.', 'Cheap heat':'Our heating bill halved. I still do not like the rig, but I like the bill.', 'Men in suits':'The young man in the suit was very polite. Very.', 'Police presence':'Since when do we need police at the bakery?',
   'Public-order unit':'Helmets. In our village. On a Tuesday.', 'Police buses in the valley':'My nephew saw the police bus on the main road. Plates from three cantons.', 'Helicopter':'Who pays for that helicopter? We do.', 'Out-of-canton money':'Zurich money. Of course it is.', 'School funding':'The new sports hall is lovely. Their logo is on the floor.',
   'Information stand':'I took a brochure. For the stove.', 'Old habits':'We have always heated with wood. My father did too.', 'Rumour':'My cousin says the hens stopped laying.', 'Protest march':'Everybody was at the march. Even the priest.', 'Banner in the field':'Have you seen the banner at the Juillerat field?',
