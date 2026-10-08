@@ -75,7 +75,26 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #loans table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;margin:6px 0}
 #loans td,#loans th{padding:2px 4px;border-top:1px dotted var(--line);text-align:right;font-weight:400}
 #loans td:first-child,#loans th:first-child{text-align:left}
-#research{top:10px;left:10px;width:330px;max-width:calc(100% - 20px);z-index:2}
+#research,#polls,#wire{top:10px;left:10px;width:340px;max-width:calc(100% - 20px);z-index:2}
+#polls table{width:100%;border-collapse:collapse;margin-top:6px;font-variant-numeric:tabular-nums}
+#polls tr{cursor:pointer}
+#polls tr:hover{background:#fff}
+#polls td{padding:4px;border-top:1px dotted var(--line);text-align:right}
+#polls td:first-child{text-align:left}
+#wire ol{list-style:none;margin:6px 0 0;padding:0}
+#wire li{padding:4px 0;border-top:1px dotted var(--line)}
+#wire li .sub{margin:0 4px 0 0;display:inline}
+#card q{display:block;margin:6px 0;padding:4px 8px;border-left:3px solid var(--line);font-style:italic;color:#3b4046}
+#card q:before,#card q:after{content:none}
+#card table.why{width:100%;border-collapse:collapse;margin:4px 0;font-variant-numeric:tabular-nums}
+#card table.why td{padding:2px 0;border-top:1px dotted var(--line)}
+#card table.why td+td{text-align:right}
+#card ul.tips{margin:6px 0 0;padding-left:16px}
+#card ul.tips li{border:0;padding:1px 0}
+.meter u{position:absolute;left:50.1%;top:0;bottom:0;width:2px;background:var(--ink)}
+.vote{cursor:pointer}
+#news{cursor:pointer}
+#news:hover span{text-decoration:underline}
 #research .row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-top:1px dotted var(--line)}
 #steps{position:absolute;top:10px;left:10px;max-width:calc(100% - 20px);padding:4px 10px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #steps span{color:var(--muted)}
@@ -97,7 +116,16 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #news{grid-column:1/-1;padding:5px 10px;display:flex;gap:10px;min-width:0;align-items:baseline}
 #news b{color:#fff;background:var(--warn);padding:1px 6px;font-size:10.5px;letter-spacing:.14em;flex:none}
 #news span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#readout{position:absolute;right:10px;bottom:10px;width:300px;max-width:calc(100% - 20px);background:var(--paper);color:#2b2318;border:1px solid #5a4a2a;padding:8px 10px;box-sizing:border-box;font:11.5px/1.4 "Courier New",monospace;max-height:40%;overflow:auto;white-space:pre-wrap}
+#stage.sec #scroll{top:46px;bottom:var(--dock,10px)}
+#stage.sec #hint{right:10px;max-width:none;height:calc(var(--dock) - 20px);overflow:auto}
+#stage.sec #hint.withlog{right:330px}
+#stage.sec #readout{height:calc(var(--dock) - 20px);max-height:none}
+#hint .pl{margin-top:3px}
+#hint .strata{display:flex;flex-wrap:wrap;gap:3px;margin:4px 0}
+#hint .strata span{padding:0 5px;border:1px solid var(--line);background:#fff;font-size:11.5px}
+#hint .strata .g{font-style:italic;color:var(--muted)}
+#hint .strata .u{color:var(--muted);background:#e3e5e8}
+#readout{position:absolute;right:10px;bottom:10px;width:310px;max-width:calc(100% - 20px);background:var(--paper);color:#2b2318;border:1px solid #5a4a2a;padding:8px 10px;box-sizing:border-box;font:11.5px/1.4 "Courier New",monospace;max-height:40%;overflow:auto;white-space:pre-wrap}
 @media (max-width:820px){ #app{grid-template:auto minmax(0,1fr) auto auto / minmax(0,1fr)} #top{grid-row:1} #stage{grid-row:2} #pal{grid-row:3;flex-direction:row;overflow-x:auto} #news{grid-row:4} #pal h3{writing-mode:vertical-rl;transform:rotate(180deg);margin:0 4px;flex:none;align-self:stretch;text-align:center} #pal .it{flex:none;width:auto;flex-direction:column;min-width:68px;text-align:center;padding:4px 4px 3px 7px} .it span{align-items:center} #steps{font-size:11px} }
 </style>
 </head>
@@ -110,7 +138,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
     <div class="chip">Month <b id="net">&nbsp;</b></div>
     <div class="chip"><b id="date">Jan, year 1</b><small id="left"></small></div>
     <div class="sp" role="group" aria-label="Speed"><button id="sp0" title="Pause (space)">II</button><button id="sp1">&#9654;</button><button id="sp4">&#9654;&#9654;</button><button id="mute" title="Sound">&#9834;</button></div>
-    <div class="vote"><label>Vote forecast <b id="fc">40.0%</b> yes &middot; needs 50.1%</label><div class="bar"><i id="fcfill"></i><u></u></div></div>
+    <div class="vote" id="votebtn" role="button" tabindex="0" title="Open the polls"><label>Vote forecast <b id="fc">40.0%</b> yes &middot; needs 50.1%</label><div class="bar"><i id="fcfill"></i><u></u></div></div>
   </header>
   <nav id="pal" class="box" aria-label="Objects"></nav>
   <main id="stage" class="box">
@@ -119,6 +147,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
     <aside id="card" class="pane" hidden></aside>
     <aside id="loans" class="pane" hidden></aside>
     <aside id="research" class="pane" hidden></aside>
+    <aside id="polls" class="pane" hidden></aside>
+    <aside id="wire" class="pane" hidden></aside>
     <aside id="steps" class="pane" hidden></aside>
     <pre id="readout" hidden></pre>
     <div id="zoombar" hidden><button class="btn" data-a="zin" title="Zoom in" aria-label="Zoom in">+</button><button class="btn" data-a="zout" title="Zoom out" aria-label="Zoom out">&minus;</button></div>
@@ -146,10 +176,10 @@ const CFG = {
 const DEF = {
   survey:{g:'Explore',n:'Survey line',c:'4k per 100 m',h:'Click a grid line, then its start and end. Three vibrator trucks drive it and the section comes into focus.'},
   pass2:{g:'Explore',n:'Second pass',c:'2k per 100 m',h:'Click a surveyed stretch of a line to sharpen it.'},
-  testrig:{g:'Explore',n:'Test rig',cost:60,up:2,build:3,h:'Click a grid line. A small tower cores one column to 2,000 m, prints a log, and stands there until you dismantle it.'},
+  testrig:{g:'Explore',n:'Test rig',cost:60,up:2,build:3,h:'Click a grid line. A small tower cores one column as deep as your research allows (2,200 m, or 5,000 m with deep drilling), prints a log, and stands there until you dismantle it.'},
   light:{g:'Drill',n:'Light rig',cost:150,up:3,build:2,h:'Straight wells to 2,200 m. Deep enough for the warm aquifer. Place it on a grid line, then open the line to draw its well.'},
   deep:{g:'Drill',n:'Deep rig',cost:250,up:5,build:3,need:'deep',h:'Straight wells to 5,000 m, into the granite.'},
-  dir:{g:'Drill',n:'Directional rig',cost:400,up:6,build:3,need:'dir',h:'As the deep rig, and the well may bend up to 30 degrees from vertical.'},
+  dir:{g:'Drill',n:'Directional rig',cost:400,up:6,build:3,need:'dir',hide:1,h:'As the deep rig, and the well may bend up to 30 degrees from vertical.'},   // kept for old saves; research now upgrades every rig
   quiet:{g:'Drill',n:'Quiet upgrade',cost:80,need:'noise',h:'Click a rig. Halves its noise.'},
   station:{g:'Drill',n:'Heat station',cost:80,build:3,h:'Click a rig whose well sits in the warm aquifer. Then connect it to a village with a heat pipe.'},
   plant:{g:'Drill',n:'Power plant',cost:300,build:8,h:'Click one deep rig, then a second one on the same line, 150 to 600 m away, both ending in the same hot granite.'},
@@ -326,7 +356,7 @@ const creditLimit = () => CFG.CREDIT_BASE + CFG.CREDIT_ASSET*S.assets + CFG.CRED
 const loanPay = () => S.loans.reduce((s,l) => s + l.pay, 0);
 function borrow(){ if (debt() + CFG.LOAN_STEP > creditLimit()) return 'The bank will not go beyond ' + fmt(creditLimit()) + '. Build and earn to raise the line.';
   const r = CFG.LOAN_RATE/12, n = CFG.LOAN_TERM, pay = CFG.LOAN_STEP*r/(1 - Math.pow(1+r, -n));
-  S.loans.push({id:S.loans.length + 1, m:S.month, bal:CFG.LOAN_STEP, pay, left:n}); S.cash += CFG.LOAN_STEP; sfx('coin'); return 'ok'; }
+  S.loanN = (S.loanN || 0) + 1; S.loans.push({id:S.loanN, m:S.month, bal:CFG.LOAN_STEP, pay, left:n}); S.cash += CFG.LOAN_STEP; sfx('coin'); return 'ok'; }
 function repayAll(){ let n = 0; for (const l of S.loans.slice()) if (S.cash >= l.bal + 50){ S.cash -= l.bal; S.loans.splice(S.loans.indexOf(l), 1); n++; } return n ? 'ok' : 'Keep 50k in hand after repaying a loan.'; }
 const canPay = k => S.cash >= k;
 
@@ -395,13 +425,13 @@ function place(type, x, y){
     }
     case 'fest': {
       if (!v) return 'Click a village.'; S.cash -= def.cost; sfx('jingle');
-      if (v.festYear === year()){ bump(v, 'Fest seen as a bribe', -8); const f = freeSpot(v.x, v.y + v.h/2 + 14, 20, i => hash(S.month, i, 4, S.seed)) || {x:v.x, y:v.y + v.h/2 + 12}; add('counterfest', f.x, f.y, {v:v.id, opp:1, until:S.t + 1, w:7, hh:8}); news('Second fest this year in ' + v.name + '. "We are not for sale," say people eating the free sausages.'); return 'ok'; }
+      if (v.festYear === year()){ bump(v, 'Fest seen as a bribe', -8); const f = freeSpot(v.x, v.y + v.h/2 + 14, 20, i => hash(S.month, i, 4, S.seed)) || {x:v.x, y:v.y + v.h/2 + 12}; add('counterfest', f.x, f.y, {v:v.id, opp:1, until:S.t + 1, w:7, hh:8}); news('Second fest this year in ' + v.name + '. "We are not for sale," say people eating the free sausages. Mood −8, and a counter-fest.'); return 'ok'; }
       v.festYear = year(); v.festUntil = S.t + 2; v.festMult = S.month % 12 === 10 ? 2 : 1;
-      news('Fête de la Saint-Géothermie in ' + v.name + ': heated carousel, free sausages' + (v.festMult === 2 ? ', and it is Saint-Martin.' : '.')); return 'ok';
+      news('Fête de la Saint-Géothermie in ' + v.name + ': heated carousel, free sausages' + (v.festMult === 2 ? ', and it is Saint-Martin.' : '.') + ' Mood +' + 5*v.festMult + ' a month there for two months.'); return 'ok';
     }
     case 'school': {
       if (!v) return 'Click a village.'; S.cash -= def.cost;
-      if (S.obj.some(s => s.type === 'school' && s.v === v.id)){ bump(v, 'Buying our children', -10); news('"They are buying our children": ' + v.name + ' returns the second cheque.'); return 'ok'; }
+      if (S.obj.some(s => s.type === 'school' && s.v === v.id)){ bump(v, 'Buying our children', -10); news('"They are buying our children": ' + v.name + ' returns the second cheque. Mood −10.'); return 'ok'; }
       const f = freeSpot(v.x - v.w/2 - 14, v.y, 16, i => hash(S.month, i, 5, S.seed)) || {x:v.x - v.w/2 - 14, y:v.y}; const s = add('school', f.x, f.y, {v:v.id, w:8, hh:9}); spawnArrival(s); return 'ok';
     }
     case 'congress': {
@@ -411,7 +441,7 @@ function place(type, x, y){
     case 'heli': {
       S.cash -= def.cost; S.ents.push({k:'heli', x:-30, y:HOR + 20, vx:60, ttl:30});
       S.obj.filter(b => b.type === 'tractor').forEach(rm); for (const vv of S.vil) bump(vv, 'Helicopter', -6); S.sinceForce = 0; S.forceM = Math.max(S.forceM, 3); sfx('heli');
-      news('A helicopter clears the roads. Everyone films it.'); return 'ok';
+      news('A helicopter clears the roads. Everyone films it. Mood −6 in every village.'); return 'ok';
     }
   }
   return 'Cannot place that here.';
@@ -432,7 +462,7 @@ function withdraw(o){
 }
 
 /* ================================================================== drilling: drawn wells (section coordinates) */
-function maxBend(o){ return o.type === 'dir' ? 30 : 0; }
+function maxBend(o){ return o.type === 'dir' || resDone('dir') ? 30 : 0; }   // directional research upgrades every rig
 function maxDepth(o){ return o.type === 'light' ? 220 : UGH - 2; }
 function planCost(o, pts, cased){
   let cost = 0, len = 0, fog = false, water = false; let p = tip(o);
@@ -442,6 +472,21 @@ function planCost(o, pts, cased){
     len += n; p = q; }
   return {cost, len, fog, water};
 }
+/* what the planner can tell about a drawn path: exact rock where sharpened (second pass) or drilled, a velocity reading where only surveyed once, nothing where unsurveyed */
+function interp(t){ const v = VEL[t]; return v <= -5 ? 'slow zone (water, fault or hot rock?)' : v > 2 ? 'hard rock' : 'soft sediments'; }
+function pathInfo(o, pts){
+  const rows = [], faults = [], water = []; let p = tip(o), months = 0, blind = 0, last = null;
+  for (const q of pts){ const n = Math.max(1, Math.hypot(q.x - p.x, q.d - p.d)|0);
+    for (let i = 1; i <= n; i++){ const x = p.x + (q.x - p.x)*i/n, d = p.d + (q.d - p.d)*i/n, t = rockL(o.line, x, d), k = knownAt(o.line, x, d);
+      const lab = k >= 3 ? RNAME[t] : k === 2 ? interp(t) : 'unsurveyed'; if (k < 2) blind++;
+      months += 1/RSPEED[t];
+      if (last && last.lab === lab) last.to = d; else { last = {lab, from:d, to:d, known:k}; rows.push(last); }
+      if (k >= 2 && t === ROCK.FAULT){ const fz = faults[faults.length - 1]; if (fz && d - fz[1] < 8) fz[1] = d; else faults.push([d, d]); }
+      if (k >= 2 && t === ROCK.WATER){ const w = water[water.length - 1]; if (w && d - w[1] < 4) w[1] = d; else water.push([d, d]); } }
+    p = q; }
+  const e = pts.length ? pts[pts.length - 1] : tip(o), ek = knownAt(o.line, e.x, e.d), et = rockL(o.line, e.x, e.d);
+  return {rows, faults, water, months, blind, end:e, endRock:ek >= 3 ? et : ek === 2 ? -1 : -2, endType:et, temp:ek >= 2 ? tempAt(o.line, e.x, e.d) : null}; }
+const M = d => ((d*10)|0).toLocaleString('en-US') + ' m';
 function validPoint(o, prev, q){
   if (q.d <= prev.d + 2) return 'Wells only go down.'; if (q.d > maxDepth(o)) return 'This rig reaches ' + (maxDepth(o)*10).toLocaleString('en-US') + ' m at most.';
   const ang = Math.atan2(Math.abs(q.x - prev.x), q.d - prev.d)*180/Math.PI; if (ang > maxBend(o) + 0.01) return maxBend(o) ? 'Too steep a bend: 30 degrees at most.' : 'This rig only drills straight down.';
@@ -462,7 +507,7 @@ function stepDrill(o, dm){
     const pt = rockL(o.line, dr.pos.x, dr.pos.d); reveal(o.line, dr.pos.x - 14, dr.pos.x + 14, dr.pos.d - 10, dr.pos.d + 12, 4);
     o.hit = o.hit || {}; if (!o.hit[pt]){ o.hit[pt] = 1; onHit(o, pt); }
     if (pt === ROCK.FAULT){ const fid = ((dr.pos.d/40)|0) + ':' + ((dr.pos.x/60)|0); if (!S.faultsHit[o.id + ':' + fid]){ S.faultsHit[o.id + ':' + fid] = 1; doQuake(o, 'The drill crosses a fault near ' + nearestVillage(o.x, o.y).name + '. The operator reports a "micro-seismic adjustment"; the village reports broken crockery.', dr.pos); } }
-    if (pt === ROCK.WATER && !dr.cased){ const v = nearestVillage(o.x, o.y); if (!v.spring.polluted){ v.spring.polluted = true; bump(v, 'Polluted spring', -10); news('The fountain in ' + v.name + ' runs brown. The company blames "natural minerals".'); } }
+    if (pt === ROCK.WATER && !dr.cased){ const v = nearestVillage(o.x, o.y); if (!v.spring.polluted){ v.spring.polluted = true; bump(v, 'Polluted spring', -10); news('The fountain in ' + v.name + ' runs brown. The company blames "natural minerals". Mood −10 there, and persuasion works half as well, for good.'); } }
     if (dr.f >= 0.999){ o.well.push({x:to.x, d:to.d, c:dr.cased}); dr.seg++; dr.f = 0; }
   }
   if (dr.seg >= dr.pts.length){ o.drilling = null; news('Drilling complete near ' + nearestVillage(o.x, o.y).name + ' at ' + (tip(o).d*10).toLocaleString('en-US') + ' m.'); }
@@ -474,15 +519,16 @@ function onHit(o, t){
   if (t === ROCK.GRANITE && !o.hit[ROCK.HOT]) news('Granite under ' + v.name + '. Cold so far.');
 }
 function doQuake(o, text, pos){ S.quakes.push({line:o.line, x:pos.x, d:pos.d, m:S.month}); const n = nearestVillage(o.x, o.y);
-  for (const v of S.vil){ bump(v, 'Felt quake', v === n ? CFG.QUAKE_NEAR : CFG.QUAKE_FAR); v.mute = CFG.QUAKE_MUTE; } S.quakeBoost = 6; shake = 1; sfx('quake'); news(text); }
+  for (const v of S.vil){ bump(v, 'Felt quake', v === n ? CFG.QUAKE_NEAR : CFG.QUAKE_FAR); v.mute = CFG.QUAKE_MUTE; } S.quakeBoost = 6; shake = 1; sfx('quake'); news(text + ' Mood −' + Math.abs(CFG.QUAKE_NEAR) + ' in ' + n.name + ', −' + Math.abs(CFG.QUAKE_FAR) + ' elsewhere; nobody listens to your people for ' + CFG.QUAKE_MUTE + ' months, and rumours spread faster.'); }
 function stimulate(pl, i){ if (!pl.on || pl.stim >= 0) return 'Not now.'; pl.stim = i; pl.age = 0; const w = byId(pl.wells[0]);
   if (hash(pl.id, S.month, i, S.seed) < CFG.STIM[i].q) doQuake(pl, 'Stimulation at ' + CFG.STIM[i].n.toLowerCase() + ' pressure shakes the valley. "Within the expected envelope," says the operator.', w ? tip(w) : {x:sx(pl.x), d:380});
   else news('Stimulation complete near ' + nearestVillage(pl.x, pl.y).name + '. Nobody felt a thing, which three people find suspicious.'); return 'ok'; }
 function offerInvest(k){ if (S.invest[k] || S.offer) return; S.offer = k; S.paused = true; showOffer(k); }
+const tempAt = (li, x, d) => { const t = rockL(li, x, d); return Math.round(10 + d*0.3 + (t === ROCK.HOT ? 45 : t === ROCK.WARM ? 4 : 0)); };   // 30 °C per km, hot granite runs hotter
 function coreLog(o){ // the test rig's printed log
   const X = sx(o.x), lines = []; let cur = -1, start = 0;
-  for (let d = 0; d <= 200; d++){ const t = d < 200 ? rockL(o.line, X, d) : -2; if (t !== cur){ if (cur >= 0) lines.push(String(start*10).padStart(5, ' ') + '–' + String(d*10).padStart(5, ' ') + ' m  ' + RNAME[cur]); cur = t; start = d; } }
-  const temp = (10 + 2000*0.03).toFixed(0); return 'CORE LOG  ' + S.lines[o.line].name + '  x=' + m(o.x) + ' m\n' + COMPANY + ', ' + MONTHS[S.month % 12] + ' year ' + (year() + 1) + '\n' + lines.join('\n') + '\n' + 'Bottom-hole temperature ' + temp + ' °C. Gradient normal.\nGeologist licked the core: limestone confirmed.'; }
+  const D0 = o.depth || 200; for (let d = 0; d <= D0; d++){ const t = d < D0 ? rockL(o.line, X, d) : -2; if (t !== cur){ if (cur >= 0) lines.push(String(start*10).padStart(5, ' ') + '–' + String(d*10).padStart(5, ' ') + ' m  ' + RNAME[cur]); cur = t; start = d; } }
+  const temp = tempAt(o.line, X, D0 - 1); return 'CORE LOG  ' + S.lines[o.line].name + '  x=' + m(o.x) + ' m\n' + COMPANY + ', ' + MONTHS[S.month % 12] + ' year ' + (year() + 1) + '\n' + lines.join('\n') + '\n' + 'Cored to ' + (D0*10).toLocaleString('en-US') + ' m. Bottom-hole temperature ' + temp + ' °C.\nGeologist licked the core: limestone confirmed.'; }
 
 /* ================================================================== time */
 function running(){ return S.started && !S.paused && !S.over; }
@@ -497,7 +543,7 @@ function continuous(dm){
   }
 }
 function onReady(o){
-  if (o.type === 'testrig'){ reveal(o.line, sx(o.x) - 6, sx(o.x) + 6, 0, 200, 4); o.log = coreLog(o); S.logs.push(o.log); news('Test core on ' + S.lines[o.line].name + ' is out. Log printed. The geologist licks it, as is tradition.'); }
+  if (o.type === 'testrig'){ o.depth = resDone('deep') ? UGH - 2 : 220; reveal(o.line, sx(o.x) - 6, sx(o.x) + 6, 0, o.depth, 4); o.log = coreLog(o); S.logs.push(o.log); news('Test core on ' + S.lines[o.line].name + ' is out. Log printed. The geologist licks it, as is tradition.'); }
   if (o.type === 'congress'){ for (const v of S.vil) bump(v, 'Congress', v.town ? 6 : 2); news('Geothermal congress in ' + S.vil[0].name + ': 300 lanyards, polite press coverage.'); o.until = S.t + 1; }
   if (o.type === 'station') news('Heat station near ' + nearestVillage(o.x, o.y).name + ' is ready. It still needs a pipe to a village.');
   if (o.type === 'plant') news('The power plant stands. Click it to choose the stimulation pressure.');
@@ -554,6 +600,7 @@ function monthTick(){
     if (v.mute > 0) v.mute--;
     for (const k in v.causes){ v.causes[k] *= 0.8; if (Math.abs(v.causes[k]) < 0.05) delete v.causes[k]; }
     for (const k in c){ v.mood = clamp(v.mood + c[k], 0, 100); v.causes[k] = (v.causes[k] || 0) + c[k]; }
+    v.delta = v.mood - (v.ref === undefined ? CFG.START_MOOD : v.ref); v.ref = v.mood;
   }
   /* opposition */
   if (force.length){ S.forceM++; S.sinceForce = 0; } else { S.forceM = 0; S.sinceForce++; }
@@ -571,10 +618,10 @@ function monthTick(){
       news(v.name + ': ' + ['hens stop laying; geothermy blamed.', 'sour milk linked to drilling, says a neighbour’s cousin.', 'a dry well is found. It was also dry in 1987.', 'the church clock runs slow. "Vibrations," says the sacristan.', 'the Tête de Moine tastes of diesel, claims the cheesemaker.'][(rnd(i+70)*5)|0]); }
     else if (b && (S.t >= b.until || S.obj.some(o => o.type === 'suit' && o.on && vdist(v, o.x, o.y) <= 26))) rm(b);
     const sites = S.obj.filter(o => SITE[o.type] && o.on && vdist(v, o.x, o.y) <= 150).sort((a,b2) => vdist(v,a.x,a.y) - vdist(v,b2.x,b2.y));
-    if (v.mood < 33 && ch(0.15, 4) && !S.obj.some(t => t.type === 'tractor' && t.v === v.id)){ const s = sites.find(s => !isBlocked(s) && !guarded(s)); if (s){ const rp = roadPos(roadS(s.x, s.y).s); const tr = add('tractor', rp.x, rp.y, {v:v.id, opp:1, target:s.id, until:S.t + 2, w:8, hh:6}); spawnArrival(tr, v); news('A manure spreader parks across the road near ' + v.name + '. The driver has gone for lunch.'); } }
-    if (v.mood < 25 && ch(0.3, 5)){ const s = sites.find(s => vdist(v,s.x,s.y) <= 90 && !S.obj.some(c => c.type === 'camp' && c.target === s.id)); if (s){ add('camp', s.x + (s.x < v.x ? 12 : -12), s.y + 6, {v:v.id, opp:1, target:s.id, w:9, hh:7}); news('A protest camp goes up at the site near ' + v.name + '. The yurt is better insulated than the village hall.'); } }
+    if (v.mood < 33 && ch(0.15, 4) && !S.obj.some(t => t.type === 'tractor' && t.v === v.id)){ const s = sites.find(s => !isBlocked(s) && !guarded(s)); if (s){ const rp = roadPos(roadS(s.x, s.y).s); const tr = add('tractor', rp.x, rp.y, {v:v.id, opp:1, target:s.id, until:S.t + 2, w:8, hh:6}); spawnArrival(tr, v); news('A manure spreader parks across the road near ' + v.name + '. The driver has gone for lunch. The site is blocked for two months, or until police arrive.'); } }
+    if (v.mood < 25 && ch(0.3, 5)){ const s = sites.find(s => vdist(v,s.x,s.y) <= 90 && !S.obj.some(c => c.type === 'camp' && c.target === s.id)); if (s){ add('camp', s.x + (s.x < v.x ? 12 : -12), s.y + 6, {v:v.id, opp:1, target:s.id, w:9, hh:7}); news('A protest camp goes up at the site near ' + v.name + '. The yurt is better insulated than the village hall. If it stays ' + (s.fenced ? 6 : 3) + ' months, the site burns; a riot unit clears it.'); } }
   });
-  if (avg < 35 && !S.obj.some(o => o.type === 'march') && rnd(7) < 0.15*k){ const t = S.vil[0]; add('march', t.x, t.y + t.h/2 + 8, {opp:1, until:S.t + 1, w:1, hh:1}); const s0 = roadS(t.x, t.y).s; for (let i = 0; i < 12; i++) S.ents.push({k:'marcher', s:s0 - 60 - i*5, vs:6, sign:i%2 ? 'NON' : 'STOP', until:S.t + 1, idx:i}); bump(t, 'Protest march', -4); news('March in ' + t.name + ': a thousand people, twelve tractors, one alphorn.'); }
+  if (avg < 35 && !S.obj.some(o => o.type === 'march') && rnd(7) < 0.15*k){ const t = S.vil[0]; add('march', t.x, t.y + t.h/2 + 8, {opp:1, until:S.t + 1, w:1, hh:1}); const s0 = roadS(t.x, t.y).s; for (let i = 0; i < 12; i++) S.ents.push({k:'marcher', s:s0 - 60 - i*5, vs:6, sign:i%2 ? 'NON' : 'STOP', until:S.t + 1, idx:i}); bump(t, 'Protest march', -4); news('March in ' + t.name + ': a thousand people, twelve tractors, one alphorn. Mood −4 in town.'); }
   for (const o of S.obj.slice()){
     if (o.until !== undefined && S.t >= o.until && ['tractor','march','counterfest','congress','rumour'].includes(o.type)){ if (o.type === 'tractor') spawnLeave(o); rm(o); continue; }
     if (o.type === 'tractor' && !byId(o.target)){ spawnLeave(o); rm(o); }
@@ -692,18 +739,20 @@ function chatter(o, px, py, t, lines){ if (o.id === undefined) return; const c =
   const riot = c.type === 'riot', talk = riot ? ['NON!', 'Dispersez!', 'Hou!', '...'] : ['NON!', 'Circulez!', 'Café?', '...merci.'];
   if (slot % 2 === 0) say(px, py, 17, talk[slot]); else say(c.x, c.y, 10, talk[slot]); }
 /* vehicles: oriented boxes. dir: 'x' (east-west) or 'y' (north-south). x,y = centre of footprint */
-function vehicle(g, k, x, y, dir, col, anim){ // x,y = centre of the footprint; dir 'x' (east-west) or 'y' (north-south)
+function vehicle(g, k, x, y, dir, col, anim, fw){ // x,y = centre of the footprint; dir 'x' (east-west) or 'y' (north-south); fw -1 = driving towards -x/-y
   const sz = {car:[6.5,3.2], blackcar:[6.8,3.2], postauto:[11,3.6], lorry:[11,3.6], tractor:[6,3.2], policevan:[8.5,3.4], riotbus:[12,3.8], van:[8.5,3.4], vib:[9.5,3.6]}[k] || [6.5,3.2];
   const L = sz[0], Wd = sz[1], X = dir === 'y' ? Wd : L, Y = dir === 'y' ? L : Wd, x0 = x - X/2, y0 = y - Y/2, ln = 'rgba(0,0,0,.5)', glass = '#9cc4dd', blink = ((performance.now()/260)|0) % 2;
-  const seg = (l0, l1, ins, z, h, c, o) => dir === 'y' ? box(g, x0 + ins, y0 + l0*L, Wd - 2*ins, (l1 - l0)*L, h, c, Object.assign({line:ln}, o), z) : box(g, x0 + l0*L, y0 + ins, (l1 - l0)*L, Wd - 2*ins, h, c, Object.assign({line:ln}, o), z);
-  const side = (l0, l1, z0, z1, c) => wpoly(g, dir === 'y' ? [[x0 + Wd, y0 + l0*L, z0], [x0 + Wd, y0 + l1*L, z0], [x0 + Wd, y0 + l1*L, z1], [x0 + Wd, y0 + l0*L, z1]] : [[x0 + l0*L, y0 + Wd, z0], [x0 + l1*L, y0 + Wd, z0], [x0 + l1*L, y0 + Wd, z1], [x0 + l0*L, y0 + Wd, z1]], c);
+  const back = fw < 0, fl = l => back ? 1 - l : l, front = !back;      // the drawn end face (east/south) is the bonnet when driving forward, the tail when reversing
+  const seg = (l0, l1, ins, z, h, c, o) => { if (back){ const a = 1 - l1; l1 = 1 - l0; l0 = a; } return dir === 'y' ? box(g, x0 + ins, y0 + l0*L, Wd - 2*ins, (l1 - l0)*L, h, c, Object.assign({line:ln}, o), z) : box(g, x0 + l0*L, y0 + ins, (l1 - l0)*L, Wd - 2*ins, h, c, Object.assign({line:ln}, o), z); };
+  const side = (l0, l1, z0, z1, c) => { if (back){ const a = 1 - l1; l1 = 1 - l0; l0 = a; } wpoly(g, dir === 'y' ? [[x0 + Wd, y0 + l0*L, z0], [x0 + Wd, y0 + l1*L, z0], [x0 + Wd, y0 + l1*L, z1], [x0 + Wd, y0 + l0*L, z1]] : [[x0 + l0*L, y0 + Wd, z0], [x0 + l1*L, y0 + Wd, z0], [x0 + l1*L, y0 + Wd, z1], [x0 + l0*L, y0 + Wd, z1]], c); };
   const end = (w0, w1, z0, z1, c) => wpoly(g, dir === 'y' ? [[x0 + w0*Wd, y0 + L, z0], [x0 + w1*Wd, y0 + L, z0], [x0 + w1*Wd, y0 + L, z1], [x0 + w0*Wd, y0 + L, z1]] : [[x0 + L, y0 + w0*Wd, z0], [x0 + L, y0 + w1*Wd, z0], [x0 + L, y0 + w1*Wd, z1], [x0 + L, y0 + w0*Wd, z1]], c);
-  const wheel = (l, r) => { const p = dir === 'y' ? P(x0 + Wd, y0 + l*L, r) : P(x0 + l*L, y0 + Wd, r); g.fillStyle = '#16181c'; g.beginPath(); g.arc(p[0], p[1], r, 0, 7); g.fill(); R(g, '#9aa0aa', p[0] - 0.3, p[1] - 0.3, 0.6, 0.6); };
+  const lights = (z0, z1) => { const c = front ? '#ffe9a0' : '#d0201a'; end(0.1, 0.27, z0, z1, c); end(0.73, 0.9, z0, z1, c); };
+  const wheel = (l, r) => { l = fl(l); const p = dir === 'y' ? P(x0 + Wd, y0 + l*L, r) : P(x0 + l*L, y0 + Wd, r); g.fillStyle = '#16181c'; g.beginPath(); g.arc(p[0], p[1], r, 0, 7); g.fill(); R(g, '#9aa0aa', p[0] - 0.3, p[1] - 0.3, 0.6, 0.6); };
   const roofLights = h => { const p = P(x, y, h + 0.2); R(g, blink ? '#ff3b30' : '#5a1a16', p[0] - 1.3, p[1] - 0.8, 1, 0.8); R(g, blink ? '#1a2a5a' : '#3b8bff', p[0] + 0.3, p[1] - 0.8, 1, 0.8); };
   shadowAt(g, x0 - 0.5, y0 - 0.3, X, Y);
   if (k === 'car' || k === 'blackcar'){ const c = k === 'blackcar' ? '#1b1e24' : (col || '#2f4f7a');
     seg(0, 1, 0, 0.5, 1.1, c); seg(0.22, 0.78, 0.25, 1.6, 1.1, glass, {top:shade(c, 1.2), left:glass, right:shade(glass, 0.8)}); side(0.48, 0.53, 1.6, 2.7, c);
-    end(0.12, 0.3, 1.0, 1.4, '#ffe9a0'); end(0.7, 0.88, 1.0, 1.4, '#ffe9a0'); wheel(0.2, 0.75); wheel(0.8, 0.75); }
+    lights(1.0, 1.4); wheel(0.2, 0.75); wheel(0.8, 0.75); }
   else if (k === 'postauto' || k === 'policevan' || k === 'riotbus' || k === 'van'){
     const c = {postauto:'#f2c230', policevan:'#f4f4f0', riotbus:'#2f3742', van:'#f1f1ee'}[k], H = k === 'riotbus' ? 3.4 : k === 'postauto' ? 3.1 : 2.8;
     seg(0, 1, 0, 0.5, H, c, {top:k === 'postauto' ? '#f6f6f2' : shade(c, 1.1)});
@@ -711,14 +760,14 @@ function vehicle(g, k, x, y, dir, col, anim){ // x,y = centre of the footprint; 
     else if (k === 'riotbus'){ side(0.05, 0.95, 2.3, 3.5, '#5a6f80'); for (let l = 0.08; l < 0.95; l += 0.05) side(l, l + 0.012, 2.3, 3.5, '#1c2026'); side(0, 1, 1.3, 1.7, '#2a4fa0'); }
     else if (k === 'postauto'){ side(0.05, 0.95, 2.1, 3.3, glass); for (let l = 0.2; l < 0.95; l += 0.15) side(l, l + 0.02, 2.1, 3.3, c); side(0, 1, 1.2, 1.5, '#c8102e'); }
     else { side(0.55, 0.95, 2.0, 2.9, glass); side(0.05, 0.5, 1.4, 1.7, '#3f8f4e'); const p = P(x, y + Wd/2, 1); T(g, 'ZH', p[0] - 2, p[1] + 1.5, '#1c2225', 3.5); }
-    end(0.12, 0.88, H*0.62, H + 0.3, glass); end(0.1, 0.25, 1.0, 1.4, '#ffe9a0'); end(0.75, 0.9, 1.0, 1.4, '#ffe9a0');
+    end(0.12, 0.88, H*0.62, H + 0.3, front ? glass : shade(c, 0.8)); lights(1.0, 1.4);
     wheel(0.17, 0.8); wheel(0.82, 0.8); if (k === 'policevan' || k === 'riotbus') roofLights(H + 0.5); }
-  else if (k === 'lorry'){ seg(0, 0.7, 0, 0.5, 3.4, '#e9e7e0'); side(0.05, 0.65, 1.8, 2.3, '#c8571b'); seg(0.72, 1, 0, 0.5, 2.6, col || '#2f4f7a'); end(0.12, 0.88, 1.9, 3.0, glass); wheel(0.14, 0.8); wheel(0.34, 0.8); wheel(0.86, 0.8); }
-  else if (k === 'vib'){ seg(0, 0.68, 0.2, 0.5, 0.9, '#3d4a66'); seg(0.25, 0.5, 0.6, 1.4, 1.5, '#e0a93a'); seg(0.7, 1, 0, 0.5, 2.5, '#2f3f8a'); end(0.12, 0.88, 1.8, 2.9, glass);
+  else if (k === 'lorry'){ seg(0, 0.7, 0, 0.5, 3.4, '#e9e7e0'); side(0.05, 0.65, 1.8, 2.3, '#c8571b'); seg(0.72, 1, 0, 0.5, 2.6, col || '#2f4f7a'); if (front) end(0.12, 0.88, 1.9, 3.0, glass); lights(0.8, 1.2); wheel(0.14, 0.8); wheel(0.34, 0.8); wheel(0.86, 0.8); }
+  else if (k === 'vib'){ seg(0, 0.68, 0.2, 0.5, 0.9, '#3d4a66'); seg(0.25, 0.5, 0.6, 1.4, 1.5, '#e0a93a'); seg(0.7, 1, 0, 0.5, 2.5, '#2f3f8a'); if (front) end(0.12, 0.88, 1.8, 2.9, glass); lights(0.8, 1.2);
     if (anim){ seg(0.28, 0.47, 0.5, 0.05 + (anim % 2)*0.15, 0.4, '#555'); } wheel(0.12, 0.8); wheel(0.58, 0.8); wheel(0.86, 0.8); }
   else if (k === 'tractor'){ const red = '#c8372d';
     seg(0.48, 1, 0.7, 0.9, 1.4, red, {top:'#d9483e'}); seg(0.05, 0.5, 0.35, 0.9, 2.6, glass, {top:red, left:glass, right:shade(glass, 0.8)}); seg(0, 0.55, 0.15, 3.5, 0.35, red);
-    const ex = dir === 'y' ? P(x, y0 + 0.82*L, 2.3) : P(x0 + 0.82*L, y, 2.3); R(g, '#2b2b2b', ex[0] - 0.2, ex[1] - 1.8, 0.5, 1.8); if (anim) R(g, 'rgba(150,155,160,.8)', ex[0] - 0.6 + (anim % 2)*0.4, ex[1] - 3.2 - (anim % 3)*0.4, 1.4, 1.2);
+    const ex = dir === 'y' ? P(x, y0 + fl(0.82)*L, 2.3) : P(x0 + fl(0.82)*L, y, 2.3); R(g, '#2b2b2b', ex[0] - 0.2, ex[1] - 1.8, 0.5, 1.8); if (anim) R(g, 'rgba(150,155,160,.8)', ex[0] - 0.6 + (anim % 2)*0.4, ex[1] - 3.2 - (anim % 3)*0.4, 1.4, 1.2);
     wheel(0.27, 1.45); wheel(0.84, 0.85); }
   else { seg(0, 1, 0, 0.5, 1.4, col || '#888'); wheel(0.2, 0.7); wheel(0.8, 0.7); }
 }
@@ -756,14 +805,32 @@ function obj(g, o, t){
     case 'testrig': case 'light': case 'deep': case 'dir': rigSprite(g, x, y, o.type, o.burnt, o.drilling, t); if (o.type === 'dir' && !o.burnt){ const p = P(x, y, 22); R(g, '#b3261e', p[0] + 1.5, p[1], 1.5, 1.5); } break;
     case 'station': shadowAt(g, x - 4, y - 3, 8, 6); box(g, x - 4, y - 3, 8, 6, 4, '#b35a3a'); box(g, x + 2, y - 2.5, 1.2, 1.2, 7.5, '#555'); if (o.inc > 0){ const p = P(x + 2.6, y - 2, 8); R(g, '#f2f2f2', p[0] - 1, p[1] - 2 - bob, 2.2, 1.8); } break;
     case 'plant': shadowAt(g, x - 6, y - 4.5, 12, 9); box(g, x - 6, y - 4.5, 12, 9, 5.5, '#7b848c'); box(g, x + 1, y - 3, 4.5, 4.5, 13, '#d3d8dc'); if (o.on && o.stim >= 0){ const p = P(x + 3.2, y - 0.8, 13.5); R(g, '#f2f2f2', p[0] - 1.5, p[1] - 2.5 - bob, 3.2, 2.2); } if (o.on && o.stim < 0) billboard(g, x, y - 4.5, 8, ['!'], 6); break;
-    case 'lobby': shadowAt(g, x - 4.5, y - 3.5, 9, 7); box(g, x - 4.5, y - 3.5, 9, 7, 6.5, '#9cc3de', {top:'#e9ecef', line:'rgba(255,255,255,.7)'}); break;
+    case 'lobby': { shadowAt(g, x - 5.2, y - 3.7, 10.4, 7.4); box(g, x - 5.2, y - 3.7, 10.4, 7.4, 0.5, '#c9cdd2', {line:'rgba(0,0,0,.35)'});
+      box(g, x - 4.6, y - 3.1, 9.2, 6.2, 4.6, '#7fb6da', {top:'#e9ecef', left:'#93c9e8', right:'#5f9cc4', line:'rgba(255,255,255,.85)'}, 0.5);
+      g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 0.3; g.beginPath(); for (let i = -3.3; i < 4.6; i += 1.3){ const a = P(x + i, y + 3.1, 0.5), b = P(x + i, y + 3.1, 5.1); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } for (let i = -1.8; i < 3.1; i += 1.3){ const a = P(x + 4.6, y + i, 0.5), b = P(x + 4.6, y + i, 5.1); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); }
+      { const a = P(x - 4.6, y + 3.1, 2.8), b = P(x + 4.6, y + 3.1, 2.8), c = P(x + 4.6, y - 3.1, 2.8); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(c[0], c[1]); } g.stroke();
+      wpoly(g, [[x - 3.5, y + 3.1, 0.5], [x - 2.3, y + 3.1, 0.5], [x - 0.3, y + 3.1, 5.1], [x - 1.5, y + 3.1, 5.1]], 'rgba(255,255,255,.3)'); wpoly(g, [[x + 1, y + 3.1, 0.5], [x + 1.6, y + 3.1, 0.5], [x + 3.6, y + 3.1, 5.1], [x + 3, y + 3.1, 5.1]], 'rgba(255,255,255,.25)');
+      box(g, x - 5.2, y - 3.7, 10.4, 7.4, 0.5, '#f4f4f2', {line:'rgba(0,0,0,.35)'}, 5.1);
+      { const p = P(x, y + 3.7, 5.6); R(g, '#1f5fa8', p[0] - 4, p[1] - 3, 8, 3); R(g, '#f2a33a', p[0] + 2.2, p[1] - 2.6, 1, 2); T(g, 'CPJ', p[0] - 0.5, p[1] - 0.6, '#fff', 3, 'center'); }
+      { const p = P(x + 6.5, y + 3.2, 0); R(g, '#555', p[0], p[1] - 13, 0.5, 13); R(g, '#1f5fa8', p[0] + 0.5, p[1] - 13, 4, 2.4); R(g, '#f2a33a', p[0] + 1.8, p[1] - 12.5, 1, 1.4); }
+      for (const dx of [-3.5, 2.5]){ box(g, x + dx, y + 4.3, 1.4, 0.9, 0.8, '#8a6a4a', {line:'rgba(0,0,0,.35)'}); const p = P(x + dx + 0.7, y + 4.7, 0.8); g.fillStyle = '#3f8f4e'; g.beginPath(); g.arc(p[0], p[1] - 0.8, 1, 0, 7); g.fill(); } break; }
     case 'stand': { const p = P(x, y, 0); R(g, 'rgba(0,0,0,.14)', p[0] - 3, p[1] - 0.5, 6, 1.2); R(g, '#555', p[0] - 0.3, p[1] - 7, 0.7, 7); g.fillStyle = '#2a6fb0'; g.beginPath(); g.ellipse(p[0], p[1] - 7, 4.5, 1.6, 0, 0, 7); g.fill(); R(g, '#f2f2f2', p[0] - 2.5, p[1] - 2.5, 5, 2); break; }
     case 'oppstand': { const p = P(x, y, 0); R(g, 'rgba(0,0,0,.14)', p[0] - 3, p[1] - 0.5, 6, 1.2); R(g, '#555', p[0] - 0.3, p[1] - 7, 0.7, 7); g.fillStyle = '#b3261e'; g.beginPath(); g.ellipse(p[0], p[1] - 7, 4.5, 1.6, 0, 0, 7); g.fill(); R(g, '#f2f2f2', p[0] - 3, p[1] - 2.5, 6, 2); T(g, 'NON', p[0], p[1] - 0.9, '#b3261e', 3.2, 'center'); break; }
     case 'suit': person(g, x, y, t, '#1d2743', null, '#1c2225'); break;
     case 'police': case 'riot': { const tg = o.id === undefined ? null : S.obj.find(b => b.opp && b.type !== 'march' && Math.hypot(b.x - x, b.y - y) <= 26), fc = tg ? faceTo(x, y, tg.x, tg.y) : 1;
       if (o.type === 'police'){ policeman(g, x - 1.5, y, false, fc); policeman(g, x + 1.5, y + 1, false, fc); if (!tg && o.id !== undefined && ((t + o.id*2.1) % 14) < 1.4) say(x, y, 10, 'Bonjour!'); }
       else for (let i = 0; i < 4; i++) policeman(g, x - 3 + i*2, y + (i%2), true, fc); break; }
-    case 'school': shadowAt(g, x - 4.5, y - 3, 9, 6); box(g, x - 4.5, y - 3, 9, 6, 4, '#f3f3ef'); { const p = P(x + 5, y - 3, 0); R(g, '#555', p[0], p[1] - 11, 0.6, 11); R(g, '#b3261e', p[0] + 0.6, p[1] - 11, 3, 2); } break;
+    case 'school': { shadowAt(g, x - 5, y - 3, 10, 6); box(g, x - 5, y - 3, 10, 6, 3.6, '#efe6d0', {line:'rgba(0,0,0,.4)'});
+      wpoly(g, [[x - 4.6, y + 3, 1.4], [x + 1.6, y + 3, 1.4], [x + 1.6, y + 3, 2.9], [x - 4.6, y + 3, 2.9]], '#8fb8d6', 'rgba(0,0,0,.35)', 0.3);
+      g.strokeStyle = '#f6f2e6'; g.lineWidth = 0.35; g.beginPath(); for (let i = -3.4; i < 1.6; i += 1.25){ const a = P(x + i, y + 3, 1.4), b = P(x + i, y + 3, 2.9); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } g.stroke();
+      wpoly(g, [[x + 2.4, y + 3, 0], [x + 3.8, y + 3, 0], [x + 3.8, y + 3, 2.5], [x + 2.4, y + 3, 2.5]], '#2a6fb0', 'rgba(0,0,0,.4)');
+      wpoly(g, [[x + 5, y - 2.2, 1.4], [x + 5, y + 2.2, 1.4], [x + 5, y + 2.2, 2.9], [x + 5, y - 2.2, 2.9]], '#7aa6c4', 'rgba(0,0,0,.35)', 0.3);
+      box(g, x - 5.4, y - 3.4, 10.8, 6.8, 0.4, '#7f8f9c', {line:'rgba(0,0,0,.4)'}, 3.6); box(g, x - 5.4, y - 1.9, 10.8, 3.8, 0.45, '#93a3b0', {line:'rgba(0,0,0,.3)'}, 4); box(g, x - 5.4, y - 0.8, 10.8, 1.6, 0.3, '#a7b5c0', {line:'rgba(0,0,0,.25)'}, 4.45);
+      { const p = P(x + 1, y + 3, 3.2); R(g, '#1f5fa8', p[0] - 4.2, p[1] - 1.7, 8.4, 2.3); T(g, 'ÉCOLE · CPJ', p[0], p[1] + 0.2, '#fff', 2.4, 'center'); }
+      { const p = P(x - 6.5, y + 3.5, 0); R(g, '#555', p[0], p[1] - 12, 0.5, 12); R(g, '#d52b1e', p[0] + 0.5, p[1] - 12, 3, 3); R(g, '#fff', p[0] + 1.6, p[1] - 11.4, 0.8, 1.8); R(g, '#fff', p[0] + 1.1, p[1] - 10.9, 1.8, 0.8); }
+      { const p = P(x + 7.5, y - 1.5, 0); R(g, '#666', p[0], p[1] - 7, 0.5, 7); R(g, '#f2f2f2', p[0] - 1.2, p[1] - 8.6, 2.8, 2); R(g, '#e46a2a', p[0] - 0.4, p[1] - 6.8, 1.4, 0.4); }
+      { const a = P(x + 6, y + 4.5, 0), b = P(x + 9, y + 4.5, 0); R(g, '#7a5a3a', a[0], a[1] - 4, 0.5, 4); R(g, '#7a5a3a', b[0], b[1] - 4, 0.5, 4); g.strokeStyle = '#7a5a3a'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(a[0], a[1] - 4); g.lineTo(b[0] + 0.5, b[1] - 4); g.stroke();
+        const sw = Math.sin(t*2.5)*0.8, m = [(a[0] + b[0])/2 + 0.2, (a[1] + b[1])/2 - 4]; g.strokeStyle = '#555'; g.lineWidth = 0.25; g.beginPath(); g.moveTo(m[0], m[1]); g.lineTo(m[0] + sw, m[1] + 2.6); g.stroke(); R(g, '#b3261e', m[0] + sw - 0.6, m[1] + 2.6, 1.3, 0.4); } break; }
     case 'chair': shadowAt(g, x - 4.5, y - 3, 9, 6); box(g, x - 4.5, y - 3, 9, 6, 5, '#2b313c'); billboard(g, x, y + 3, 5.5, ['UNI'], 4, '#1c2225'); break;
     case 'congress': shadowAt(g, x - 5.5, y - 3.5, 11, 7); box(g, x - 5.5, y - 3.5, 11, 7, 5, '#f2f2f2', {top:'#2a6fb0'}); break;
     case 'banner': { const a = P(x - 6, y, 0), b = P(x + 6, y, 0); R(g, '#5a4632', a[0], a[1] - 8, 0.7, 8); R(g, '#5a4632', b[0], b[1] - 8, 0.7, 8); billboard(g, x, y, 4, ['JURA SANS', 'FRACKING'], 4, '#b3261e', 24); break; }
@@ -862,10 +929,10 @@ function drawMap(g, t){
   for (const o of S.obj) if (o.y <= yc && !(!o.arrived && ['tractor','suit','police','riot','activists'].includes(o.type))) draws.push({k:K(o.x, o.y), f:() => obj(g, o, t)});
   for (const e of S.ents){ if (e.k === 'heli') continue;
     if (e.k === 'train'){ if (S.rail.y <= yc) draws.push({k:K(e.x, S.rail.y), f:() => train(g, e.x, S.rail.y, t)}); continue; }
-    if (e.k === 'vib'){ if (e.y <= yc) draws.push({k:K(e.x, e.y + 2), f:() => vehicle(g, 'vib', e.x, e.y + 2.5, 'x', null, S.lines[e.line].segs.some(s => s.id === e.seg && s.arrived) ? ((t*8)|0) : 0)}); continue; }
+    if (e.k === 'vib'){ if (e.y <= yc) draws.push({k:K(e.x, e.y + 2), f:() => vehicle(g, 'vib', e.x, e.y + 2.5, 'x', null, S.lines[e.line].segs.some(s => s.id === e.seg && s.arrived) ? ((t*8)|0) : 0, e.leaving || !S.lines[e.line].segs.some(s => s.id === e.seg && s.arrived) ? Math.sign(e.vs) || 1 : 1)}); continue; }
     if (e.k === 'marcher'){ const q = roadPos(e.s); if (q.y > yc) continue; draws.push({k:K(q.x, q.y + 2), f:() => { const i = e.idx || 0; person(g, q.x, q.y + 2, e.anim, ['#8a2b2b','#2f4f7a','#3f7a4a','#8c7a4a'][i % 4], e.sign, null, {wave:t*5 + i, face:Math.sign(q.dx - q.dy) || 1}); if (i % 4 === 0 && ((t + i) % 5) < 1.2) say(q.x, q.y + 2, 17, ['NON!', 'Hou!', 'Jura sans forage!'][(i/4) % 3]); }}); continue; }
     if (e.parked){ if (e.py <= yc) draws.push({k:K(e.px, e.py), f:() => vehicle(g, e.k, e.px, e.py, e.pdir, e.col)}); continue; }
-    const q = roadPos(e.s); if (q.y > yc) continue; const off = (e.lane || 1)*1.7; const vx = q.x - q.dy*off, vy = q.y + q.dx*off; draws.push({k:K(vx, vy), f:() => vehicle(g, e.k, vx, vy, Math.abs(q.dx) > Math.abs(q.dy) ? 'x' : 'y', e.col, e.anim)}); }
+    const q = roadPos(e.s); if (q.y > yc) continue; const off = (e.lane || 1)*1.7; const vx = q.x - q.dy*off, vy = q.y + q.dx*off; const hz = Math.abs(q.dx) > Math.abs(q.dy), fw = Math.sign((hz ? q.dx : q.dy)*e.vs) || 1; draws.push({k:K(vx, vy), f:() => vehicle(g, e.k, vx, vy, hz ? 'x' : 'y', e.col, e.anim, fw)}); }
   BUB.length = 0; draws.sort((a,b) => a.k - b.k); for (const d of draws) d.f(); drawBubbles(g);
   for (const e of S.ents) if (e.k === 'heli'){ const p = P(e.x, 60, 30); R(g, 'rgba(0,0,0,.12)', p[0] - 3, p[1] + 30, 10, 2); R(g, '#3b3f45', p[0], p[1], 8, 3); R(g, '#3b3f45', p[0] - 4, p[1] + 1, 4, 1); R(g, '#3b3f45', p[0] - 3 + (((t*30)|0)%2), p[1] - 2, 13, 0.8); }
   /* interaction overlays */
@@ -983,7 +1050,7 @@ function drawSection(g, t){
 /* ================================================================== HUD, palette, cards */
 function buildPalette(){
   const pal = $('#pal'), GC = {Explore:'#2f6fb0', Drill:'#c8571b', Connect:'#1f8a7a', Persuade:'#3f8f4e', Force:'#b3261e'}; let h = '', grp = '';
-  for (const k in DEF){ const d = DEF[k]; if (d.g !== grp){ grp = d.g; h += '<h3 style="--g:' + GC[grp] + '">' + grp + '</h3>'; }
+  for (const k in DEF){ const d = DEF[k]; if (d.hide) continue; if (d.g !== grp){ grp = d.g; h += '<h3 style="--g:' + GC[grp] + '">' + grp + '</h3>'; }
     h += '<button class="it" style="--g:' + GC[d.g] + '" data-t="' + k + '" title="' + d.h.replace(/"/g, '&quot;') + '" aria-pressed="false"><canvas width="36" height="36"></canvas><span><b>' + d.n + '</b><small>' + (d.c || (d.cost ? fmt(d.cost) : '') + (d.up && d.cost ? ' + ' + d.up + 'k/mo' : '')) + '</small></span></button>'; }
   pal.innerHTML = h;
   pal.querySelectorAll('.it').forEach(b => { const g = b.querySelector('canvas').getContext('2d'), tk = b.dataset.t; g.fillStyle = '#7fb56b'; g.fillRect(0, 22, 36, 14); g.fillStyle = '#6aa35a'; for (let i = 0; i < 36; i += 4) g.fillRect(i + (i % 8 ? 1 : 3), 24 + (i % 3)*3, 1, 1); g.save(); g.scale(1.8, 1.8);
@@ -1009,20 +1076,49 @@ function hud(){
   $('#uncutbtn').hidden = !(view === 'map' && cutLine !== null && S.started && !S.over);
   const hint = $('#hint'); let hs = '';
   if (plan) hs = ''; else if (tool) hs = anchor ? (tool === 'survey' ? 'Now click where the stretch ends on the same line.' : tool === 'pipe' ? 'Now click the village to heat.' : 'Now click the second deep rig.') : DEF[tool].n + ': ' + DEF[tool].h;
+  else if (view === 'section') hs = 'Line ' + S.lines[line].name + '. Drag or scroll to look deeper. Click a rig at the surface to select it, then Draw well. Red stripes on the survey are faults, blue patches water.';
   else if (view === 'map') hs = cutLine !== null ? 'The block is cut along line ' + S.lines[cutLine].name + '. Click the face to open it flat.' : 'Click a dotted grid line to cut the block there. Click houses to hear how a village feels.';
   if (hs){ if (hint.textContent !== hs){ hint.textContent = hs; hint.dataset.plan = ''; } hint.hidden = false; } else if (!plan) hint.hidden = true;
   if (toastT && performance.now() > toastT){ $('#toast').hidden = true; toastT = 0; }
-  const ro = $('#readout'); const tr = sel && sel.id && byId(sel.id); if (view === 'section' && tr && tr.type === 'testrig' && tr.log){ if (ro.textContent !== tr.log) ro.textContent = tr.log; ro.hidden = false; } else ro.hidden = true;
-  if (sel) renderCard(); if (!$('#loans').hidden) renderLoans(); if (!$('#research').hidden) renderResearch(); renderSteps();
+  const ro = $('#readout'); const tr = sel && sel.id && byId(sel.id); if (view === 'section' && tr && tr.type === 'testrig' && tr.log){ if (ro.textContent !== tr.log) ro.textContent = tr.log; ro.hidden = false; } else ro.hidden = true; hint.classList.toggle('withlog', !ro.hidden);
+  if (sel) renderCard(); if (!$('#loans').hidden) renderLoans(); if (!$('#research').hidden) renderResearch(); if (!$('#polls').hidden) renderPolls(); if (!$('#wire').hidden) renderWire(); renderSteps();
 }
+const VOICE = {'Felt quake':'The plates fell off the dresser. Again.', 'Rig noise':'You hear it at night, like a fridge the size of a church.', 'Polluted spring':'The fountain is brown. My grandmother washed in it.', 'Survey trucks':'Three trucks shaking the road at seven in the morning.',
+  'Village fest':'Free sausages. I am not saying I changed my mind. I am saying they were good.', 'Cheap heat':'Our heating bill halved. I still do not like the rig, but I like the bill.', 'Men in suits':'The young man in the suit was very polite. Very.', 'Police presence':'Since when do we need police at the bakery?',
+  'Riot unit':'Helmets. In our village. On a Tuesday.', 'Riot police in the valley':'My nephew saw the riot bus on the main road.', 'Helicopter':'Who pays for that helicopter? We do.', 'Out-of-canton money':'Zurich money. Of course it is.', 'School funding':'The new sports hall is lovely. Their logo is on the floor.',
+  'Information stand':'I took a brochure. For the stove.', 'Old habits':'We have always heated with wood. My father did too.', 'Rumour':'My cousin says the hens stopped laying.', 'Protest march':'Everybody was at the march. Even the priest.', 'Banner in the field':'Have you seen the banner at the Juillerat field?',
+  'Local jobs':'My son works on the rig now. He comes home tired and happy.', 'Congress':'A congress in our town! With lanyards!', 'Dug-up road':'The road has been dug up since spring.', 'Fest seen as a bribe':'Another fest? We are not for sale.', 'Buying our children':'They put their name on our children’s sports hall.',
+  'Stored anger':'Nobody has forgotten the riot police.', 'Counter-fest':'The counter-fest had better music.', 'Field leased over their heads':'They leased the field. Nobody asked the neighbours.', 'Test rig':'There is a tower in the field now.', 'Fence':'A fence round a hole in the ground. Very welcoming.'};
+function voice(v, cs){ const c = cs[0]; return VOICE[c && c[0]] || (v.mood >= 50 ? 'Heat from under our feet. Why not.' : 'We will see. We always see.'); }
+function advice(v, cs){ const t = [], has = k => (v.causes[k] || 0);
+  if (v.mute > 0) t.push('Not listening for ' + v.mute + ' more month' + (v.mute > 1 ? 's' : '') + ' after the quake: persuasion has no effect.');
+  if (v.mood < 25) t.push('<span class="neg">Below 25: protest camps. A site burns after 3 months, 6 if fenced. A riot unit clears camps.</span>');
+  else if (v.mood < 33) t.push('<span class="neg">Below 33: tractors may block your nearest site. A police patrol sends them home.</span>');
+  if (has('Rig noise') < -1) t.push('Rig noise: research noise control and fit quiet upgrades, or drill further away.');
+  if (v.heat !== 'on' && !v.spring.polluted) t.push('Nothing wins hearts like a cheaper heating bill: pipe a heat station here (+0.8 a month).');
+  if (v.festYear !== year()) t.push('A fest this year: +5 a month for two months (doubled at Saint-Martin, November).');
+  if (has('Riot unit') < -1 || has('Police presence') < -1) t.push('Uniforms cost mood every month, and the anger comes back after they leave.');
+  if (v.spring.polluted) t.push('The fountain stays brown. Case your wells through groundwater.');
+  return t.slice(0, 3); }
+function renderPolls(){ const el = $('#polls'), all = S.vil.reduce((a, u) => a + u.pop, 0), fc = forecast();
+  let h = '<button class="x" data-a="closepolls" aria-label="Close">×</button><h4>Polls</h4><div class="sub">Forecast <b class="' + (fc >= 50.1 ? 'pos' : 'neg') + '">' + fc.toFixed(1) + '%</b> yes, weighted by voters. ' + Math.max(0, CFG.END - S.month) + ' months to the vote. Click a village for details.</div><table>';
+  for (const v of S.vil){ const c = Object.entries(v.causes).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]))[0], d = v.delta || 0;
+    h += '<tr data-a="vil" data-v="' + v.id + '"><td><b>' + v.name + '</b><div class="sub" style="margin:0">' + v.pop.toLocaleString('en-US') + ' voters · ' + Math.round(v.pop/all*100) + '%' + (c ? ' · ' + c[0].toLowerCase() : '') + '</div></td><td>' + v.mood.toFixed(0) + '%</td><td class="' + (d >= 0 ? 'pos' : 'neg') + '">' + (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '</td></tr>'; }
+  h += '</table>'; if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } }
+function renderWire(){ const el = $('#wire');
+  let h = '<button class="x" data-a="closewire" aria-label="Close">×</button><h4>The wire</h4><div class="sub">Everything that happened, newest first.</div><ol>' + S.news.slice().reverse().slice(0, 40).map(n => '<li><span class="sub">' + MONTHS[n.m % 12] + ', yr ' + ((n.m/12|0) + 1) + '</span> ' + n.s + '</li>').join('') + '</ol>';
+  if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } }
 function renderCard(){
   const el = $('#card'); let h = '<button class="x" data-a="close" aria-label="Close">×</button>';
   if (sel.v !== undefined){
-    const v = S.vil[sel.v], top = Object.entries(v.causes).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0,3);
+    const v = S.vil[sel.v], cs = Object.entries(v.causes).filter(c => Math.abs(c[1]) >= 0.25).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])), d = v.delta || 0, all = S.vil.reduce((a, u) => a + u.pop, 0);
     const feel = v.mood >= 65 ? 'Mostly in favour.' : v.mood >= 50 ? 'Leaning yes, quietly.' : v.mood >= 40 ? 'Sceptical.' : v.mood >= 25 ? 'Against. Signs in the windows.' : 'Furious. Tractors are being fuelled.';
-    h += '<h4>' + v.name + '</h4><div class="sub">' + (v.town ? 'Town' : 'Village') + ', ' + v.pop.toLocaleString('en-US') + ' voters</div><div><b>' + feel + '</b></div><div class="meter"><i style="width:' + v.mood + '%"></i></div><ul>';
-    h += top.length ? top.map(c => '<li>' + (c[1] < 0 ? '<span class="neg">▼</span> ' : '<span class="pos">▲</span> ') + c[0] + '</li>').join('') : '<li>No strong feelings yet</li>';
-    h += '</ul><div class="sub">Fountain: ' + (v.spring.polluted ? '<span class="neg">brown, for good</span>' : 'clear') + ' · Heating: ' + (v.heat === 'on' ? '<span class="pos">geothermal</span>' : v.heat === 'build' ? 'pipe being laid' : 'oil and wood') + (v.mute > 0 ? ' · <span class="neg">not listening after the quake</span>' : '') + '</div>';
+    h += '<h4>' + v.name + '</h4><div class="sub">' + (v.town ? 'Town' : 'Village') + ' · ' + v.pop.toLocaleString('en-US') + ' voters · ' + Math.round(v.pop/all*100) + '% of the valley’s vote</div>';
+    h += '<div><b>' + feel + '</b> <span class="' + (d >= 0 ? 'pos' : 'neg') + '">' + (d >= 0 ? '▲ +' : '▼ −') + Math.abs(d).toFixed(1) + ' last month</span></div><div class="meter"><i style="width:' + v.mood + '%;background:' + (v.mood >= 50.1 ? 'var(--ok)' : 'var(--warn)') + '"></i><u></u></div>';
+    h += '<div class="sub">' + v.mood.toFixed(0) + ' in 100 would vote yes today; 50.1 needed.</div><q>' + voice(v, cs) + '</q>';
+    h += cs.length ? '<table class="why">' + cs.slice(0, 7).map(c => '<tr><td>' + c[0] + '</td><td class="' + (c[1] < 0 ? 'neg' : 'pos') + '">' + (c[1] > 0 ? '+' : '−') + Math.abs(c[1]).toFixed(1) + '</td></tr>').join('') + '</table><div class="sub">Recent effects on the mood; each fades by a fifth a month.</div>' : '<div class="sub">No strong feelings yet.</div>';
+    h += '<div class="sub">Fountain: ' + (v.spring.polluted ? '<span class="neg">brown, for good</span>' : 'clear') + ' · Heating: ' + (v.heat === 'on' ? '<span class="pos">geothermal</span>' : v.heat === 'build' ? 'pipe being laid' : 'oil and wood') + '</div>';
+    const tips = advice(v, cs); if (tips.length) h += '<ul class="tips">' + tips.map(t => '<li>' + t + '</li>').join('') + '</ul>';
   } else if (sel.line !== undefined){
     const l = S.lines[sel.line]; h += '<h4>Line ' + l.name + '</h4><div class="sub">Seismic grid profile ' + (sel.line + 1) + ' of ' + CFG.NLINES + '</div>';
     h += '<div>' + (l.legacy ? 'Shot by the petroleum campaign in the 1970s. The paper section survives' + (l.gaps.length ? ', with ' + l.gaps.length + ' gap' + (l.gaps.length > 1 ? 's' : '') + '.' : '.') : 'Never shot. Nothing is known below this line.') + (l.segs.length ? ' ' + l.segs.length + ' modern survey stretch' + (l.segs.length > 1 ? 'es' : '') + '.' : '') + '</div>';
@@ -1038,9 +1134,14 @@ function renderCard(){
     else if (opp) s = {banner:'Lowers the mood nearby until the village warms up.', oppstand:'Cancels one of your suits or your stand here.', rumour:'Blames you for something unrelated. Fades, or a suit nearby ends it.', march:'A month of bad press in town.', activists:'Double the pace of the opposition. They leave three months after the last police unit.', counterfest:'Cancels your second fest.'}[o.type];
     else if (SITE[o.type]){
       if (isBlocked(o)) s = '<span class="neg">Blocked by protesters.</span> ';
-      if (RIG[o.type]){ const tp = tip(o); s += o.plant ? 'Wellhead of the power plant.' : o.drilling ? 'Drilling at ' + ((o.drilling.pos.d*10)|0).toLocaleString('en-US') + ' m. Cannot be stopped.' : o.well.length ? 'Well ends at ' + (tp.d*10).toLocaleString('en-US') + ' m in ' + RNAME[rockL(o.line, tp.x, tp.d)] + '.' : 'No well yet.';
+      if (RIG[o.type]){ const tp = tip(o), reached = [ROCK.WATER, ROCK.WARM, ROCK.FAULT, ROCK.GRANITE, ROCK.HOT].filter(t => wellHas(o, t)).map(t => RNAME[t]);
+        if (o.plant) s += 'Wellhead of the power plant.';
+        else if (o.drilling){ const dr = o.drilling, rest = pathInfo(Object.assign({}, o, {well:[{x:dr.pos.x, d:dr.pos.d}]}), dr.pts.slice(dr.seg)), here = rockL(o.line, dr.pos.x, dr.pos.d), goal = dr.pts[dr.pts.length - 1];
+          s += 'Drilling at <b>' + M(dr.pos.d) + '</b> in ' + RNAME[here] + ' (' + RSPEED[here]*10 + ' m a month). ' + M(Math.max(0, goal.d - dr.pos.d)) + ' to go, about ' + rest.months.toFixed(1) + ' months. Cannot be stopped.<div class="meter"><i style="width:' + clamp(dr.pos.d/Math.max(1, goal.d)*100, 0, 100) + '%"></i></div>'; }
+        else s += o.well.length ? 'Well ends at <b>' + M(tp.d) + '</b> in ' + RNAME[rockL(o.line, tp.x, tp.d)] + ', about ' + tempAt(o.line, tp.x, tp.d) + ' °C.' : 'No well yet. This rig reaches ' + M(maxDepth(o)) + (maxBend(o) ? ' and may bend 30°.' : ', straight down.');
+        if (reached.length && !o.drilling) s += '<div class="sub">Passed through: ' + reached.join(', ') + (wellHas(o, ROCK.WATER) ? (o.well.every(w => w.c) ? ' (cased)' : '') : '') + '.</div>';
         if (!o.plant && !o.drilling) acts += '<button class="btn main" data-a="plan">' + (o.well.length ? 'Extend well' : 'Draw well') + '</button>'; }
-      if (o.type === 'testrig') s += o.log ? 'Core log printed (shown in the section). Costs ' + DEF.testrig.up + 'k a month while it stands.' : 'Coring.';
+      if (o.type === 'testrig') s += o.log ? 'Cored to ' + M(o.depth || 200) + '. The log is shown in the section. Costs ' + DEF.testrig.up + 'k a month while it stands.' : 'Coring.';
       if (o.type === 'station') s += S.pipes.some(p => p.from === o.id) ? 'Earned ' + fmt(o.inc || 0) + ' last month.' : 'Needs a heat pipe to a village.';
       if (o.type === 'plant'){ if (o.stim < 0){ s += 'Choose the stimulation pressure. Done once.'; acts += CFG.STIM.map((p,i) => '<button class="btn" data-a="stim" data-v="' + i + '">' + p.n + ' pressure</button>').join(''); } else s += (S.plines.some(l => l.from === o.id) ? '' : 'Needs a power line. ') + 'Earned ' + fmt(o.inc || 0) + ' last month.'; }
       if (view === 'map' && o.line !== undefined) acts += '<button class="btn" data-a="open">Open section</button>';
@@ -1053,7 +1154,7 @@ function renderCard(){
 }
 function renderResearch(){
   const el = $('#research'); let h = '<button class="x" data-a="closeres" aria-label="Close">\u00d7</button><h4>Research</h4><div class="sub">Each programme runs for its term, then unlocks its rig. A university chair makes them 25% cheaper.</div>';
-  for (const k in RES){ const st = S.res[k], done = resDone(k); h += '<div class="row"><div><b>' + RES[k].n + '</b><div class="sub" style="margin:0">' + (k === 'deep' ? 'Unlocks the deep rig (5,000 m).' : k === 'dir' ? 'Unlocks the directional rig (bends 30\u00b0).' : 'Unlocks the quiet upgrade for rigs.') + '</div></div>' + (done ? '<span class="pos">Done</span>' : st !== undefined ? '<span>' + Math.ceil(st - S.t) + ' mo. left</span>' : '<button class="btn" data-a="research" data-v="' + k + '">' + fmt(RES[k].cost) + ' \u00b7 ' + RES[k].t + ' mo.</button>') + '</div>'; }
+  for (const k in RES){ const st = S.res[k], done = resDone(k); h += '<div class="row"><div><b>' + RES[k].n + '</b><div class="sub" style="margin:0">' + (k === 'deep' ? 'Unlocks the deep rig and test cores to 5,000 m.' : k === 'dir' ? 'Every rig, old and new, may bend its well up to 30\u00b0.' : 'Unlocks the quiet upgrade for rigs.') + '</div></div>' + (done ? '<span class="pos">Done</span>' : st !== undefined ? '<span>' + Math.ceil(st - S.t) + ' mo. left</span>' : '<button class="btn" data-a="research" data-v="' + k + '">' + fmt(RES[k].cost) + ' \u00b7 ' + RES[k].t + ' mo.</button>') + '</div>'; }
   if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; }
 }
 function renderSteps(){
@@ -1074,7 +1175,22 @@ function renderLoans(){
 function planBar(){
   const el = $('#hint'); if (!plan){ if (el.dataset.plan) el.dataset.plan = ''; return; }
   const o = byId(plan.rig); if (!o) return; const pc = planCost(o, plan.pts, plan.cased);
-  const h = '<b>Drawing the well</b> (' + DEF[o.type].n.toLowerCase() + '): click points downward' + (maxBend(o) ? ', up to 30° off vertical.' : ', straight down.') + ' ' + (plan.pts.length ? 'Section ' + (pc.len*10).toLocaleString('en-US') + ' m for <b>' + fmt(pc.cost) + '</b>' + (pc.fog ? ' (blind through unsurveyed ground)' : '') + (pc.water && !plan.cased ? ' <span class="neg">crosses groundwater uncased</span>' : '') + '.' : '') + (plan.err ? ' <span class="neg">' + plan.err + '</span>' : '') +
+  const pi = pathInfo(o, plan.pts), v = nearestVillage(o.x, o.y), casing = plan.cased ? planCost(o, plan.pts, true).cost - planCost(o, plan.pts, false).cost : 0;
+  let h = '<b>Drawing the well</b> · ' + DEF[o.type].n.toLowerCase() + ' · ' + (maxBend(o) ? 'bends up to 30°' : 'straight down') + ' · reaches ' + M(maxDepth(o)) + '. Click points below the bit.';
+  if (plan.pts.length){
+    h += '<div class="pl"><b>' + M(pc.len) + '</b> of hole, bottom at <b>' + M(pi.end.d) + '</b> · <b>' + fmt(pc.cost) + '</b>' + (casing ? ' (casing ' + fmt(casing) + ')' : '') + ' · about <b>' + Math.max(0.1, pi.months).toFixed(1) + ' months</b> of drilling</div>';
+    h += '<div class="strata">' + pi.rows.filter(r => r.to - r.from >= 2 || pi.rows.length < 9).slice(0, 10).map(r => '<span class="' + (r.known >= 3 ? 'k' : r.known === 2 ? 'g' : 'u') + '">' + M(r.from) + '–' + M(r.to) + ' ' + r.lab + '</span>').join('') + '</div>';
+    const endTxt = pi.endRock === -2 ? 'Ends in unsurveyed ground: nobody knows what is down there.' : pi.endRock === -1 ? 'Ends in ' + interp(pi.endType) + ', about ' + pi.temp + ' °C. A second survey pass would name the rock.'
+      : pi.endRock === ROCK.WARM ? '<span class="pos">Ends in the warm aquifer, about ' + pi.temp + ' °C: a heat station can stand here.</span>'
+      : pi.endRock === ROCK.HOT ? '<span class="pos">Ends in hot granite, about ' + pi.temp + ' °C: pair it with a second well 150–600 m away for a power plant.</span>'
+      : 'Ends in ' + RNAME[pi.endRock] + ', about ' + pi.temp + ' °C: no usable heat yet. The warm aquifer usually lies at 1,600–1,900 m, hot granite below 3,500 m.';
+    h += '<div>' + endTxt + '</div>';
+    for (const fd of pi.faults) h += '<div class="neg">⚠ Fault zone at ' + M(fd[0]) + (fd[1] - fd[0] > 3 ? '–' + M(fd[1]) : '') + ': crossing it shakes ' + v.name + ' (mood −14 there, −5 elsewhere).</div>';
+    for (const w of pi.water) h += '<div class="' + (plan.cased ? 'pos' : 'neg') + '">' + (plan.cased ? '✓ Groundwater at ' + M(w[0]) + '–' + M(w[1]) + ' is cased off.' : '⚠ Groundwater at ' + M(w[0]) + '–' + M(w[1]) + ': uncased, it turns the fountain of ' + v.name + ' brown for good (mood −10).') + '</div>';
+    if (pi.blind) h += '<div>? ' + M(pi.blind) + ' through unsurveyed ground: priced at the worst case, and faults there are invisible.</div>';
+  }
+  if (plan.err) h += '<div class="neg">' + plan.err + '</div>';
+  h +=
     '<div class="acts"><button class="btn" data-a="case" aria-pressed="' + plan.cased + '">' + (plan.cased ? '☑' : '☐') + ' Case it (+' + CFG.CASE_K + 'k per 100 m)</button><button class="btn" data-a="undo">Undo point</button><button class="btn main" data-a="commit"' + (plan.pts.length ? '' : ' disabled') + '>Commit ' + (plan.pts.length ? fmt(pc.cost) : '') + '</button><button class="btn" data-a="cancelplan">Cancel</button></div>';
   if (el.dataset.plan !== h){ el.innerHTML = h; el.dataset.plan = h; } el.hidden = false;
 }
@@ -1149,12 +1265,13 @@ function clickWorld(p){
   sel = null; $('#card').hidden = true;
 }
 function act(a, v){
-  if (a === 'close'){ sel = null; $('#card').hidden = true; return; } if (a === 'closeloans'){ $('#loans').hidden = true; return; } if (a === 'closeres'){ $('#research').hidden = true; return; }
+  if (a === 'close'){ sel = null; $('#card').hidden = true; return; } if (a === 'closeloans'){ $('#loans').hidden = true; return; } if (a === 'closeres'){ $('#research').hidden = true; return; } if (a === 'closepolls'){ $('#polls').hidden = true; return; } if (a === 'closewire'){ $('#wire').hidden = true; return; }
+  if (a === 'vil'){ sel = {v:Number(v)}; renderCard(); return; }
   if (a === 'research'){ const r = research(v); toast(r === 'ok' ? RES[v].n + ' started.' : r); return; } if (a === 'uncut'){ cutLine = null; sel = null; $('#card').hidden = true; return; }
   if (a === 'zin'){ zoomStep(1.5); return; } if (a === 'zout'){ zoomStep(1/1.5); return; }
   if (a === 'map'){ closeSection(); return; } if (a === 'toggle'){ showPaper = !showPaper; return; }
   if (a === 'start'){ S.started = true; S.paused = false; $('#overlay').hidden = true; audio(); return; }
-  if (a === 'continue'){ try { const d = JSON.parse(localStorage.getItem('jf3_save')); if (d && d.v === 3){ S = d; GEO.clear(); KN.clear(); CANV.clear(); DIRTY.clear(); VELS.clear(); for (const [k,arr] of (S.KN || [])) KN.set(k, Uint8Array.from(arr)); delete S.KN; baseMap = null; } } catch (e) {} S.paused = false; S.started = true; $('#overlay').hidden = true; return; }
+  if (a === 'continue'){ try { const d = JSON.parse(localStorage.getItem('jf3_save')); if (d && d.v === 3){ S = d; GEO.clear(); KN.clear(); CANV.clear(); DIRTY.clear(); VELS.clear(); for (const [k,arr] of (S.KN || [])) KN.set(k, Uint8Array.from(arr)); delete S.KN; baseMap = null; } } catch (e) {} S.paused = false; S.started = true; $('#overlay').hidden = true; if (S.offer){ S.paused = true; showOffer(S.offer); } return; }
   if (a === 'again'){ boot(true); return; }
   if (a === 'accept'){ const d = S.offerData; S.cash += d.c; S.invest[S.offer] = true; for (const vv of S.vil) bump(vv, 'Out-of-canton money', d.m); news('Investors from outside the canton take a stake. The logo on the rig changes overnight.'); S.offer = null; S.paused = false; $('#overlay').hidden = true; sfx('coin'); return; }
   if (a === 'decline'){ S.invest[S.offer] = true; news('The Company declines outside money. "We remain Jurassien," says the press release, printed in Bern.'); S.offer = null; S.paused = false; $('#overlay').hidden = true; return; }
@@ -1184,7 +1301,9 @@ function bind(){
   $('#pal').addEventListener('click', e => { const b = e.target.closest('.it'); if (!b || !S.started || S.over) return; if (b.dataset.t){ const d = DEF[b.dataset.t]; if (d.need && !resDone(d.need)){ $('#research').hidden = false; renderResearch(); toast(d.n + ' needs ' + RES[d.need].n.toLowerCase() + '. See Research.'); return; } pickTool(b.dataset.t); } });
   $('#stage').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) act(b.dataset.a, b.dataset.v); });
   $('#sp0').onclick = () => { S.paused = true; }; $('#sp1').onclick = () => { if (S.offer) return; S.paused = false; S.speed = 1; audio(); }; $('#sp4').onclick = () => { if (S.offer) return; S.paused = false; S.speed = 4; audio(); };
-  $('#mute').onclick = () => { S.muted = !S.muted; }; $('#loanbtn').onclick = () => { $('#loans').hidden = !$('#loans').hidden; $('#research').hidden = true; renderLoans(); }; $('#resbtn').onclick = () => { $('#research').hidden = !$('#research').hidden; $('#loans').hidden = true; renderResearch(); };
+  $('#mute').onclick = () => { S.muted = !S.muted; }; const pane = (id, fn) => { const open = $(id).hidden; for (const p of ['#loans', '#research', '#polls', '#wire']) $(p).hidden = true; $(id).hidden = !open; if (open) fn(); };
+  $('#loanbtn').onclick = () => pane('#loans', renderLoans); $('#resbtn').onclick = () => pane('#research', renderResearch); $('#votebtn').onclick = () => pane('#polls', renderPolls); $('#news').onclick = () => pane('#wire', renderWire);
+  $('#votebtn').onkeydown = e => { if (e.key === 'Enter') pane('#polls', renderPolls); };
   window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; const k = e.key;
     if (k === ' ' && S.started && !S.offer){ S.paused = !S.paused; e.preventDefault(); } if (k === 'Escape'){ tool = null; anchor = null; plan = null; sel = null; $('#card').hidden = true; $('#loans').hidden = true; $('#research').hidden = true; if (view === 'section') closeSection(); else cutLine = null; }
     if (view === 'section'){ if (k === 'ArrowUp'){ cam.y = clamp(cam.y - 24, 0, SURF + UGH - SH); e.preventDefault(); } if (k === 'ArrowDown'){ cam.y = clamp(cam.y + 24, 0, SURF + UGH - SH); e.preventDefault(); } } });
@@ -1193,8 +1312,8 @@ function bind(){
 function setZoom(z, cx, cy){ z = clamp(z, 1, 5); if (Math.abs(z - zoom) < 1e-3) return; const c = $('#game'), sc = $('#scroll'), r0 = c.getBoundingClientRect(), fx = (cx - r0.left)/r0.width, fy = (cy - r0.top)/r0.height;
   zoom = z; fit(true); const r1 = c.getBoundingClientRect(); sc.scrollLeft += r1.left + fx*r1.width - cx; sc.scrollTop += r1.top + fy*r1.height - cy; }
 function zoomStep(k){ const r = $('#stage').getBoundingClientRect(); setZoom(zoom*k, r.left + r.width/2, r.top + r.height/2); }
-function fit(keep){ const st = $('#stage'), c = $('#game'); const W = view === 'map' ? CW*2 : SW, H = view === 'map' ? CH*2 : SH; if (c.width !== W){ c.width = W; c.height = H; }
-  const aw = st.clientWidth - 8, ah = st.clientHeight - 8; if (aw < 50 || ah < 50) return; let s = Math.min(aw/W, ah/H); if (view === 'map') s *= zoom; if (s >= 1) s = Math.floor(s*8)/8; scale = s; c.style.width = (W*s) + 'px'; c.style.height = (H*s) + 'px';
+function fit(keep){ const st = $('#stage'), c = $('#game'); st.classList.toggle('sec', view === 'section'); st.style.setProperty('--dock', view === 'section' ? Math.min(170, Math.max(120, st.clientHeight*0.3)) + 'px' : '10px'); const W = view === 'map' ? CW*2 : SW, H = view === 'map' ? CH*2 : SH; if (c.width !== W){ c.width = W; c.height = H; }
+  const sc0 = $('#scroll'), aw = sc0.clientWidth - 8, ah = sc0.clientHeight - 8; if (aw < 50 || ah < 50) return; let s = Math.min(aw/W, ah/H); if (view === 'map') s *= zoom; if (s >= 1) s = Math.floor(s*8)/8; scale = s; c.style.width = (W*s) + 'px'; c.style.height = (H*s) + 'px';
   if (!keep){ const sc = $('#scroll'); sc.scrollLeft = (sc.scrollWidth - sc.clientWidth)/2; sc.scrollTop = (sc.scrollHeight - sc.clientHeight)/2; } }
 
 /* ================================================================== loop and boot */
