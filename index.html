@@ -69,6 +69,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #uncutbtn{position:absolute;right:10px;bottom:10px;z-index:1}
 #zoombar{position:absolute;right:10px;bottom:46px;display:flex;flex-direction:column;gap:4px;z-index:1}
 #zoombar .btn{width:30px;padding:2px 0;font-size:16px;font-weight:700}
+#zoombar.sec [data-a^="cut"]{display:none}
+#stage.sec #zoombar{bottom:calc(var(--dock,10px) + 10px)}
 #viewbar{position:absolute;top:10px;left:10px;display:flex;gap:6px;align-items:center}
 #viewbar span{font-weight:700;padding:0 4px}
 #loans{top:10px;left:10px;width:330px;max-width:calc(100% - 20px);z-index:2}
@@ -249,7 +251,7 @@ const sx = x => x*SW/MW;                                            // map x -> 
 const mx = x => x*MW/SW;
 
 /* ================================================================== state */
-let linking = null, zoom = 1, S, cam = {y:0}, view = 'map', line = null, cutLine = null, tool = null, anchor = null, sel = null, plan = null, hover = null, toastT = 0, shake = 0, lastT = 0, scale = 1, showPaper = false;
+let linking = null, zoom = 1, S, cam = {y:0, x:0, z:1}, view = 'map', line = null, cutLine = null, tool = null, anchor = null, sel = null, plan = null, hover = null, toastT = 0, shake = 0, lastT = 0, scale = 1, showPaper = false;
 const GEO = new Map(), KN = new Map(), CANV = new Map(), DIRTY = new Map();
 
 /* ------------------------------------------------------------------ geology per grid line (a slice through a 3D noise field) */
@@ -1351,7 +1353,7 @@ function bore(g, p, q, cased, y0){ const n = Math.max(1, Math.hypot(q.x - p.x, q
 function drawSection(g, t){
   const li = line, l = S.lines[li], cy = cam.y|0; flushKnown(li); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
   g.save(); if (shake > 0.02){ g.translate(((Math.random()-.5)*6*shake)|0, ((Math.random()-.5)*6*shake)|0); shake *= 0.92; } else shake = 0;
-  g.translate(0, -cy);
+  g.scale(cam.z, cam.z); g.translate(-cam.x, -cy);
   /* surface strip */
   const winter = S.season >= 11 || S.season <= 1;
   for (let y = 0; y < SURF; y++){ g.fillStyle = y < 18 ? PAL.sky1 : y < 34 ? PAL.sky2 : PAL.sky3; g.fillRect(0, y, SW, 1); }
@@ -1376,12 +1378,12 @@ function drawSection(g, t){
       if (hover && hover.ug){ const hq = {x:maxBend(o) ? hover.ug.x : p.x, d:hover.ug.d}; const e = validPoint(o, p, hq); g.strokeStyle = e ? PAL.warn : '#ffe06a'; g.beginPath(); g.moveTo(p.x, SURF + p.d); g.lineTo(hq.x, SURF + hq.d); g.stroke(); } g.setLineDash([]);
       for (const q of plan.pts) R(g, '#64c86b', q.x - 1, SURF + q.d - 1, 3, 3); } }
   }
-  for (let d = 50; d < UGH; d += 50){ R(g, 'rgba(255,255,255,.4)', 0, SURF + d, 12, 1); T(g, (d*10).toLocaleString('en-US') + ' m', 14, SURF + d + 3, showPaper ? '#5a4a2a' : '#fff', 9, 'left', showPaper ? null : 'rgba(11,15,31,.6)'); }
+  if (sel && sel.id){ const o = byId(sel.id); if (o && o.line === li){ g.strokeStyle = PAL.warn; g.lineWidth = 1; g.strokeRect(sx(o.x) - 9.5, SURF - 36.5, 19, 34); } }
+  for (let d = 50; d < UGH; d += 50){ R(g, 'rgba(255,255,255,.4)', cam.x, SURF + d, 12, 1); T(g, (d*10).toLocaleString('en-US') + ' m', cam.x + 14, SURF + d + 3, showPaper ? '#5a4a2a' : '#fff', 9, 'left', showPaper ? null : 'rgba(11,15,31,.6)'); }
   g.restore();
   /* legend strip */
   if (!showPaper){ const lx = SW - 250, ly = SH - 40; R(g, 'rgba(11,15,31,.25)', lx + 2, ly + 2, 242, 34); R(g, '#f2f3f5', lx, ly, 242, 34); T(g, 'Reflection seismic', lx + 6, ly + 11, '#15181c', 9);
     R(g, '#1e1e1e', lx + 6, ly + 16, 10, 6); T(g, 'harder rock below', lx + 19, ly + 22, '#15181c', 8); R(g, '#f5f2ec', lx + 106, ly + 16, 10, 6); g.strokeStyle = '#999'; g.strokeRect(lx + 106.5, ly + 16.5, 9, 5); T(g, 'softer below', lx + 119, ly + 22, '#15181c', 8); T(g, 'breaks = faults', lx + 180, ly + 22, '#15181c', 8); }
-  if (sel && sel.id){ const o = byId(sel.id); if (o && o.line === li){ g.strokeStyle = PAL.warn; g.lineWidth = 1; g.strokeRect(sx(o.x) - 9.5, SURF - 36.5 - cy, 19, 34); } }
 }
 /* ================================================================== HUD, palette, cards */
 function buildPalette(){
@@ -1408,7 +1410,7 @@ function hud(){
       const base = d.c || (d.cost ? fmt(d.cost) : '') + (d.up && d.cost ? ' + ' + fmt(d.up).replace('CHF ', '') + '/mo' : ''); const txt = locked ? base + ' \u00b7 needs research' : noUni ? base + ' \u00b7 needs a university' : base; if (el.textContent !== txt){ el.textContent = txt; el.className = locked || noUni ? 'lock' : ''; }
       b.setAttribute('aria-pressed', tool === tk); } });
   const vb = $('#viewbar'); vb.hidden = view !== 'section'; if (view === 'section'){ const l = S.lines[line]; $('#linename').textContent = 'Line ' + l.name + (l.legacy ? '' : ' (no 1970s data)'); $('#togglebtn').textContent = showPaper ? 'Show survey' : '1970s paper'; $('#togglebtn').disabled = !l.legacy && !showPaper; }
-  $('#zoombar').hidden = !(view === 'map' && S.started && !S.over);
+  $('#zoombar').hidden = !(S.started && !S.over); $('#zoombar').classList.toggle('sec', view === 'section');
   $('#uncutbtn').hidden = !(view === 'map' && cutLine !== null && S.started && !S.over);
   const hint = $('#hint'); let hs = '';
   if (plan) hs = ''; else if (tool) hs = anchor ? (tool === 'survey' ? 'Now click where the stretch ends on the same line.' : tool === 'pipe' ? 'Now click the village to heat.' : 'Now click the second deep rig.') : DEF[tool].n + ': ' + DEF[tool].h;
@@ -1633,8 +1635,10 @@ function toWorld(e){ const c = $('#game'), r = c.getBoundingClientRect();
   if (view === 'map'){ const cx = (e.clientX - r.left)/r.width*CW, cy = (e.clientY - r.top)/r.height*CH, yc = cutLine !== null ? S.lines[cutLine].y : MH, w = unP(cx, cy);
     if (w.x >= 0 && w.x <= MW && w.y >= 0 && w.y <= yc) return {x:w.x, y:w.y};
     const xf = cx - OX + yc*KX, v = (cy - OY - (xf + yc)*KY)*UGH/D; if (xf >= 0 && xf <= MW && v >= 0 && v <= UGH) return {face:true, u:xf*SW/MW, v}; return {}; }
-  const x = (e.clientX - r.left)/r.width*SW, y = (e.clientY - r.top)/r.height*SH + cam.y; return {x, y, ug:y > SURF ? {x:clamp(x, 0, SW-1), d:clamp(y - SURF, 0, UGH-1)} : null}; }
-function openSection(li){ if (plan && (byId(plan.rig) || {}).line !== li) plan = null; view = 'section'; line = li; cutLine = li; sel = null; $('#card').hidden = true; anchor = null; if (tool && !['pass2'].includes(tool)) tool = null; cam.y = 0; fit(); }
+  const x = (e.clientX - r.left)/r.width*SW/cam.z + cam.x, y = (e.clientY - r.top)/r.height*SH/cam.z + cam.y; return {x, y, ug:y > SURF ? {x:clamp(x, 0, SW-1), d:clamp(y - SURF, 0, UGH-1)} : null}; }
+const secMaxY = () => Math.max(0, SURF + UGH - SH/cam.z), secMaxX = () => Math.max(0, SW - SW/cam.z);
+function secZoom(z, fx, fy){ z = clamp(z, 1, 4); fx = fx === undefined ? 0.5 : fx; fy = fy === undefined ? 0.5 : fy; const wx = cam.x + fx*SW/cam.z, wy = cam.y + fy*SH/cam.z; cam.z = z; cam.x = clamp(wx - fx*SW/z, 0, secMaxX()); cam.y = clamp(wy - fy*SH/z, 0, secMaxY()); }
+function openSection(li){ if (plan && (byId(plan.rig) || {}).line !== li) plan = null; if (view !== 'section'){ cam.z = 1; cam.x = 0; } view = 'section'; line = li; cutLine = li; sel = null; $('#card').hidden = true; anchor = null; if (tool && !['pass2'].includes(tool)) tool = null; cam.y = 0; fit(); }
 function closeSection(){ view = 'map'; plan = null; sel = null; $('#card').hidden = true; $('#readout').hidden = true; fit(); }
 function pickTool(tk){ anchor = null; plan = null; linking = null; if (tool === tk){ tool = null; return; } tool = tk; sel = null; $('#card').hidden = true; sfx('click');
   if (DEF[tk].now){ const r = place(tk, 0, 0); tool = null; toast(r === 'ok' ? DEF[tk].n + (tk === 'congress' ? ' booked.' : ' sent.') : r); return; }
@@ -1666,7 +1670,7 @@ function act(a, v){
   if (a === 'vil'){ sel = {v:Number(v)}; renderCard(); return; }
   if (a === 'research'){ const r = research(v); toast(r === 'ok' ? RES[v].n + ' started.' : r); return; } if (a === 'uncut'){ cutLine = null; sel = null; $('#card').hidden = true; return; }
   if (a === 'cutup' || a === 'cutdown'){ stepCut(a === 'cutup' ? -1 : 1); return; } if (a === 'secprev' || a === 'secnext'){ const y0 = cam.y; openSection(clamp(line + (a === 'secprev' ? -1 : 1), 0, S.lines.length - 1)); cam.y = y0; return; }
-  if (a === 'zin'){ zoomStep(1.5); return; } if (a === 'zout'){ zoomStep(1/1.5); return; }
+  if (a === 'zin'){ if (view === 'section') secZoom(cam.z*1.5); else zoomStep(1.5); return; } if (a === 'zout'){ if (view === 'section') secZoom(cam.z/1.5); else zoomStep(1/1.5); return; }
   if (a === 'map'){ closeSection(); return; } if (a === 'toggle'){ showPaper = !showPaper; return; }
   if (a === 'start'){ S.started = true; S.paused = false; $('#overlay').hidden = true; audio(); return; }
   if (a === 'continue'){ try { const d = JSON.parse(localStorage.getItem('jf3_save')); if (d && d.v === 4){ S = d; GEO.clear(); KN.clear(); CANV.clear(); DIRTY.clear(); for (const [k,arr] of (S.KN || [])) KN.set(k, Uint8Array.from(arr)); delete S.KN; baseMap = null; } } catch (e) {} S.paused = false; S.started = true; $('#overlay').hidden = true; if (S.offer){ S.paused = true; showOffer(S.offer); } else if (S.event){ S.paused = true; showEvent(); } return; }
@@ -1679,7 +1683,7 @@ function act(a, v){
   if (plan){ if (a === 'shoe'){ plan.shoe = clamp(plan.shoe + Number(v)*10, 10, 200); return; } if (a === 'ptop'){ plan.top = v; return; } if (a === 'pbit'){ plan.bit = v; return; } if (a === 'pmud'){ plan.mud = v; return; } if (a === 'pcbl'){ plan.cbl = !plan.cbl; return; } if (a === 'psalt'){ plan.saltMud = !plan.saltMud; return; } }
   if (a === 'open'){ if (sel && sel.line !== undefined) openSection(sel.line); else if (sel && sel.id){ const o = byId(sel.id); if (o && o.line !== undefined){ const id = o.id; openSection(o.line); sel = {id}; renderCard(); } } return; }
   const o = sel && byId(sel.id); if (!o) return;
-  if (a === 'plan'){ if (view !== 'section') openSection(o.line); plan = newPlan(o); tool = null; sel = null; $('#card').hidden = true; cam.y = clamp(SURF + tip(o).d - 80, 0, SURF + UGH - SH); return; }
+  if (a === 'plan'){ if (view !== 'section') openSection(o.line); plan = newPlan(o); tool = null; sel = null; $('#card').hidden = true; cam.y = clamp(SURF + tip(o).d - 80, 0, secMaxY()); return; }
   if (a === 'talk'){ if (o.talking === undefined && !o.talked){ if (!canPay(20)){ toast('Talking costs ' + fmt(20) + '.'); return; } S.cash -= 20; acct('Liaison officers', -20); o.talking = S.t; sfx('click'); } return; }
   if (a === 'stim'){ const r = stimulate(o, Number(v)); if (r !== 'ok') toast(r); return; }
   if (a === 'link'){ linking = {st:o.id, role:v}; tool = null; toast('Click a rig to use it as the ' + (v === 'prod' ? 'production' : 'injection') + ' well.'); return; }
@@ -1698,15 +1702,15 @@ function bind(){
   const ptrs = new Map(), sc = $('#scroll'); let pinch = null;           // one finger drags (pans the block, scrolls the section), two fingers pinch-zoom the block
   const two = () => { const [a, b] = [...ptrs.values()]; return {d:Math.hypot(a.x - b.x, a.y - b.y), x:(a.x + b.x)/2, y:(a.y + b.y)/2}; };
   c.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY}); try { c.setPointerCapture(e.pointerId); } catch (err) {}
-    if (ptrs.size === 2){ pinch = {d:two().d, z:zoom}; drag = null; return; } drag = {x:e.clientX, y:e.clientY, cy:cam.y, sl:sc.scrollLeft, st:sc.scrollTop}; moved = false; });
+    if (ptrs.size === 2){ pinch = {d:two().d, z:view === 'map' ? zoom : cam.z}; drag = null; return; } drag = {x:e.clientX, y:e.clientY, cy:cam.y, cx:cam.x, sl:sc.scrollLeft, st:sc.scrollTop}; moved = false; });
   c.addEventListener('pointermove', e => { if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY}); hover = toWorld(e);
-    if (pinch && ptrs.size === 2){ const m = two(); if (view === 'map') setZoom(pinch.z*m.d/Math.max(1, pinch.d), m.x, m.y); return; }
+    if (pinch && ptrs.size === 2){ const m = two(); if (view === 'map') setZoom(pinch.z*m.d/Math.max(1, pinch.d), m.x, m.y); else { const r = c.getBoundingClientRect(); secZoom(pinch.z*m.d/Math.max(1, pinch.d), (m.x - r.left)/r.width, (m.y - r.top)/r.height); } return; }
     if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.hypot(dx, dy) > 6) moved = true; if (!moved) return;
-    if (view === 'section') cam.y = clamp(drag.cy - dy/scale, 0, SURF + UGH - SH); else { sc.scrollLeft = drag.sl - dx; sc.scrollTop = drag.st - dy; } });
+    if (view === 'section'){ cam.y = clamp(drag.cy - dy/scale/cam.z, 0, secMaxY()); cam.x = clamp(drag.cx - dx/scale/cam.z, 0, secMaxX()); } else { sc.scrollLeft = drag.sl - dx; sc.scrollTop = drag.st - dy; } });
   const lift = e => { ptrs.delete(e.pointerId); if (pinch){ if (ptrs.size < 2) pinch = null; drag = null; return true; } return false; };
   c.addEventListener('pointerup', e => { if (lift(e)) return; if (drag && !moved) clickWorld(toWorld(e)); drag = null; });
   c.addEventListener('pointerleave', () => { hover = null; }); c.addEventListener('pointercancel', e => { lift(e); drag = null; });
-  c.addEventListener('wheel', e => { e.preventDefault(); if (view === 'section') cam.y = clamp(cam.y + e.deltaY*0.5, 0, SURF + UGH - SH); else setZoom(zoom*(e.deltaY < 0 ? 1.15 : 1/1.15), e.clientX, e.clientY); }, {passive:false});
+  c.addEventListener('wheel', e => { e.preventDefault(); if (view === 'section'){ if (e.ctrlKey || e.metaKey){ const r = c.getBoundingClientRect(); secZoom(cam.z*(e.deltaY < 0 ? 1.15 : 1/1.15), (e.clientX - r.left)/r.width, (e.clientY - r.top)/r.height); } else if (e.shiftKey) cam.x = clamp(cam.x + e.deltaY*0.5/cam.z, 0, secMaxX()); else cam.y = clamp(cam.y + e.deltaY*0.5/cam.z, 0, secMaxY()); } else setZoom(zoom*(e.deltaY < 0 ? 1.15 : 1/1.15), e.clientX, e.clientY); }, {passive:false});
   $('#pal').addEventListener('click', e => { const b = e.target.closest('.it'); if (!b || !S.started || S.over) return; if (b.dataset.t){ const d = DEF[b.dataset.t]; if (d.need && !resDone(d.need)){ $('#research').hidden = false; renderResearch(); toast(d.n + ' needs ' + RES[d.need].n.toLowerCase() + '. See Research.'); return; } pickTool(b.dataset.t); } });
   $('#stage').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) act(b.dataset.a, b.dataset.v); });
   $('#sp0').onclick = () => { S.paused = true; }; $('#sp1').onclick = () => { if (S.offer || S.event) return; S.paused = false; S.speed = 1; audio(); }; $('#sp4').onclick = () => { if (S.offer || S.event) return; S.paused = false; S.speed = 4; audio(); }; $('#sp05').onclick = () => { if (S.offer || S.event) return; S.paused = false; S.speed = 0.5; audio(); };
@@ -1716,7 +1720,7 @@ function bind(){
   window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; const k = e.key;
     if (k === ' ' && S.started && !S.offer && !S.event){ S.paused = !S.paused; e.preventDefault(); } if (k === 'Escape'){ tool = null; anchor = null; plan = null; linking = null; sel = null; $('#card').hidden = true; $('#loans').hidden = true; $('#research').hidden = true; if (view === 'section') closeSection(); else cutLine = null; }
     if ((k === '[' || k === ']') && S.started){ if (view === 'section'){ const y0 = cam.y; openSection(clamp(line + (k === '[' ? -1 : 1), 0, S.lines.length - 1)); cam.y = y0; } else stepCut(k === '[' ? -1 : 1); }
-    if (view === 'section'){ if (k === 'ArrowUp'){ cam.y = clamp(cam.y - 24, 0, SURF + UGH - SH); e.preventDefault(); } if (k === 'ArrowDown'){ cam.y = clamp(cam.y + 24, 0, SURF + UGH - SH); e.preventDefault(); } } });
+    if (view === 'section'){ if (k === 'ArrowUp'){ cam.y = clamp(cam.y - 24, 0, secMaxY()); e.preventDefault(); } if (k === 'ArrowDown'){ cam.y = clamp(cam.y + 24, 0, secMaxY()); e.preventDefault(); } } });
   window.addEventListener('resize', fit);
 }
 function stepCut(dir){ cutLine = cutLine === null ? (dir > 0 ? 0 : S.lines.length - 1) : clamp(cutLine + dir, 0, S.lines.length - 1); showPaper = false; }
@@ -1742,7 +1746,7 @@ function boot(fresh){
   if (!bound){ buildPalette(); bind(); bound = true; requestAnimationFrame(tt => { lastT = tt; frame(tt); }); }
   zoom = $('#stage').clientWidth < 700 ? 2 : 1; fit(); showContract(hasSave);
 }
-window.JF = {pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, research, borrow, commitPlan, stimulate, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, SURF + UGH - SH); }, select:s => { sel = s; renderCard(); },
+window.JF = {pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, research, borrow, commitPlan, stimulate, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, secMaxY()); }, select:s => { sel = s; renderCard(); },
   newGame:seed => { newGame(seed); S.started = true; S.paused = false; view = 'map'; cutLine = null; baseMap = null; fit(); $('#overlay').hidden = true; }, setCut:li => { cutLine = li; }, get cutLine(){ return cutLine; }};
 const ready = document.fonts && document.fonts.load ? document.fonts.load('12px "Pixelify Sans"').catch(() => {}) : Promise.resolve();
 ready.then(() => boot(false));
