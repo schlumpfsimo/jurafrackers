@@ -49,7 +49,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .it.off{opacity:.5}
 .it .lock{color:var(--warn)}
 #stage{position:relative;min-width:0;min-height:0;overflow:hidden;background:linear-gradient(#f6f8fa,#dbe1e7);display:flex;align-items:center;justify-content:center}
-#game{image-rendering:pixelated;image-rendering:crisp-edges;display:block;cursor:crosshair;touch-action:none}
+#scroll{position:absolute;inset:0;overflow:auto;display:flex}
+#game{margin:auto;image-rendering:pixelated;image-rendering:crisp-edges;display:block;cursor:crosshair;touch-action:none}
 .pane{position:absolute;box-sizing:border-box;padding:9px 11px;background:var(--panel);border:1px solid var(--lo2);box-shadow:inset 1px 1px 0 var(--hi),inset -1px -1px 0 var(--lo),3px 3px 0 rgba(0,0,0,.15);max-height:calc(100% - 20px);overflow:auto}
 .pane h4{margin:0 22px 2px 0;font-size:14px;padding-bottom:3px;border-bottom:1px solid var(--line)}
 #card{top:10px;right:10px;width:300px;max-width:calc(100% - 20px)}
@@ -62,6 +63,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .meter i{position:absolute;inset:0 auto 0 0;background:var(--ok)}
 #hint{position:absolute;left:10px;bottom:10px;max-width:min(62%,620px);box-sizing:border-box;padding:5px 10px;background:rgba(242,243,245,.96);border:1px solid var(--lo2);box-shadow:inset 1px 1px 0 var(--hi),inset -1px -1px 0 var(--lo);font-size:12.5px}
 #toast{position:absolute;top:10px;left:50%;transform:translateX(-50%);max-width:calc(100% - 20px);box-sizing:border-box;padding:5px 12px;background:#fff;border:1px solid var(--warn);color:var(--warn);font-weight:700;text-align:center}
+#uncutbtn{position:absolute;right:10px;bottom:10px;z-index:1}
 #viewbar{position:absolute;top:10px;left:10px;display:flex;gap:6px;align-items:center}
 #viewbar span{font-weight:700;padding:0 4px}
 #loans{top:10px;left:10px;width:330px;max-width:calc(100% - 20px);z-index:2}
@@ -70,11 +72,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #loans td:first-child,#loans th:first-child{text-align:left}
 #research{top:10px;left:10px;width:330px;max-width:calc(100% - 20px);z-index:2}
 #research .row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-top:1px dotted var(--line)}
-#steps{position:absolute;top:10px;left:10px;width:230px;padding:8px 10px;font-size:12px}
-#steps ol{margin:4px 0 0;padding-left:18px}
-#steps li{margin:2px 0}
-#steps li.done{color:var(--muted);text-decoration:line-through}
-#steps li.now{font-weight:700}
+#steps{position:absolute;top:10px;left:10px;max-width:calc(100% - 20px);padding:4px 10px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#steps span{color:var(--muted)}
 #overlay{position:absolute;inset:0;background:rgba(40,45,52,.55);display:flex;align-items:flex-start;justify-content:center;padding:12px;overflow:auto;z-index:3;box-sizing:border-box}
 .contract{margin:auto;background:var(--paper);color:#2b2318;border:1px solid #5a4a2a;max-width:560px;padding:16px 22px;font-size:13.5px;line-height:1.4;position:relative;box-shadow:4px 4px 0 rgba(0,0,0,.25)}
 .contract:before{content:"";position:absolute;inset:5px;border:1px solid #8a7a55;pointer-events:none}
@@ -94,7 +93,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #news b{color:var(--warn);letter-spacing:.14em;font-size:10.5px;flex:none}
 #news span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #readout{position:absolute;right:10px;bottom:10px;width:300px;max-width:calc(100% - 20px);background:var(--paper);color:#2b2318;border:1px solid #5a4a2a;padding:8px 10px;box-sizing:border-box;font:11.5px/1.4 "Courier New",monospace;max-height:40%;overflow:auto;white-space:pre-wrap}
-@media (max-width:820px){ #app{grid-template:auto minmax(0,1fr) auto auto / minmax(0,1fr)} #top{grid-row:1} #stage{grid-row:2} #pal{grid-row:3;flex-direction:row;overflow-x:auto} #news{grid-row:4} #pal h3{writing-mode:vertical-rl;transform:rotate(180deg);margin:0 2px;flex:none} .it{flex:none;width:auto;flex-direction:column;min-width:64px;text-align:center;padding:2px} .it span{align-items:center} #steps{display:none} }
+@media (max-width:820px){ #app{grid-template:auto minmax(0,1fr) auto auto / minmax(0,1fr)} #top{grid-row:1} #stage{grid-row:2} #pal{grid-row:3;flex-direction:row;overflow-x:auto} #news{grid-row:4} #pal h3{writing-mode:vertical-rl;transform:rotate(180deg);margin:0 2px;flex:none} .it{flex:none;width:auto;flex-direction:column;min-width:64px;text-align:center;padding:2px} .it span{align-items:center} #steps{font-size:11px} }
 </style>
 </head>
 <body>
@@ -110,13 +109,14 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   </header>
   <nav id="pal" class="box" aria-label="Objects"></nav>
   <main id="stage" class="box">
-    <canvas id="game" width="480" height="270"></canvas>
+    <div id="scroll"><canvas id="game" width="480" height="270"></canvas></div>
     <div id="viewbar" hidden><button class="btn" data-a="map">&larr; Block</button><span id="linename"></span><button class="btn" data-a="toggle" id="togglebtn">1970s paper</button></div>
     <aside id="card" class="pane" hidden></aside>
     <aside id="loans" class="pane" hidden></aside>
     <aside id="research" class="pane" hidden></aside>
     <aside id="steps" class="pane" hidden></aside>
     <pre id="readout" hidden></pre>
+    <button class="btn" id="uncutbtn" data-a="uncut" hidden title="Show the whole block (Esc)">&times; Close cut</button>
     <div id="hint" hidden></div>
     <div id="toast" hidden></div>
     <div id="overlay"></div>
@@ -702,6 +702,7 @@ function obj(g, o, t){
     case 'activists': vehicle(g, 'van', x - 4, y, 'x', null); person(g, x + 4, y + 2, t, '#1c2225', 'STOP'); break;
     case 'counterfest': wpoly(g, [[x - 3, y + 2, 0], [x + 3, y + 2, 0], [x, y, 4]], '#1c2225', 'rgba(0,0,0,.4)'); wpoly(g, [[x - 3, y - 2, 0], [x + 3, y - 2, 0], [x, y, 4]], '#2f343a', 'rgba(0,0,0,.4)'); break;
   }
+  if (SITE[o.type] && !o.burnt && o.id !== undefined){ const z = {testrig:11, light:16, deep:23, dir:23, station:7.5, plant:13}[o.type], fx0 = o.type === 'station' ? x + 2.6 : o.type === 'plant' ? x + 3.2 : x, fy0 = o.type === 'station' ? y - 1.9 : o.type === 'plant' ? y - 0.8 : y; const a = P(fx0, fy0, z), b = P(fx0, fy0, z + 5); g.strokeStyle = '#2b313c'; g.lineWidth = 0.4; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); poly(g, [[b[0], b[1]], [b[0] + 3.5, b[1] + 0.9 + 0.3*Math.sin(t*5 + o.id)], [b[0], b[1] + 2]], '#1f5fa8'); }
   if (o.fenced && SITE[o.type]){ g.strokeStyle = '#666'; g.lineWidth = 0.5; const w = o.type === 'plant' ? 9 : 6; const pts = [[x - w, y - w*0.7], [x + w, y - w*0.7], [x + w, y + w*0.7], [x - w, y + w*0.7]]; for (let i = 0; i < 4; i++){ const a = pts[i], b = pts[(i + 1)%4]; for (let f = 0; f <= 1; f += 0.2){ const px = a[0] + (b[0]-a[0])*f, py = a[1] + (b[1]-a[1])*f; const q = P(px, py, 0), q2 = P(px, py, 2); g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(q2[0], q2[1]); g.stroke(); } const a2 = P(a[0], a[1], 1.6), b2 = P(b[0], b[1], 1.6); g.beginPath(); g.moveTo(a2[0], a2[1]); g.lineTo(b2[0], b2[1]); g.stroke(); } }
   if (!o.on && !o.burnt && o.arrived){ const f = clamp((S.t - o.t0)/Math.max(0.01, o.ready - o.t0), 0, 1), p = P(x, y, 0); R(g, '#1c2225', p[0] - 4, p[1] + 2, 8.5, 1.8); R(g, '#f2c230', p[0] - 3.7, p[1] + 2.4, 7.9*f, 1); }
 }
@@ -717,6 +718,7 @@ function drawBase(cutY){
   const li = cutLine !== null ? cutLine : S.lines.length - 1; const col = x => rockL(li, x, 0);
   wpoly(g, [[MW, 0, 0], [MW, yc, 0], [MW, yc, -D], [MW, 0, -D]], '#c9c1b2', 'rgba(0,0,0,.5)');
   for (let d = 0; d < UGH; d += 10){ const t = rockL(li, SW - 2, d + 5), c = RCOL[t][0]; wpoly(g, [[MW, 0, -d*D/UGH], [MW, yc, -d*D/UGH], [MW, yc, -(d + 10)*D/UGH], [MW, 0, -(d + 10)*D/UGH]], shade(c, 0.85)); }
+  if (winter) wpoly(g, [[MW, 0, 0], [MW, yc, 0], [MW, yc, -2.2], [MW, 0, -2.2]], '#f4f7f9');
   g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 0.6; wpoly(g, [[MW, 0, 0], [MW, yc, 0], [MW, yc, -D], [MW, 0, -D]], null, 'rgba(0,0,0,.55)', 0.6);
   /* top face */
   wpoly(g, [[0, 0, 0], [MW, 0, 0], [MW, yc, 0], [0, yc, 0]], groundColor(winter));
@@ -754,7 +756,7 @@ function drawMap(g, t){
   faceTransform(g, yc); g.drawImage(showPaper ? paperCanvas(li) : knownCanvas(li), 0, 0);
   if (!showPaper){ for (const o of S.obj) if (o.line === li && o.well){ let p = {x:sx(o.x), d:0}; const pts = o.well.slice(); if (o.drilling) pts.push(o.drilling.pos); for (let i = 0; i < pts.length; i++){ const q = pts[i]; g.strokeStyle = (i < o.well.length ? o.well[i].c : o.drilling.cased) ? '#9aa0aa' : '#b8794b'; g.lineWidth = 5; g.beginPath(); g.moveTo(p.x, p.d); g.lineTo(q.x, q.d); g.stroke(); g.strokeStyle = '#0c1020'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(p.x, p.d); g.lineTo(q.x, q.d); g.stroke(); p = q; } }
     for (const q of S.quakes) if (q.line === li){ g.strokeStyle = '#111'; g.lineWidth = 1.5; g.beginPath(); g.arc(q.x, q.d, 6, 0, 7); g.stroke(); } }
-  g.setTransform(2, 0, 0, 2, 0, 0); wpoly(g, [[0, yc, 0], [MW, yc, 0], [MW, yc, -D], [0, yc, -D]], null, 'rgba(0,0,0,.6)', 0.7);
+  g.setTransform(2, 0, 0, 2, 0, 0); if (S.season >= 11 || S.season <= 1) wpoly(g, [[0, yc, 0], [MW, yc, 0], [MW, yc, -2.2], [0, yc, -2.2]], '#f4f7f9'); wpoly(g, [[0, yc, 0], [MW, yc, 0], [MW, yc, -D], [0, yc, -D]], null, 'rgba(0,0,0,.6)', 0.7);
   for (let d = 100; d < UGH; d += 100){ const p = P(0, yc, -d*D/UGH); T(g, (d*10).toLocaleString('en-US') + ' m', p[0] - 2, p[1] + 2, '#15181c', 5.5, 'right'); }
   /* surface drawables, sorted by depth */
   const mo = S.season, winter = mo >= 11 || mo <= 1, autumn = mo === 9 || mo === 10, draws = [], K = (x, y) => x + y;
@@ -892,7 +894,8 @@ function drawSection(g, t){
   for (let d = 50; d < UGH; d += 50){ R(g, 'rgba(255,255,255,.4)', 0, SURF + d, 12, 1); T(g, (d*10).toLocaleString('en-US') + ' m', 14, SURF + d + 3, showPaper ? '#5a4a2a' : '#fff', 9, 'left', showPaper ? null : 'rgba(11,15,31,.6)'); }
   g.restore();
   /* legend strip */
-  if (!showPaper){ R(g, 'rgba(255,255,255,.85)', SW - 150, SH - 16, 142, 12); for (let i = 0; i < 100; i++) R(g, rainbow(-10 + i*0.2), SW - 146 + i, SH - 13, 1, 6); T(g, 'slow', SW - 146, SH - 5, '#0b1b2b', 7); T(g, 'fast', SW - 46, SH - 5, '#0b1b2b', 7, 'right'); T(g, 'Vs', SW - 36, SH - 5, '#0b1b2b', 7); }
+  if (!showPaper){ const lx = SW - 238, ly = SH - 46; R(g, 'rgba(11,15,31,.25)', lx + 2, ly + 2, 230, 40); R(g, '#f2f3f5', lx, ly, 230, 40); T(g, 'Shear-wave speed (Vs)', lx + 6, ly + 11, '#15181c', 9);
+    for (let i = 0; i < 218; i++) R(g, rainbow(-10 + i*20/218), lx + 6 + i, ly + 15, 1, 8); T(g, 'slow: water, faults, hot rock', lx + 6, ly + 35, '#15181c', 8); T(g, 'fast: dolomite, granite', lx + 224, ly + 35, '#15181c', 8, 'right'); }
   if (sel && sel.id){ const o = byId(sel.id); if (o && o.line === li){ g.strokeStyle = PAL.warn; g.lineWidth = 1; g.strokeRect(sx(o.x) - 9.5, SURF - 36.5 - cy, 19, 34); } }
 }
 /* ================================================================== HUD, palette, cards */
@@ -920,9 +923,10 @@ function hud(){
       const base = d.c || (d.cost ? fmt(d.cost) : '') + (d.up && d.cost ? ' + ' + d.up + 'k/mo' : ''); const txt = locked ? base + ' \u00b7 needs research' : base; if (el.textContent !== txt){ el.textContent = txt; el.className = locked ? 'lock' : ''; }
       b.setAttribute('aria-pressed', tool === tk); } });
   const vb = $('#viewbar'); vb.hidden = view !== 'section'; if (view === 'section'){ const l = S.lines[line]; $('#linename').textContent = 'Line ' + l.name + (l.legacy ? '' : ' (no 1970s data)'); $('#togglebtn').textContent = showPaper ? 'Show survey' : '1970s paper'; $('#togglebtn').disabled = !l.legacy && !showPaper; }
+  $('#uncutbtn').hidden = !(view === 'map' && cutLine !== null && S.started && !S.over);
   const hint = $('#hint'); let hs = '';
   if (plan) hs = ''; else if (tool) hs = anchor ? (tool === 'survey' ? 'Now click where the stretch ends on the same line.' : tool === 'pipe' ? 'Now click the village to heat.' : 'Now click the second deep rig.') : DEF[tool].n + ': ' + DEF[tool].h;
-  else if (view === 'map') hs = cutLine !== null ? 'The block is cut along line ' + S.lines[cutLine].name + '. Click the face to open it flat; Esc closes the cut.' : 'Click a dotted grid line to cut the block there. Click houses to hear how a village feels.';
+  else if (view === 'map') hs = cutLine !== null ? 'The block is cut along line ' + S.lines[cutLine].name + '. Click the face to open it flat.' : 'Click a dotted grid line to cut the block there. Click houses to hear how a village feels.';
   if (hs){ if (hint.textContent !== hs){ hint.textContent = hs; hint.dataset.plan = ''; } hint.hidden = false; } else if (!plan) hint.hidden = true;
   if (toastT && performance.now() > toastT){ $('#toast').hidden = true; toastT = 0; }
   const ro = $('#readout'); const tr = sel && sel.id && byId(sel.id); if (view === 'section' && tr && tr.type === 'testrig' && tr.log){ if (ro.textContent !== tr.log) ro.textContent = tr.log; ro.hidden = false; } else ro.hidden = true;
@@ -973,7 +977,7 @@ function renderSteps(){
   const el = $('#steps'); if (!S.started || S.over || S.month > 48 || view !== 'map'){ el.hidden = true; return; }
   const st = [['Survey a stretch of a grid line', S.lines.some(l => l.segs.length)], ['Place a rig on the surveyed stretch', S.obj.some(o => RIG[o.type] || o.type === 'station' || o.type === 'plant')], ['Open the line and draw the well', S.obj.some(o => (o.well && o.well.length) || o.drilling)], ['Reach warm water, build a heat station', S.obj.some(o => o.type === 'station' || o.type === 'plant')], ['Lay a heat pipe to a village', S.pipes.length > 0]];
   if (st.every(x => x[1])){ el.hidden = true; return; }
-  let seen = false; let h = '<b>First well</b><ol>' + st.map(x => { const now = !x[1] && !seen; if (now) seen = true; return '<li class="' + (x[1] ? 'done' : now ? 'now' : '') + '">' + x[0] + '</li>'; }).join('') + '</ol>';
+  const i = st.findIndex(x => !x[1]); let h = '<span>First well, step ' + (i + 1) + ' of ' + st.length + ':</span> <b>' + st[i][0] + '</b>';
   if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } el.hidden = false;
 }
 function renderLoans(){
@@ -1084,7 +1088,7 @@ function bind(){
   c.addEventListener('pointerdown', e => { drag = {y:e.clientY, cy:cam.y}; moved = false; c.setPointerCapture(e.pointerId); });
   c.addEventListener('pointermove', e => { hover = toWorld(e); if (drag && view === 'section'){ const dy = (e.clientY - drag.y)/scale; if (Math.abs(dy) > 4) moved = true; if (moved) cam.y = clamp(drag.cy - dy, 0, SURF + UGH - SH); } });
   c.addEventListener('pointerup', e => { if (drag && !moved) clickWorld(toWorld(e)); drag = null; });
-  c.addEventListener('pointerleave', () => { hover = null; });
+  c.addEventListener('pointerleave', () => { hover = null; }); c.addEventListener('pointercancel', () => { drag = null; });
   c.addEventListener('wheel', e => { if (view !== 'section') return; e.preventDefault(); cam.y = clamp(cam.y + e.deltaY*0.5, 0, SURF + UGH - SH); }, {passive:false});
   $('#pal').addEventListener('click', e => { const b = e.target.closest('.it'); if (!b || !S.started || S.over) return; if (b.dataset.t){ const d = DEF[b.dataset.t]; if (d.need && !resDone(d.need)){ $('#research').hidden = false; renderResearch(); toast(d.n + ' needs ' + RES[d.need].n.toLowerCase() + '. See Research.'); return; } pickTool(b.dataset.t); } });
   $('#stage').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) act(b.dataset.a, b.dataset.v); });
@@ -1096,7 +1100,8 @@ function bind(){
   window.addEventListener('resize', fit);
 }
 function fit(){ const st = $('#stage'), c = $('#game'); const W = view === 'map' ? CW*2 : SW, H = view === 'map' ? CH*2 : SH; if (c.width !== W){ c.width = W; c.height = H; }
-  const aw = st.clientWidth - 8, ah = st.clientHeight - 8; if (aw < 50 || ah < 50) return; let s = Math.min(aw/W, ah/H); if (s >= 1) s = Math.floor(s*8)/8; scale = s; c.style.width = (W*s) + 'px'; c.style.height = (H*s) + 'px'; }
+  const aw = st.clientWidth - 8, ah = st.clientHeight - 8; if (aw < 50 || ah < 50) return; let s = Math.min(aw/W, ah/H); if (view === 'map' && aw < 700) s = Math.min(ah/H, 2*aw/W); if (s >= 1) s = Math.floor(s*8)/8; scale = s; c.style.width = (W*s) + 'px'; c.style.height = (H*s) + 'px';
+  const sc = $('#scroll'), pan = W*s > aw + 8 || H*s > ah + 8; c.style.touchAction = pan ? 'pan-x pan-y' : 'none'; sc.scrollLeft = (sc.scrollWidth - sc.clientWidth)/2; sc.scrollTop = (sc.scrollHeight - sc.clientHeight)/2; }
 
 /* ================================================================== loop and boot */
 let bound = false, acc = 0;
