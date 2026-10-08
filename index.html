@@ -194,38 +194,37 @@ const CFG = {
   QUAKE_NEAR:-14, QUAKE_FAR:-5, QUAKE_MUTE:3, DRIFT:0.08
 };
 const DEF = {
-  office:{g:'Company',n:'Antenne régionale',en:'Regional office',cost:300,up:20,build:1,bld:1,h:'Your seat in the valley and your membership of the geothermal association. Unlocks rigs, exploration wells, heat stations, pipes and fences, and the Office panel.'},
-  experts:{g:'Company',n:'Bureau de géologues',en:'Geologists',cost:250,up:40,build:1,bld:1,near:'office',h:'Next to the office: a container of geologists and geophysicists. Unlocks the second pass and written readings of the sections, and the tracer test.'},
-  engineers:{g:'Company',n:'Bureau d’ingénieurs',en:'Drilling engineers',cost:600,up:60,build:2,bld:1,near:'office',h:'Next to the office: drilling engineers. Unlocks the deep rig, exploration wells to full depth, quiet upgrades, cement logs and squeezes.'},
-  prhut:{g:'Company',n:'Cabane d’information',en:'Public relations',cost:80,up:15,build:0.5,bld:1,near:'office',h:'Next to the office: local public relations. Unlocks police and every other force, fests, information stands and talking to protesters.'},
-  lobby:{g:'Company',n:'Bureau de lobbying',en:'Lobby outpost',cost:400,up:30,build:2,bld:1,h:'The association’s glass office for the whole valley. Unlocks the man in a suit, the congress, school funding and the campaign.'},
-  workshop:{g:'Company',n:'Atelier de forage dirigé',en:'Directional drilling',cost:1500,up:50,build:6,bld:1,near:'engineers',h:'Next to the engineer compound. Every rig may bend its well up to 30°; brings the stimulation kit.'},
-  waterlab:{g:'Company',n:'Laboratoire des eaux',en:'Water lab',cost:300,up:20,build:2,bld:1,h:'Samples every spring each week. Small traces are caught before anyone notices; unlocks the treatment plant.'},
-  chair:{g:'Company',n:'Station universitaire',en:'University field station',cost:3000,up:80,build:12,bld:1,h:'A university chair with a field station. Unlocks the third pass, and its papers are friendlier.'},
-  seisnet:{g:'Company',n:'Réseau sismique',en:'Seismic network',cost:800,up:15,build:3,bld:1,h:'Seismometers around the valley, data published live. Quakes hurt mood less; unlocks the traffic-light stimulation and, with the workshop, the power plant.'},
-  survey:{g:'Explore',n:'Campagne sismique',en:'Survey line',c:'CHF 40k per km',h:'Click a grid line: a crew shoots 1.5 km around the click; click a surveyed stretch near one end to extend it. Three vibroseis trucks shake the ground; geophones record the echoes as a reflection section. It shows layer boundaries and breaks, not the rock itself.'},
-  pass2:{g:'Explore',n:'Deuxième passage',en:'Second pass',c:'CHF 120k per km',h:'Only with a university chair: a denser 3D array and reprocessing. Click a surveyed stretch to sharpen its reflection section.'},
-  pass3:{g:'Explore',n:'Troisième passage 3D',en:'Third pass',c:'CHF 200k per km',h:'The university reprocesses a stretch that had its second pass, with a 3D array. The readings then name the layers.'},
-  testrig:{g:'Explore',n:'Forage d’exploration',en:'Exploration well',cost:3000,up:30,build:3,h:'A slim hole drilled as deep as your research allows (2,200 m, or 5,000 m with deep drilling). Cuttings and wireline logs name every layer and its temperature. Snaps to the nearest seismic line.'},
-  light:{g:'Drill',n:'Appareil de forage léger',en:'Light rig',cost:800,up:250,build:1,h:'Mobilisation CHF 800k; CHF 20k a day while drilling, CHF 250k a month standing idle. Reaches 2,200 m. Snaps to the nearest seismic line; anywhere goes, with consequences.'},
-  deep:{g:'Drill',n:'Appareil de forage profond',en:'Deep rig',cost:1800,up:500,build:2,need:'deep',h:'Mobilisation CHF 1.8 M; CHF 40k a day while drilling, CHF 500k a month standing idle. Reaches 5,000 m, into the granite.'},
+  office:{g:'Company',n:'Antenne régionale',en:'Regional office',cost:300,up:20,build:1,bld:1,h:'Your foothold in the valley. Opens rigs, exploration wells, heat stations, pipes, fences and the Office panel.'},
+  experts:{g:'Company',n:'Bureau de géologues',en:'Geologists',cost:250,up:40,build:1,bld:1,near:'office',h:'Geologists in a container next to the office. Second pass, readings of the sections, tracer tests.'},
+  engineers:{g:'Company',n:'Bureau d’ingénieurs',en:'Drilling engineers',cost:600,up:60,build:2,bld:1,near:'office',h:'Drilling engineers next to the office. Deep rigs, full-depth exploration wells, soundproofing, cement logs.'},
+  prhut:{g:'Company',n:'Cabane d’information',en:'Public relations',cost:80,up:15,build:0.5,bld:1,near:'office',h:'Public relations next to the office. Police and other forces, fests, stands, talks with protesters.'},
+  lobby:{g:'Company',n:'Bureau de lobbying',en:'Lobby outpost',cost:400,up:30,build:2,bld:1,h:'A glass office for the whole valley. Suits, congress, school funding, the campaign.'},
+  workshop:{g:'Company',n:'Atelier de forage dirigé',en:'Directional drilling',cost:1500,up:50,build:6,bld:1,near:'engineers',h:'Next to the engineers. Wells may bend up to 30°. Stimulation kit for the power plant.'},
+  waterlab:{g:'Company',n:'Laboratoire des eaux',en:'Water lab',cost:300,up:20,build:2,bld:1,h:'Weekly samples from every spring. Treatment plants.'},
+  chair:{g:'Company',n:'Station universitaire',en:'University field station',cost:3000,up:80,build:12,bld:1,h:'A university field station. Third pass. Friendlier papers.'},
+  seisnet:{g:'Company',n:'Réseau sismique',en:'Seismic network',cost:800,up:15,build:3,bld:1,h:'Seismometers across the valley, data public. Quakes cost less goodwill. With the workshop: the power plant.'},
+  survey:{g:'Explore',n:'Campagne sismique',en:'Survey line',c:'CHF 40k per km',h:'Click a grid line: three vibroseis trucks shoot 1.5 km. Click near the end of a stretch to extend it. Shows layer boundaries and breaks, not the rock.'},
+  pass2:{g:'Explore',n:'Deuxième passage',en:'Second pass',c:'CHF 120k per km',h:'The geologists go out again in a pickup. Click a surveyed stretch: the depths get sharper.'},
+  pass3:{g:'Explore',n:'Troisième passage 3D',en:'Third pass',c:'CHF 200k per km',h:'The university’s 3D crew. Click a stretch that had its second pass: the readings name the layers.'},
+  testrig:{g:'Explore',n:'Forage d’exploration',en:'Exploration well',cost:3000,up:30,build:3,h:'A slim hole on the nearest seismic line: 2,200 m, or 5,000 m with the engineers. Logs name every layer and its temperature.'},
+  light:{g:'Drill',n:'Appareil de forage léger',en:'Light rig',cost:800,up:250,build:1,h:'CHF 800k to bring in; CHF 20k a day drilling, 250k a month idle. Reaches 2,200 m. Snaps to the nearest seismic line.'},
+  deep:{g:'Drill',n:'Appareil de forage profond',en:'Deep rig',cost:1800,up:500,build:2,need:'deep',h:'CHF 1.8 M to bring in; CHF 40k a day drilling, 500k a month idle. Reaches 5,000 m.'},
   dir:{g:'Drill',n:'Directional rig',cost:1800,up:500,build:2,need:'dir',hide:1,h:'As the deep rig, and the well may bend up to 30 degrees from vertical.'},   // kept for old saves; research now upgrades every rig
-  quiet:{g:'Drill',n:'Insonorisation',en:'Quiet upgrade',cost:300,need:'noise',h:'Click a rig. Halves its noise.'},
-  station:{g:'Drill',n:'Centrale de chauffage',en:'Heat station',cost:4000,up:40,build:6,h:'Heat exchanger and heat pumps. Build it anywhere, any time; link a production well and an injection well in the Muschelkalk aquifer, then pipe the heat to a village. If the wells give little water, it earns little.'},
-  plant:{g:'Drill',n:'Centrale géothermique',en:'Power plant',cost:25000,up:150,build:12,h:'An ORC turbine, about the size of the first deep plants. Build it anywhere, any time; link two deep wells in granite above 100 °C, stimulate the rock, then connect a power line.'},
-  pipe:{g:'Connect',n:'Réseau de chaleur',en:'Heat pipe',c:'CHF 1.5 M per km',h:'Click a heat station or plant, then a village. The pipe follows the road, or cuts across the fields when that is shorter.'},
-  pline:{g:'Connect',n:'Ligne à haute tension',en:'Power line',c:'CHF 300k per km',h:'Click a power plant. The line runs to the grid at the east end of the valley.'},
-  fence:{g:'Connect',n:'Clôture de chantier',en:'Fence',cost:50,build:1,h:'Click a rig or plant. Protesters need twice as long to get at it.'},
-  suit:{g:'Persuade',n:'Monsieur en complet',en:'Man in a suit',up:15,c:'CHF 15k a month',h:'Click near a village. He arrives by car and talks to people.'},
+  quiet:{g:'Drill',n:'Insonorisation',en:'Quiet upgrade',cost:300,need:'noise',h:'Click a rig. Half the noise.'},
+  station:{g:'Drill',n:'Centrale de chauffage',en:'Heat station',cost:4000,up:40,build:6,h:'Heat exchanger and heat pumps. Link a production and an injection well in the Muschelkalk, then lay a pipe to a village.'},
+  plant:{g:'Drill',n:'Centrale géothermique',en:'Power plant',cost:25000,up:150,build:12,h:'ORC turbine. Link two wells in granite above 100 °C, stimulate the rock, connect a power line.'},
+  pipe:{g:'Connect',n:'Réseau de chaleur',en:'Heat pipe',c:'CHF 1.5 M per km',h:'Click a heat station or plant, then a village. Follows the road unless the fields are shorter.'},
+  pline:{g:'Connect',n:'Ligne à haute tension',en:'Power line',c:'CHF 300k per km',h:'Click a power plant. Runs to the grid at the east end of the valley.'},
+  fence:{g:'Connect',n:'Clôture de chantier',en:'Fence',cost:50,build:1,h:'Click a site. Protesters take twice as long to get in.'},
+  suit:{g:'Persuade',n:'Monsieur en complet',en:'Man in a suit',up:15,c:'CHF 15k a month',h:'Click near a village. A black car, a firm handshake, fewer rumours.'},
   stand:{g:'Persuade',n:'Stand d’information',en:'Information stand',cost:20,up:3,h:'Click near a village. Brochures and a parasol.'},
-  fest:{g:'Persuade',n:'Fête villageoise',en:'Village fest',cost:80,h:'Click a village. Carousel, sausages, plum brandy. In November it is the autumn feast: blood sausage, cream tart, six hours at the table.'},
-  congress:{g:'Persuade',n:'Congrès',en:'Congress',cost:200,now:1,h:'Held in town right away. Lanyards are pre-printed.'},
-  school:{g:'Persuade',n:'Subvention halle de gym',en:'School funding',cost:2500,build:6,c:'CHF 2.5 M',h:'Click a village. A new sports hall with your name on it.'},
-  police:{g:'Force',n:'Patrouille de gendarmerie',en:'Police patrol',up:60,c:'CHF 60k a month',h:'Click near a blockade or site. The van drives in, a word is had, the tractors leave.'},
-  riot:{g:'Force',n:'Maintien de l’ordre',en:'Public-order unit',up:400,c:'CHF 400k a month',h:'Click near a protest camp. There is no standing riot police: these are public-order officers pooled from several cantons. A bus of helmets.'},
-  heli:{g:'Force',n:'Hélicoptère d’appui',en:'Helicopter',cost:150,now:1,last:1,h:'The last resort: circles the town and the sites and clears every blockade and camp at once. Every village resents it, now and later.'}
+  fest:{g:'Persuade',n:'Fête villageoise',en:'Village fest',cost:80,h:'Click a village. Carousel, sausages, plum brandy; twice the effect at the autumn feast in November. Twice a year looks like a bribe.'},
+  congress:{g:'Persuade',n:'Congrès',en:'Congress',cost:200,now:1,h:'In town, right away. Lanyards included.'},
+  school:{g:'Persuade',n:'Subvention halle de gym',en:'School funding',cost:2500,build:6,c:'CHF 2.5 M',h:'Click a village. A new gym hall with your name on it.'},
+  police:{g:'Force',n:'Patrouille de gendarmerie',en:'Police patrol',up:60,c:'CHF 60k a month',h:'Click near a blockade or site. CHF 20k per call-out.'},
+  riot:{g:'Force',n:'Maintien de l’ordre',en:'Public-order unit',up:400,c:'CHF 400k a month',h:'Click near a protest camp. Officers pooled from several cantons. CHF 150k per call-out.'},
+  heli:{g:'Force',n:'Hélicoptère d’appui',en:'Helicopter',cost:150,now:1,last:1,h:'Last resort. Clears every blockade and camp at once; every village remembers.'}
 };
-const RES = {deep:{n:'Deep drilling',cost:1500,t:6}, dir:{n:'Directional drilling',cost:2000,t:8}, noise:{n:'Noise control',cost:600,t:4}};
 const OPP = {banner:'Banner in the field', oppstand:'Opposition stand', rumour:'Rumour', tractor:'Manure blockade', march:'Protest march', camp:'Protest camp', activists:'Outside activists', counterfest:'Counter-fest'};
 const SITE = {light:1,deep:1,dir:1,station:1,plant:1,testrig:1,office:1,experts:1,engineers:1,prhut:1,lobby:1,workshop:1,waterlab:1,chair:1,seisnet:1}, RIG = {light:1,deep:1,dir:1};
 const REQ = {pass2:['experts'], pass3:['chair'], testrig:['office'], light:['office'], deep:['engineers'], quiet:['engineers'], station:['office'], plant:['engineers','workshop','seisnet'], pipe:['office'], pline:['office'], fence:['office'], suit:['lobby'], stand:['prhut'], fest:['prhut'], congress:['lobby'], school:['lobby'], police:['prhut'], riot:['prhut'], heli:['prhut'], experts:['office'], engineers:['office'], prhut:['office'], lobby:['prhut'], workshop:['engineers'], waterlab:['experts'], chair:['experts'], seisnet:['chair']};
@@ -444,7 +443,6 @@ function place(type, x, y){
       news('Vibroseis trucks set off for line ' + l.name + ' with a cable of geophones. The cows are not consulted.'); return 'ok';
     }
     case 'pass2': {
-      if (!S.obj.some(c => c.type === 'chair' && c.on)) return 'A second run needs a university: endow a chair first. They bring the 3D array and do the processing.';
       if (!ln) return 'Click a grid line.'; const sg = ln.segs.find(s => x >= s.x0 && x <= s.x1 && !s.active && s.pass < 2); if (!sg) return 'Click a finished survey stretch that has not had its second pass yet.';
       const cost = Math.ceil(m(sg.x1 - sg.x0)/100)*CFG.PASS2_K; if (!canPay(cost)) return 'That pass costs ' + fmt(cost) + '.';
       S.cash -= cost; acct('Seismic surveys', -cost); sg.pass++; sg.prog = 0; sg.active = true; sg.arrived = false; spawnConvoy(ln, sg, 'pickup'); news('The geologists load a pickup with geophones and drive out to line ' + ln.name + '.'); return 'ok';
@@ -518,8 +516,6 @@ function place(type, x, y){
   }
   return 'Cannot place that here.';
 }
-function research(k){ if (S.res[k] !== undefined) return 'Already ' + (resDone(k) ? 'done.' : 'under way.'); const cost = RES[k].cost*(S.obj.some(o => o.type === 'chair' && o.on) ? 0.75 : 1);
-  if (!canPay(cost)) return RES[k].n + ' costs ' + fmt(cost) + '.'; S.cash -= cost; acct('Research', -cost); S.res[k] = S.t + RES[k].t; return 'ok'; }
 const DISMANTLE = {testrig:0.5, light:0.75, deep:1.5, dir:1.5, station:2, plant:4, office:0.5, experts:0.25, engineers:0.5, prhut:0.25, lobby:0.5, workshop:1, waterlab:0.5, chair:2, seisnet:0.5};   // months: plugging, lifting the derrick, trucks out
 function withdraw(o){
   if (SITE[o.type] && !o.dismantling && !o.burnt && o.on){ const mo = DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0); o.dismantling = S.t + mo; o.off = true; o.drilling = null; if (RIG[o.type] && o.well && o.well.length && !o.plugPaid){ o.plugPaid = true; S.cash -= 500; acct('Plugging wells (required by law)', -500); } plan = plan && plan.rig === o.id ? null : plan;
@@ -541,10 +537,10 @@ const CAMP = {
   canvass:{n:'Door-to-door', c:40, mo:1, per:1, d:'A month of knocking on doors in one village: +3 there.'} };
 const campOpen = () => S.month >= CFG.END - 6 && !S.over;
 function campaign(k, vid){ S.camp = S.camp || {done:{}, run:[]}; const d = CAMP[k], key = d.per ? k + vid : k;
-  if (!campOpen()) return 'The campaign starts six months before the vote.'; if (!has('lobby')) return 'Campaigning needs the lobby outpost.'; if (S.camp.done[key]) return 'Already done.'; if (!canPay(d.c)) return d.n + ' costs ' + fmt(d.c) + '.';
+  if (!campOpen()) return 'The campaign starts six months before the vote.'; if (!has('lobby')) return 'Campaigning needs the Bureau de lobbying.'; if (S.camp.done[key]) return 'Already done.'; if (!canPay(d.c)) return d.n + ' costs ' + fmt(d.c) + '.';
   S.cash -= d.c; acct('Campaign', -d.c); S.camp.done[key] = 1; S.camp.run.push({k, vid, at:S.month + d.mo}); sfx('coin'); return 'ok'; }
 function campaignTick(){
-  if (S.month === CFG.END - 6){ news('Six months to the vote. The campaign begins: posters, ads, a debate, doors to knock on. Open Campaign at the top. Elsewhere, towns have voted yes to geothermal heat by large margins, and some regretted it after the first tremor.'); for (const p of ['#loans', '#research', '#polls', '#wire']) $(p).hidden = true; $('#camp').hidden = false; renderCampaign(); }
+  if (S.month === CFG.END - 6){ news('Six months to the vote. The campaign opens: posters, ads, a debate, doors to knock on. See Campaign at the top.'); for (const p of ['#loans', '#research', '#polls', '#wire']) $(p).hidden = true; $('#camp').hidden = false; renderCampaign(); }
   if (!S.camp) return;
   for (const r of S.camp.run.slice()){ if (r.at > S.month) continue; S.camp.run.splice(S.camp.run.indexOf(r), 1); const town = S.vil[0];
     if (r.k === 'posters'){ S.camp.posters = S.month; news('Posters go up in every village: a smiling family in front of a rig. Someone draws a moustache on the rig.'); }
@@ -864,7 +860,7 @@ function stepDrill(o, dm){
   }
   if (dr.seg >= dr.pts.length){ o.drilling = null; const tb = tip(o), aq = openIn(o, ROCK.WARM), target = aq || openIn(o, ROCK.GRANITE), wT = aq ? aqT(o.line, tb.x, wellPts(o).find(p => rockL(o.line, p.x, p.d) === ROCK.WARM).d) : tempAt(o.line, tb.x, tb.d), ok = target && wT >= 60, back = ok ? Math.round(o.spent*DRILL.subsidy) : 0;
     S.cash += back; if (back) acct('Federal exploration contribution', back); o.sub = (o.sub || 0) + back; o.cost = (o.cost || 0) + o.spent;
-    news('Well finished near ' + nearestVillage(o.x, o.y).name + ' at ' + M(tb.d) + ', water or rock at about ' + wT + ' °C. It cost ' + fmt(o.spent) + '. ' + (ok ? 'The federal government refunds 60%: ' + fmt(back) + '.' : !target ? 'The federal programme refunds nothing: the open hole reaches neither the Muschelkalk nor the granite.' : 'The federal programme refunds nothing: water below 60 °C needs heat pumps, and heat-pump projects are not eligible. A motion to change that is before the federal parliament.')); o.spent = 0; }
+    news('Well finished near ' + nearestVillage(o.x, o.y).name + ' at ' + M(tb.d) + ', water or rock at about ' + wT + ' °C. It cost ' + fmt(o.spent) + '. ' + (ok ? 'The federal government refunds 60%: ' + fmt(back) + '.' : !target ? 'The federal programme refunds nothing: the open hole reaches neither the Muschelkalk nor the granite.' : 'No federal refund: below 60 °C it needs heat pumps, and heat-pump projects are not eligible.')); o.spent = 0; }
 }
 /* trouble at the bit is a gamble, but not a blind one: it only happens in risky rock, and the programme shifts the odds.
    Karst swallows mud, the more so the heavier it is; gas sits in the coal trough (a bright spot on the seismic) and deep fault zones,
@@ -1033,10 +1029,10 @@ function monthTick(){
     let eff = Math.min(suits.length, 2); if (opst && eff > 0) eff--;
     if (eff > 0) put('Men in suits', 0.6*eff*(stands.length ? 1.5 : 1)*pm*sk);
     if (stands.length && !(opst && !suits.length)) put('Information stand', 0.3*pm*sk);
-    if (lob > 1) put('Lobby "embassy"', -0.8); else if (count('lobby') === 1) put('Lobby outpost', 0.4*pm);
+    if (lob > 1) put('Lobby "embassy"', -0.8); else if (count('lobby') === 1) put('Bureau de lobbying', 0.4*pm);
     if (v.festUntil > S.t - 1e-6) put('Village fest', 5*v.festMult*pm*sk);
     if (S.obj.some(o => o.type === 'school' && o.on && o.v === v.id)) put('School funding', 0.6*pm*sk);
-    if (chairs === 1) put('University chair', 0.3*pm);
+    if (chairs === 1) put('Station universitaire', 0.3*pm);
     if (v.heat === 'on') put('Cheap heat', 0.8); if (v.heat === 'build') put('Dug-up road', -1);
     if (v.spring.lvl === 2) put('Boil-water notice', -1.5); if (v.spring.lvl === 3) put('Polluted spring', v.spring.treated ? -0.6 : -1.5);
     for (const l of S.lines) for (const sg of l.segs) if (sg.active && sg.arrived){ const d = vdist(v, sg.x0 + sg.prog, l.y); if (d <= 36) put('Survey trucks', -1.5*(1 - d/40)); }
@@ -1105,7 +1101,7 @@ function startSecret(){ S.secret = {t:0, stage:0, fires:[], booms:[]}; S.paused 
   const t = S.vil[0]; S.secret.fires.push([t.x + t.w/2 + 10, t.y + 8]); S.secret.wreck = [t.x + t.w/2 + 10, t.y + 8];
   news('The valley erupts. The school halls, the Company’s offices and parked cars are burning; a police helicopter burns on the football pitch in ' + t.name + '.'); sfx('fire'); shake = 1; }
 function secretTick(dt){ const z = S.secret; z.t += dt;
-  if (z.stage === 0 && z.t > 4){ z.stage = 1; for (let i = 0; i < 5; i++) S.ents.push({k:'army', s:-12 - i*16, vs:22, lane:1, leaving:true}); news('Intervention fédérale: the federal government sends troops in support of the civil authorities. A convoy of army trucks rolls up the valley road.'); }
+  if (z.stage === 0 && z.t > 4){ z.stage = 1; for (let i = 0; i < 5; i++) S.ents.push({k:'army', s:-12 - i*16, vs:22, lane:1, leaving:true}); news('Intervention fédérale. Army trucks roll up the valley road.'); }
   if (z.stage === 1 && z.t > 9){ z.stage = 2; for (const o of S.obj.filter(o => ['suit','police','riot','stand'].includes(o.type))){ spawnLeave(o); rm(o); } news('Every Company employee is evacuated in army trucks. The engineers leave their coffee cups behind.'); }
   if (z.stage === 2 && z.t > 11){ z.stage = 3; for (let i = 0; i < 3; i++) S.ents.push({k:'jet', x:-60 - i*24, y:30 + i*40, vx:150}); news('Low over the valley: three F-35s.'); sfx('heli'); }
   if (z.stage === 3){ const rigs = S.obj.filter(o => (RIG[o.type] || o.type === 'station' || o.type === 'plant' || o.type === 'testrig') && !o.boomed); rigs.forEach((o, i) => { if (z.t > 12 + i*0.35){ o.boomed = true; o.burnt = S.t; o.on = false; o.drilling = null; z.booms.push({x:o.x, y:o.y, t0:z.t}); shake = 1; sfx('quake'); } });
@@ -1611,12 +1607,12 @@ function hud(){
   $('#uncutbtn').hidden = !(view === 'map' && cutLine !== null && S.started && !S.over);
   const hint = $('#hint'); let hs = '';
   if (plan) hs = ''; else if (tool) hs = anchor ? (tool === 'survey' ? 'Now click where the stretch ends on the same line.' : tool === 'pipe' ? 'Now click the village to heat.' : 'Now click the second deep rig.') : DEF[tool].n + ': ' + DEF[tool].h;
-  else if (view === 'section') hs = 'Line ' + S.lines[line].name + '. Drag or scroll to look deeper. Click a rig at the surface to select it, then Draw well. Dark and light bands are layer boundaries; where they break or blur there is probably a fault. Only drilling shows the rock itself.';
-  else if (view === 'map') hs = cutLine !== null ? 'The block is cut along line ' + S.lines[cutLine].name + '. Click the face to open it flat.' : 'Click a dotted grid line to cut the block there. Click houses to hear how a village feels.';
+  else if (view === 'section') hs = 'Line ' + S.lines[line].name + '. Drag to move, + and − to zoom. Click a rig at the surface, then Draw well. Where the bands break there is probably a fault; only drilling shows the rock.';
+  else if (view === 'map') hs = cutLine !== null ? 'The block is cut along line ' + S.lines[cutLine].name + '. Click the face to open it flat.' : 'Click a dotted grid line to cut the block. Click a village to hear it.';
   if (hs){ if (hint.textContent !== hs){ hint.textContent = hs; hint.dataset.plan = ''; } hint.hidden = false; } else if (!plan) hint.hidden = true;
   if (toastT && performance.now() > toastT){ $('#toast').hidden = true; toastT = 0; }
   const ro = $('#readout'); const tr = sel && sel.id && byId(sel.id); if (view === 'section' && tr && tr.type === 'testrig' && tr.log){ if (ro.textContent !== tr.log) ro.textContent = tr.log; ro.hidden = false; } else ro.hidden = true; hint.classList.toggle('withlog', !ro.hidden);
-  if (sel) renderCard(); if (!$('#loans').hidden) renderLoans(); if (!$('#research').hidden) renderResearch(); if (!$('#polls').hidden) renderPolls(); if (!$('#wire').hidden) renderWire(); if (!$('#camp').hidden) renderCampaign(); if (!$('#ledger').hidden) renderLedger(); $('#campchip').hidden = !campOpen(); renderSteps();
+  if (sel) renderCard(); if (!$('#loans').hidden) renderLoans(); if (!$('#polls').hidden) renderPolls(); if (!$('#wire').hidden) renderWire(); if (!$('#camp').hidden) renderCampaign(); if (!$('#ledger').hidden) renderLedger(); $('#campchip').hidden = !campOpen(); renderSteps();
 }
 const VOICE = {'A village lost its spring':'Their fountain is dead. Ours is next.', 'Felt quake':'The plates fell off the dresser. Again.', 'Rig noise':'You hear it at night, like a fridge the size of a church.', 'Polluted spring':'The fountain is brown. My grandmother washed in it.', 'Survey trucks':'Three trucks shaking the road at seven in the morning.',
   'Village fest':'Free sausages. I am not saying I changed my mind. I am saying they were good.', 'Cheap heat':'Our heating bill halved. I still do not like the rig, but I like the bill.', 'Men in suits':'The young man in the suit was very polite. Very.', 'Police presence':'Since when do we need police at the bakery?',
@@ -1629,7 +1625,7 @@ function advice(v, cs){ const t = [], has = k => (v.causes[k] || 0);
   if (v.mute > 0) t.push('Not listening for ' + v.mute + ' more month' + (v.mute > 1 ? 's' : '') + ' after the quake: persuasion has no effect.');
   if (v.mood < 25) t.push('<span class="neg">Below 25: protest camps. A site burns after 3 months, 6 if fenced. A public-order unit clears camps.</span>');
   else if (v.mood < 33) t.push('<span class="neg">Below 33: tractors may block your nearest site. A police patrol sends them home.</span>');
-  if (has('Rig noise') < -1) t.push('Rig noise: research noise control and fit quiet upgrades, or drill further away.');
+  if (has('Rig noise') < -1) t.push('Rig noise: soundproof the rig (engineers), or drill further away.');
   if (v.heat !== 'on' && !polluted(v)) t.push('Nothing wins hearts like a cheaper heating bill: pipe a heat station here (+0.8 a month).');
   if (v.festYear !== year()) t.push('A fest this year: +5 a month for two months (doubled at the autumn feast, November).');
   if (has('Public-order unit') < -1 || has('Police presence') < -1) t.push('Uniforms cost mood every month, and the anger comes back after they leave.');
@@ -1694,14 +1690,14 @@ function renderLedger(){ const el = $('#ledger'), A = (S.acct && S.acct.last) ||
     h += '<table><tr><th>Loan</th><th>Balance</th><th>Per month</th><th>Left</th></tr>' + (S.loans.length ? S.loans.slice().sort((a, b) => (b.rate || 0) - (a.rate || 0)).map(l => '<tr><td>#' + l.id + (l.shady ? ' <span class="neg">private</span>' : '') + '</td><td>' + fmt(l.bal) + ' · ' + ((l.rate || CFG.LOAN_RATE)*100).toFixed(1) + '%</td><td>' + fmt(l.pay) + '</td><td>' + (l.shady ? 'due in ' + l.left + ' mo.' : l.left + ' mo.') + ' <button class="btn" data-a="repay1" data-v="' + l.id + '">Repay</button></td></tr>').join('') : '<tr><td colspan="4">No loans.</td></tr>') + '</table>';
     h += '<div>Debt service <b>' + fmt(loanPay()) + '</b> a month. Running costs of sites, offices and forces: <b>' + fmt(S.obj.reduce((a, o) => a + upkeepOf(o), 0)) + '</b> a month.</div><div>The bank rates the Company <b>' + standing() + '</b> and lends at <b>' + (bankRate()*100).toFixed(1) + '%</b> now: it looks at how much of the line is used, last month’s result, the polls and the springs.</div><div class="acts">' + (debt() + CFG.LOAN_STEP <= creditLimit() ? '<button class="btn main" data-a="borrow">Borrow ' + fmt(CFG.LOAN_STEP) + ' at ' + (bankRate()*100).toFixed(1) + '%</button>' : '<button class="btn main" data-a="shady">The lender in town: ' + fmt(SHADY.amt) + ' at ' + (SHADY.rate*100) + '%</button>') + '<button class="btn" data-a="repay">Repay what you can</button></div>' + (S.cash < 0 ? '<div class="neg">The account is empty: rigs stop drilling until there is money again.</div>' : ''); }
   else if (officeTab === 'sec'){
-    if (!has('experts')) h += '<div class="sub">Nobody here can read a seismic section. An expert container next to the office can.</div>';
-    else { h += '<div class="sub">The geologists’ reading of every surveyed stretch, at its middle. First-pass depths are rough; after the second pass they are closer. Only the university’s third pass names the layers; before that, the names are guesses from the usual depth of each layer.</div>'; let any = false;
+    if (!has('experts')) h += '<div class="sub">Nobody here reads seismic sections yet. A Bureau de géologues next to the office does.</div>';
+    else { h += '<div class="sub">Read at the middle of each stretch. First pass: rough depths, guessed layers. Second pass: sharper depths. Third pass: named layers.</div>'; let any = false;
       for (const l of S.lines){ const rd = sectionReading(l.id); if (!rd.length) continue; any = true; h += '<h4 style="margin-top:6px">Line ' + l.name + '</h4>' + rd.map(r => '<div><b>' + r.where + '</b> <span class="sub">' + ['', 'first pass', 'second pass', 'third pass'][Math.min(3, r.pass)] + '</span><ul class="dec">' + (r.items.length ? r.items.map(t => '<li>' + t + '</li>').join('') : '<li>No clear reflectors.</li>') + '</ul></div>').join(''); }
       if (!any) h += '<div>No finished surveys yet.</div>'; } }
   else if (officeTab === 'dec'){
-    h += '<div class="sub">What your recent decisions actually did.</div><ol class="dec">' + ((S.log || []).slice(0, 16).map(l => '<li><span class="sub">' + MONTHS[l.m % 12] + ', yr ' + ((l.m/12|0) + 1) + '</span> <b>' + l.what + '</b><div>' + (l.cash ? (l.cash > 0 ? '+' : '') + fmt(l.cash) : 'no cost') + (l.dm.length ? ' · ' + l.dm.map(x => x[0] + ' ' + (x[1] > 0 ? '+' : '−') + Math.abs(x[1]).toFixed(1)).join(', ') : '') + '</div></li>').join('') || '<li>No decisions yet.</li>') + '</ol>'; }
+    h += '<div class="sub">Your recent decisions and what they did.</div><ol class="dec">' + ((S.log || []).slice(0, 16).map(l => '<li><span class="sub">' + MONTHS[l.m % 12] + ', yr ' + ((l.m/12|0) + 1) + '</span> <b>' + l.what + '</b><div>' + (l.cash ? (l.cash > 0 ? '+' : '') + fmt(l.cash) : 'no cost') + (l.dm.length ? ' · ' + l.dm.map(x => x[0] + ' ' + (x[1] > 0 ? '+' : '−') + Math.abs(x[1]).toFixed(1)).join(', ') : '') + '</div></li>').join('') || '<li>No decisions yet.</li>') + '</ol>'; }
   else {
-    h += '<div class="sub">Every capability comes from a building. Switched off, it costs nothing and unlocks nothing; switching it on again takes its full build time.</div><table>';
+    h += '<div class="sub">Switched off, a building costs nothing and unlocks nothing. Switching it back on takes its full build time.</div><table>';
     for (const k of Object.keys(DEF).filter(k => DEF[k].bld)){ const d = DEF[k], o = S.obj.find(b => b.type === k && !b.burnt), opens = Object.keys(DEF).filter(t => (DEF[t].req || []).includes(k) && !DEF[t].hide).map(t => DEF[t].n.toLowerCase());
       const st = !o ? (missing(k).length ? '<span class="sub">' + needTxt(k) + '</span>' : 'not built · ' + fmt(d.cost) + ' + ' + fmt(d.up) + '/mo') : o.dismantling ? 'being dismantled' : o.waitRoad ? 'waiting for a road' : !o.on ? (o.restart ? 'rehiring' : 'being built') : o.off ? '<span class="neg">switched off</span>' : '<span class="pos">running</span>';
       h += '<tr><td><b>' + d.n + '</b><div class="sub" style="margin:0">' + (opens.length ? 'Unlocks ' + opens.join(', ') : '') + '</div></td><td>' + st + '</td></tr>'; }
@@ -1732,7 +1728,7 @@ function renderCard(){
     h += '<h4>' + v.name + '</h4><div class="sub">' + (v.town ? 'Town' : 'Village') + ' · ' + v.pop.toLocaleString('en-US') + ' voters · ' + Math.round(v.pop/all*100) + '% of the valley’s vote</div>';
     h += '<div><b>' + feel + '</b> <span class="' + (d >= 0 ? 'pos' : 'neg') + '">' + (d >= 0 ? '▲ +' : '▼ −') + Math.abs(d).toFixed(1) + ' last month</span></div><div class="meter"><i style="width:' + v.mood + '%;background:' + (v.mood >= 50.1 ? 'var(--ok)' : 'var(--warn)') + '"></i><u></u></div>';
     h += '<div class="sub">' + v.mood.toFixed(0) + ' in 100 would vote yes today; 50.1 needed.</div><q>' + voice(v, cs) + '</q>';
-    h += cs.length ? '<table class="why">' + cs.slice(0, 7).map(c => '<tr><td>' + c[0] + '</td><td class="' + (c[1] < 0 ? 'neg' : 'pos') + '">' + (c[1] > 0 ? '+' : '−') + Math.abs(c[1]).toFixed(1) + '</td></tr>').join('') + '</table><div class="sub">Recent effects on the mood; each fades by a fifth a month.</div>' : '<div class="sub">No strong feelings yet.</div>';
+    h += cs.length ? '<table class="why">' + cs.slice(0, 7).map(c => '<tr><td>' + c[0] + '</td><td class="' + (c[1] < 0 ? 'neg' : 'pos') + '">' + (c[1] > 0 ? '+' : '−') + Math.abs(c[1]).toFixed(1) + '</td></tr>').join('') + '</table><div class="sub">Recent effects on the mood. Each fades by a fifth a month.</div>' : '<div class="sub">No strong feelings yet.</div>';
     h += '<div class="sub">Spring: ' + ['clear', '<span class="neg">cloudy for a few months</span>', '<span class="neg">boil-water notice, bottled water ' + fmt(30) + ' a month</span>', '<span class="neg">polluted for good</span>'][v.spring.lvl || 0] + ' · Heating: ' + (v.heat === 'on' ? '<span class="pos">geothermal</span>' : v.heat === 'build' ? 'pipe being laid' : 'oil and wood') + '</div>';
     if ((v.spring.lvl || 0) >= 2 && !v.spring.treated && has('waterlab')) h += '<div class="acts"><button class="btn" data-a="treat" data-v="' + v.id + '">Build a treatment plant (' + fmt(1500) + ')</button></div>';
     h += wishHtml(v);
@@ -1751,9 +1747,9 @@ function renderCard(){
     else if (o.type === 'tractor' || o.type === 'camp'){ const vv = S.vil[o.v];
       s = o.type === 'tractor' ? 'Blocks the road to a site. Leaves after two months, or when a police patrol arrives.' : 'Stops the site. If it stays ' + ((byId(o.target) || {}).fenced ? 'six' : 'three') + ' months, the site burns. It leaves when the village calms down, or when a public-order unit arrives.';
       if (o.talking !== undefined) s += '<div class="sub">Your liaison officer is talking to them…</div>'; else if (o.talked) s += '<div class="sub">They listened once and stayed. They will not talk again.</div>';
-      else { s += '<div class="sub">A liaison officer goes over with coffee. Whether they pack up depends on them. Talking stores no anger.</div>'; if (has('prhut')) acts += '<button class="btn main" data-a="talk">Talk to them (' + fmt(20) + ')</button>'; else s += '<div class="sub">You need a PR hut to send anyone.</div>'; } }
+      else { s += '<div class="sub">A liaison officer goes over with coffee. Whether they pack up is up to them.</div>'; if (has('prhut')) acts += '<button class="btn main" data-a="talk">Talk to them (' + fmt(20) + ')</button>'; else s += '<div class="sub">Talking needs the Cabane d’information.</div>'; } }
     else if (opp) s = {banner:'Lowers the mood nearby until the village warms up.', oppstand:'Cancels one of your suits or your stand here.', rumour:'Going round the village. It fades after a few months, or a man in a suit nearby ends it.', march:'A month of bad press in town.', activists:'Double the pace of the opposition. They leave three months after the last police unit.', counterfest:'Cancels your second fest.'}[o.type];
-    if (o.type === 'rumour'){ s = (o.text ? '<q>' + o.text + '</q> ' : '') + s; if (has('prhut')) acts += '<button class="btn" data-a="correct">Publish a correction (' + fmt(15) + ')</button>'; else s += '<div class="sub">A PR hut could answer it.</div>'; }
+    if (o.type === 'rumour'){ s = (o.text ? '<q>' + o.text + '</q> ' : '') + s; if (has('prhut')) acts += '<button class="btn" data-a="correct">Publish a correction (' + fmt(15) + ')</button>'; else s += '<div class="sub">The Cabane d’information could answer it.</div>'; }
     else if (SITE[o.type]){
       if (isBlocked(o)) s = '<span class="neg">Blocked by protesters.</span> ';
       { const camp = S.obj.find(c => c.type === 'camp' && c.target === o.id); if (camp){ const left = camp.t0 + (o.fenced ? 6 : 3) - S.t; s += '<span class="neg"><b>Threatened:</b> the camp will set it on fire in about ' + (left >= 1 ? Math.ceil(left) + ' month' + (Math.ceil(left) > 1 ? 's' : '') : Math.max(1, Math.ceil(left*4.3)) + ' week' + (Math.ceil(left*4.3) > 1 ? 's' : '')) + '. Talk to them, send public-order police, or, last resort, the helicopter.</span> '; } }
@@ -1796,11 +1792,6 @@ function renderCard(){
   }
   if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } el.hidden = false;
 }
-function renderResearch(){
-  const el = $('#research'); let h = '<button class="x" data-a="closeres" aria-label="Close">\u00d7</button><h4>Research</h4><div class="sub">Each programme runs for its term, then unlocks its rig. A university chair makes them 25% cheaper.</div>';
-  for (const k in RES){ const st = S.res[k], done = resDone(k); h += '<div class="row"><div><b>' + RES[k].n + '</b><div class="sub" style="margin:0">' + (k === 'deep' ? 'Unlocks the deep rig and test cores to 5,000 m.' : k === 'dir' ? 'Every rig, old and new, may bend its well up to 30\u00b0.' : 'Unlocks the quiet upgrade for rigs.') + '</div></div>' + (done ? '<span class="pos">Done</span>' : st !== undefined ? '<span>' + Math.ceil(st - S.t) + ' mo. left</span>' : '<button class="btn" data-a="research" data-v="' + k + '">' + fmt(RES[k].cost) + ' \u00b7 ' + RES[k].t + ' mo.</button>') + '</div>'; }
-  if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; }
-}
 function renderSteps(){
   const el = $('#steps'); if (!S.started || S.over || S.month > 48 || view !== 'map'){ el.hidden = true; return; }
   const st = [['Open an antenne régionale (your local office): everything else builds on it', S.obj.some(o => o.type === 'office')], ['Survey a stretch of a grid line', S.lines.some(l => l.segs.length)], ['Place two rigs, a few hundred metres apart', S.obj.filter(o => RIG[o.type]).length >= 2], ['Draw both wells into the Muschelkalk aquifer (about 1.1 km)', S.obj.filter(o => RIG[o.type] && o.hit && o.hit[ROCK.WARM]).length >= 2], ['Build a heat station and link both wells', S.obj.some(o => o.type === 'station' && o.prod && o.inj)], ['Lay a heat pipe to a village', S.pipes.length > 0]];
@@ -1825,7 +1816,7 @@ function planBar(){
     + '<span class="grp">Top hole ' + tg('ptop', 'polymer', plan.top, 'Polymer mud') + tg('ptop', 'clean', plan.top, 'Clean water + bentonite (' + fmt(DRILL.cleanMud) + ')') + '</span>'
     + '<span class="grp"><button class="btn" data-a="pcbl" aria-pressed="' + plan.cbl + '">' + (plan.cbl ? '☑' : '☐') + ' Cement bond log (' + fmt(DRILL.cbl) + ')</button></span>' : '')
     + '<span class="grp">Bit ' + tg('pbit', 'tricone', plan.bit, 'Tricone') + tg('pbit', 'pdc', plan.bit, 'PDC') + '</span><span class="grp">Mud weight ' + tg('pmud', 'light', plan.mud, 'Light') + tg('pmud', 'normal', plan.mud, 'Normal') + tg('pmud', 'heavy', plan.mud, 'Heavy') + '</span><span class="grp"><button class="btn" data-a="psalt" aria-pressed="' + plan.saltMud + '">' + (plan.saltMud ? '☑' : '☐') + ' Salt-saturated mud (' + fmt(DRILL.saltMud) + ')</button></span></div>';
-  if (!plan.pts.length) h += '<div class="sub">' + (first ? 'Above the shoe the hole is cased and cemented to surface; below it stays open: that is where water flows in, and where things can leak out. Karst groundwater sits in the top 400–550 m. ' : '') + 'Material per metre rises with depth: at 1,500 m a metre costs about twice what it does at the surface, at 4,000 m almost four times. PDC bits cut faster and wear more; tricone bits are slower and steady. Light mud drills faster but holds gas and loose rock back less; heavy mud holds them but pushes mud into cavities and fractures. Each stage can use its own mud.</div>';
+  if (!plan.pts.length) h += '<div class="sub">' + (first ? 'Cased and cemented down to the shoe, open below it. Karst groundwater sits in the top 400–550 m. ' : '') + 'Material per metre rises with depth: at 1,500 m a metre costs about twice what it does at the surface, at 4,000 m almost four times. PDC bits cut faster and wear more; tricone bits are slower and steady. Light mud is faster but holds back less gas and loose rock; heavy mud holds them but is lost in cavities and fractures. Each stage can have its own mud.</div>';
   if (plan.pts.length){ const end = plan.pts[plan.pts.length - 1];
     h += '<div class="pl"><b>' + M(e.len) + '</b> of hole, bottom at <b>' + M(end.d) + '</b> · estimate <b>' + fmt(e.total) + '</b> (' + fmt(e.upfront) + ' now for casing and extras, the rest as it is drilled) · about <b>' + (e.days/DPM).toFixed(1) + ' months</b> if nothing goes wrong · the federal government refunds 60% when finished, if the water is at least 60 °C.</div>';
     h += '<div class="strata">' + rd.slice(0, 14).map(r => r.rock !== undefined ? '<span class="k">' + M(r.from) + '–' + M(r.to) + ' ' + RNAME[r.rock] + '</span>' : r.brk ? '<span class="b">broken reflections ' + M(r.from) + '–' + M(r.to) + '</span>' : r.bright ? '<span class="b">bright spot at ' + M(r.at) + '</span>' : '<span class="g">' + (r.strong ? 'strong ' : '') + 'reflector at ' + M(r.at) + '</span>').join('') + (e.blind ? '<span class="u">' + M(e.blind) + ' unsurveyed</span>' : '') + '</div>';
@@ -1916,7 +1907,7 @@ function act(a, v){
   if (a === 'treat'){ const vv = S.vil[Number(v)]; if (!canPay(1500)) return toast('A treatment plant costs ' + fmt(1500) + '.'); S.cash -= 1500; acct('Water treatment', -1500); if (vv.spring.lvl === 2) vv.spring.lvl = 0; else vv.spring.treated = true; news('A treatment plant for the spring of ' + vv.name + '. ' + (vv.spring.lvl ? 'The water is drinkable again; nobody trusts it.' : 'The boil-water notice is lifted.')); return; }
   if (a === 'wish'){ const vv = S.vil[Number(v)], w = vv && vv.wish, d = w && WISH[w.k]; if (d && d.cost){ if (!canPay(d.cost)){ toast('That costs ' + fmt(d.cost) + '.'); return; } S.cash -= d.cost; acct('Village wishes', -d.cost); sfx('coin'); wishEnd(vv, true); } return; }
   if (a === 'vil'){ sel = {v:Number(v)}; renderCard(); return; }
-  if (a === 'research'){ const r = research(v); toast(r === 'ok' ? RES[v].n + ' started.' : r); return; } if (a === 'uncut'){ cutLine = null; sel = null; $('#card').hidden = true; return; }
+   if (a === 'uncut'){ cutLine = null; sel = null; $('#card').hidden = true; return; }
   if (a === 'cutup' || a === 'cutdown'){ stepCut(a === 'cutup' ? -1 : 1); return; } if (a === 'secprev' || a === 'secnext'){ const y0 = cam.y; openSection(clamp(line + (a === 'secprev' ? -1 : 1), 0, S.lines.length - 1)); cam.y = y0; return; }
   if (a === 'zin'){ if (view === 'section') secZoom(cam.z*1.5); else zoomStep(1.5); return; } if (a === 'zout'){ if (view === 'section') secZoom(cam.z/1.5); else zoomStep(1/1.5); return; }
   if (a === 'map'){ closeSection(); return; } if (a === 'toggle'){ showPaper = !showPaper; return; }
@@ -2001,7 +1992,7 @@ function boot(fresh){
   if (!bound){ buildPalette(); bind(); bound = true; requestAnimationFrame(tt => { lastT = tt; frame(tt); }); }
   zoom = $('#stage').clientWidth < 700 ? 2 : 1; fit(); showContract(hasSave);
 }
-window.JF = {borrowShady, repayOne, bankRate, startSecret, addMood, unlockAll:() => { for (const k of Object.keys(DEF).filter(k => DEF[k].bld)) S.obj.push({id:S.nextId++, type:k, x:-400, y:-400, on:true, arrived:true, t0:0, ready:0, w:1, hh:1, test:true}); }, buildRoad, roadPlan, pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, research, borrow, commitPlan, stimulate, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, secMaxY()); }, select:s => { sel = s; renderCard(); },
+window.JF = {borrowShady, repayOne, bankRate, startSecret, addMood, unlockAll:() => { for (const k of Object.keys(DEF).filter(k => DEF[k].bld)) S.obj.push({id:S.nextId++, type:k, x:-400, y:-400, on:true, arrived:true, t0:0, ready:0, w:1, hh:1, test:true}); }, buildRoad, roadPlan, pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, borrow, commitPlan, stimulate, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, secMaxY()); }, select:s => { sel = s; renderCard(); },
   newGame:seed => { newGame(seed); S.started = true; S.paused = false; view = 'map'; cutLine = null; baseMap = null; fit(); $('#overlay').hidden = true; }, setCut:li => { cutLine = li; }, get cutLine(){ return cutLine; }};
 const ready = document.fonts && document.fonts.load ? document.fonts.load('12px "Pixelify Sans"').catch(() => {}) : Promise.resolve();
 ready.then(() => boot(false));
