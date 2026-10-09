@@ -77,8 +77,77 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #ledger table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;margin:6px 0}
 #ledger td,#ledger th{padding:2px 4px;border-top:1px dotted var(--line);text-align:right;font-weight:400}
 #ledger td:first-child,#ledger th:first-child{text-align:left}
-#polls,#wire,#camp,#ledger{top:10px;left:10px;width:340px;max-width:calc(100% - 20px);z-index:2}
+#polls,#wire,#camp{top:10px;left:10px;width:340px;max-width:calc(100% - 20px);z-index:2}
 .trend{width:100%;height:auto;display:block;margin:2px 0 8px;font:9px Helvetica,Arial,sans-serif}.trend .hv line{opacity:0}.trend .hv:hover line{opacity:1}.trend .hv:hover rect.b{opacity:.8}.lg{display:flex;gap:10px;font-size:11px;color:var(--muted)}.lg i{display:inline-block;width:10px;height:2px;vertical-align:middle;margin-right:4px}
+#ledger{position:fixed;inset:14px;z-index:5;max-height:none;padding:0;display:flex;flex-direction:column;overflow:hidden;font-size:14px;background:#e9ecef;box-shadow:0 0 0 100vmax rgba(21,24,28,.55),4px 4px 0 rgba(0,0,0,.3)}
+.ohead{display:flex;align-items:center;flex-wrap:wrap;gap:10px 18px;padding:10px 16px;background:#2e2442;color:#fff;border-bottom:3px solid #f2c230}
+.obrand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.obrand .logo{width:26px;height:26px;background:linear-gradient(135deg,#6a4c93 0 50%,#f2c230 50% 100%);box-shadow:0 0 0 2px #fff;flex:none}
+.obrand b{display:block;font:700 19px/1.1 var(--px);letter-spacing:.02em}
+.obrand small{color:#cfc6e0;font-size:12px}
+.otabs{display:flex;flex-wrap:wrap;gap:4px}
+.otabs .btn{font-size:14px;padding:6px 14px;background:#43375c;color:#fff;border-color:#1b1528;box-shadow:inset 1px 1px 0 #6c5d8c,inset -1px -1px 0 #1b1528}
+.otabs .btn[aria-pressed="true"]{background:#f2c230;color:#15181c;box-shadow:inset 1px 1px 0 #fff3b0,inset -1px -1px 0 #9a7a10}
+.opause{font:700 11px/1 var(--ui);letter-spacing:.14em;text-transform:uppercase;color:#f2c230}
+.obody{flex:1;overflow:auto;padding:16px}
+.owrap{max-width:1240px;margin:0 auto}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+.tile,.ocard,.bcard{background:#fff;border:1px solid var(--lo2);box-shadow:3px 3px 0 rgba(0,0,0,.12)}
+.tile{padding:9px 12px}
+.tile small{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.1em}
+.tile b{display:block;font-size:22px;line-height:1.25;font-variant-numeric:tabular-nums}
+.tile span{font-size:12px;color:var(--muted)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px;align-items:start}
+.ocard{padding:12px 14px;min-width:0}
+.ocard.wide{grid-row:span 2}
+.cols.fin{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+@media (max-width:900px){.cols.fin{grid-template-columns:minmax(0,1fr)}}
+.ohead [data-a="closeledger"]{color:var(--ink)}
+.ocard h5{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);border-bottom:1px solid #d5d9de;padding-bottom:5px}
+.ocard p{margin:6px 0}
+#ledger .sub{font-size:12.5px}
+#ledger tr.tot td{font-weight:700;border-top:2px solid var(--ink)}
+#ledger th{color:var(--muted);font-size:12px}
+.stretch{padding:6px 0;border-top:1px dotted var(--line)}.stretch:first-of-type{border-top:0}
+.tag{font-size:11px;padding:1px 6px;border:1px solid var(--line);color:var(--muted)}.tag.p2{border-color:#2f6fb0;color:#2f6fb0}.tag.p3{border-color:#1f7a3f;color:#1f7a3f}
+.ogrp{margin:16px 0 8px;font-size:13px;letter-spacing:.06em;padding:3px 8px;display:inline-block;color:#fff;background:#6a4c93}.ogrp.g-Association{background:#2f7a6a}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.bcard{padding:9px 12px;display:flex;flex-direction:column;gap:2px;border-left:5px solid #c5cad0}
+.bcard.on{border-left-color:var(--ok)}
+.bcard small{color:var(--muted)}
+.bcard .st{font-size:12.5px;font-weight:600}.bcard .st.lock{color:var(--warn);font-weight:400}
+.bcard .sub{margin:4px 0 0}
+/* lessons: a chalkboard for the university, a memo for the association, a leaflet for the stand */
+.lesson{margin:auto;max-width:600px;padding:16px 20px;position:relative;box-shadow:4px 4px 0 rgba(0,0,0,.3);font-size:14px;line-height:1.45}
+#overlay>.lesson+.acts,.lesson .acts{margin-top:10px}
+.lesson h2{margin:2px 0 4px;font-size:20px}
+.lesson .lhead small{font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.8}
+.lesson .lintro{font-style:italic;opacity:.8;font-size:12.5px}
+.lesson p{margin:8px 0}
+.lesson .lx{font-weight:600}
+.lesson .fine{font-size:10.5px;opacity:.7;text-align:right}
+.lsvg{display:block;width:100%;height:auto;margin:8px 0;max-height:260px}
+.lsvg .ln{stroke:currentColor;stroke-width:1.6;fill:none}.lsvg .f{fill:currentColor;stroke:none}
+.lsvg .w{stroke-width:4}.lsvg .d{stroke-dasharray:5 4}
+.lsvg .hot{stroke:var(--lhot);fill:none;stroke-width:2}.lsvg .hot.f{fill:var(--lhot);stroke:none}.lsvg .hot.w{stroke-width:4}
+.lsvg .cold{stroke:var(--lcold);fill:none;stroke-width:2}.lsvg .cold.f{fill:var(--lcold);stroke:none}.lsvg .cold.w{stroke-width:4}
+.lsvg .mix{stroke:#9a6fb0;fill:none;stroke-width:2}.lsvg .mix.f{fill:#9a6fb0;stroke:none}
+.lsvg .l1{fill:var(--l1)}.lsvg .l2{fill:var(--l2)}.lsvg .l3{fill:var(--l3)}
+.lsvg .bx{fill:var(--lbx);stroke:currentColor;stroke-width:1.2}
+.lsvg .tx{fill:currentColor;font:12px var(--ui)}.lsvg .tx.s{font-size:9.5px}.lsvg .tx.b{font-weight:700;font-size:14px}.lsvg .tx.w{fill:#fff}
+.lsvg .drop{fill:var(--lcold);opacity:.75}.lsvg .crack,.lsvg .refl,.lsvg .karst{fill:none;stroke:currentColor;stroke-width:2.2}.lsvg .refl{stroke-width:3}.lsvg .karst{stroke:var(--lcold);stroke-width:5;opacity:.7}
+.lsvg .band{fill:var(--lhot);opacity:.2}.lsvg .star{fill:#f2c230;stroke:currentColor}.lsvg .geo{fill:currentColor}
+.lsvg .gr{fill:#3f8f4e}.lsvg .yel{fill:#f2c230;stroke:#f2c230}.lsvg .red{fill:#d64545;stroke:#d64545}.lsvg .grey{fill:#9aa3ab}.lsvg .hotf{fill:var(--lhot)}
+.lsvg .bright{fill:#f2c230;opacity:.8}.lsvg .casing{stroke:currentColor;stroke-width:2.5}
+.lsvg .core{fill:#f08a3c;opacity:.85}.lsvg .house{fill:#fff;stroke:currentColor}.lsvg .roof{fill:#c8571b;stroke:currentColor}
+.lesson.board{background:#25392f;color:#eef0e6;border:8px solid #7a5a3a;--lhot:#ff9a7a;--lcold:#8fc8ff;--l1:#30483b;--l2:#3a4f44;--l3:#2f5560;--lbx:#30483b}
+.lesson.board h2{font-family:var(--px);font-weight:400;font-size:24px}
+.lesson.board .btn{background:#eef0e6;color:#15181c}.lesson.board .btn.main{background:#f2c230;color:#15181c;border-color:#000}
+.lesson.memo{background:#fff linear-gradient(#e3eef0 1px,transparent 1px) 0 0/100% 18px;color:#1f2a2a;border:1px solid #2f7a6a;border-top:10px solid #2f7a6a;--lhot:#c8402a;--lcold:#2f6fb0;--l1:#e9e2cf;--l2:#d6d0c4;--l3:#cfe3e8;--lbx:#fff}
+.lesson.leaflet{background:#fffdf6;color:#1f2a2a;border:1px solid #3f8f4e;border-radius:6px;--lhot:#e0662a;--lcold:#2f8fd0;--l1:#e8dcc0;--l2:#cfc6b8;--l3:#cfe6f2;--lbx:#fff}
+.lesson.leaflet h2{color:#2c7a4b}
+#ledger details{border-top:1px dotted var(--line);padding:5px 0}#ledger details summary{cursor:pointer;font-weight:600}
+#ledger details .lesson{box-shadow:none;margin:8px 0;max-width:none;font-size:13px}
 #ledger table.acc{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 #ledger td{padding:2px 0;border-top:1px dotted var(--line)}
 #ledger td+td{text-align:right}
@@ -153,7 +222,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   <header id="top" class="box">
     <div class="title">Jurafrackers <span class="ver">2.0</span></div>
     <div class="chip" id="cashc">Cash <b id="cash">—</b></div>
-    <div class="chip">Credit <b id="debt">0k</b><button id="loanbtn" title="Loans, in the Office panel">Loans</button></div><div class="chip"><button id="ledgerbtn" title="Finance, section readings, decisions, your buildings">Office</button></div><div class="chip" id="campchip" hidden><button id="campbtn" title="The campaign before the vote">Campaign</button></div>
+    <div class="chip" id="debtchip" role="button" tabindex="0" title="Loans, in the Office panel" style="cursor:pointer">Debt <b id="debt">0k</b></div><div class="chip"><button id="ledgerbtn" title="Finance and loans, section readings, buildings, notes, decisions">Office</button></div><div class="chip" id="campchip" hidden><button id="campbtn" title="The campaign before the vote">Campaign</button></div>
     <div class="chip">Month <b id="net">&nbsp;</b></div>
     <div class="chip"><b id="date">Jan, year 1</b><small id="left"></small></div>
     <div class="sp" role="group" aria-label="Speed"><button id="sp0" title="Pause (space)">II</button><button id="sp05" title="Half speed">&frac12;</button><button id="sp1" title="Normal speed">&#9654;</button><button id="sp4">&#9654;&#9654;</button><button id="mute" title="Sound">&#9834;</button></div>
@@ -192,15 +261,15 @@ const CFG = {
   QUAKE_NEAR:-14, QUAKE_FAR:-5, QUAKE_MUTE:3, DRIFT:0.08
 };
 const DEF = {
-  office:{g:'Company',n:'Secrétariat régional',en:'Regional office',cost:300,up:20,build:1,bld:1,h:'Membership of Géothermie-Helvetica, the umbrella association, and a desk in the valley. Opens rigs, exploration wells, heat stations, pipes, fences and the Office panel.'},
-  experts:{g:'Company',n:'Bureau de géologie',en:'Geologists',cost:250,up:40,build:1,bld:1,near:'office',h:'Geologists in a container next to the office. Second pass, readings of the sections, tracer tests.'},
+  office:{g:'Company',n:'Bureau de projet',en:'Project office',cost:300,up:20,build:1,bld:1,acc:'Project office, rent and staff',h:'The Company’s own desk in the valley, with its name by the door. Membership of Géothermie-Helvetica comes with it, invoice included. Opens rigs, exploration wells, heat stations, pipes, fences, stands, fests and the Office panel.'},
   engineers:{g:'Company',n:'Ingénierie de forage',en:'Drilling engineers',cost:600,up:60,build:2,bld:1,near:'office',h:'Drilling engineers next to the office. Deep rigs, full-depth exploration wells, soundproofing, cement logs.'},
-  prhut:{g:'Company',n:'Point info chantier',en:'Site information point',cost:80,up:15,build:0.5,bld:1,near:'office',h:'A container by the road with leaflets and a person who answers. Police and other forces, fests, stands, talks with protesters.'},
-  lobby:{g:'Company',n:'Maison de la géothermie',en:'Lobby outpost',cost:400,up:30,build:2,bld:1,h:'The association’s showroom for the whole valley: models of the rig, free coffee. Suits, congress, school funding, the campaign.'},
   workshop:{g:'Company',n:'Atelier de forage directionnel',en:'Directional drilling',cost:1500,up:50,build:6,bld:1,near:'engineers',h:'Next to the engineers. Wells may bend up to 30°. Stimulation kit for the power plant.'},
   waterlab:{g:'Company',n:'Laboratoire des eaux',en:'Water lab',cost:300,up:20,build:2,bld:1,h:'Weekly samples from every spring: small traces are caught before anyone notices. Treatment plants.'},
-  chair:{g:'Company',n:'Antenne universitaire',en:'University field station',cost:3000,up:80,build:12,bld:1,h:'A university field station. Third pass. The valley trusts professors a little more.'},
   seisnet:{g:'Company',n:'Surveillance sismique',en:'Seismic monitoring',cost:800,up:15,build:3,bld:1,h:'Seismometers across the valley, data public. Quakes cost less goodwill. With the workshop: the power plant.'},
+  prhut:{g:'Company',n:'Buvette des gendarmes',en:'Police outreach',cost:80,up:15,build:0.5,bld:1,near:'office',acc:'Coffee, croissants, sundries (gendarmerie)',h:'A hut at the crossroads. Coffee and croissants are free for anyone in uniform, and at Christmas there is an envelope. Patrols come when you call: police, public-order units, the helicopter.'},
+  chair:{g:'Company',n:'Antenne universitaire',en:'University field station',cost:3000,up:80,build:12,bld:1,h:'A university field station. Third pass. The valley trusts professors a little more.'},
+  experts:{g:'Association',n:'Antenne d’expertise',en:'Expert office',cost:250,up:40,build:1,bld:1,near:'office',h:'The association’s geologists, rented by the month. Second pass, readings of the sections, tracer tests, and short lessons on what you are looking at.'},
+  lobby:{g:'Association',n:'Maison de la géothermie',en:'Lobby house',cost:400,up:30,build:2,bld:1,h:'The association’s showroom: a model rig, free coffee, a man who knows everyone. The man in the suit, the congress, school funding, the campaign.'},
   survey:{g:'Explore',n:'Prospection sismique',en:'Seismic survey',c:'CHF 40k per km',h:'Click a grid line: three vibroseis trucks shoot 1.5 km. Click near the end of a stretch to extend it. Shows layer boundaries and breaks, not the rock.'},
   pass2:{g:'Explore',n:'Relevé complémentaire',en:'Second pass',c:'CHF 120k per km',h:'The geologists go out again in a pickup with more geophones. Click a surveyed stretch: the depths get sharper.'},
   pass3:{g:'Explore',n:'Sismique 3D',en:'Third pass',c:'CHF 200k per km',h:'The university’s 3D crew: a van, a doctoral student and a grid of cables. Click a stretch that had its second pass: the readings name the layers.'},
@@ -214,7 +283,7 @@ const DEF = {
   pipe:{g:'Connect',n:'Réseau de chaleur',en:'Heat pipe',c:'CHF 1.5 M per km',h:'Click a heat station or plant, then a village. Follows the road unless the fields are shorter.'},
   pline:{g:'Connect',n:'Ligne électrique',en:'Power line',c:'CHF 300k per km',h:'Click a power plant. Runs to the grid at the east end of the valley.'},
   fence:{g:'Connect',n:'Clôture de chantier',en:'Fence',cost:50,build:1,h:'Click a site. Protesters take twice as long to get in.'},
-  suit:{g:'Persuade',n:'Monsieur en complet',en:'Man in a suit',up:15,c:'CHF 15k a month',h:'Click near a village. A black car, a firm handshake, fewer rumours.'},
+  suit:{g:'Persuade',n:'Monsieur en complet',en:'Man in a suit',up:15,c:'CHF 15k a month',h:'Lent by the association. Click near a village: a black car, a handshake with the syndic, an apéro, fewer rumours. After half a year everyone knows him and it works half as well; somewhere new it works again.'},
   stand:{g:'Persuade',n:'Stand d’information',en:'Information stand',cost:20,up:3,h:'Click near a village. Brochures and a parasol.'},
   fest:{g:'Persuade',n:'Fête villageoise',en:'Village fest',cost:80,h:'Click a village. Carousel, sausages, plum brandy; twice the effect at the autumn feast in November. Twice a year looks like a bribe.'},
   congress:{g:'Persuade',n:'Congrès de la géothermie',en:'Congress',cost:200,now:1,h:'The association’s yearly congress, in town, right away. Lanyards included.'},
@@ -225,7 +294,7 @@ const DEF = {
 };
 const OPP = {banner:'Banner in the field', oppstand:'Opposition stand', rumour:'Rumour', tractor:'Manure blockade', march:'Protest march', camp:'Protest camp', activists:'Outside activists', counterfest:'Counter-fest'};
 const SITE = {light:1,deep:1,dir:1,station:1,plant:1,testrig:1,office:1,experts:1,engineers:1,prhut:1,lobby:1,workshop:1,waterlab:1,chair:1,seisnet:1}, RIG = {light:1,deep:1,dir:1};
-const REQ = {pass2:['experts'], pass3:['chair'], testrig:['office'], light:['office'], deep:['engineers'], quiet:['engineers'], station:['office'], plant:['engineers','workshop','seisnet'], pipe:['office'], pline:['office'], fence:['office'], suit:['lobby'], stand:['prhut'], fest:['prhut'], congress:['lobby'], school:['lobby'], police:['prhut'], riot:['prhut'], heli:['prhut'], experts:['office'], engineers:['office'], prhut:['office'], lobby:['prhut'], workshop:['engineers'], waterlab:['experts'], chair:['experts'], seisnet:['chair']};
+const REQ = {pass2:['experts'], pass3:['chair'], testrig:['office'], light:['office'], deep:['engineers'], quiet:['engineers'], station:['office'], plant:['engineers','workshop','seisnet'], pipe:['office'], pline:['office'], fence:['office'], suit:['lobby'], stand:['office'], fest:['office'], congress:['lobby'], school:['lobby'], police:['prhut'], riot:['prhut'], heli:['prhut'], experts:['office'], engineers:['office'], prhut:['office'], lobby:['experts'], workshop:['engineers'], waterlab:['experts'], chair:['experts'], seisnet:['chair']};
 for (const k in REQ) DEF[k].req = REQ[k];
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const ROCK = {SOIL:0, LIME:1, WATER:2, MARL:3, HARD:4, WARM:5, FAULT:6, GRANITE:7, SALT:8, SAND:9, COAL:10};
@@ -239,7 +308,7 @@ const RCOL = [['#6b4a2a','#5a3c22'], ['#c9a46a','#b8935a'], ['#194a8a','#0f2f5a'
 /* invented names only: none of these is a real place */
 const TOWN_N = ['Grand-Fracas','Montchaleur','Bourg-Granit','Porte-Vapeur'];
 const VIL_N = ['Les Trois-Sapins','Pré-Prunier','Bois-Fumé','Vache-Haute','Saint-Forage','Petit-Fracas','Roche-Tiède','Sous-la-Faille','Fontaine-Brune','Champ-Vibreur','Mont-Tiède','Les Bouillottes','Clos-Fondu','Combe-Tonnerre','Val-Grelottant','Pied-de-Puits'];
-const COMPANY = 'Chaleur Profonde du Jura SA';
+const COMPANY = 'Géo-Énergie Helvète SA';
 
 /* ================================================================== helpers */
 const $ = s => document.querySelector(s);
@@ -978,6 +1047,7 @@ function onReady(o){
 }
 function upkeepOf(o){ const d = DEF[o.type] || {}; let up = d.up || 0; if (SITE[o.type] && !o.on && !o.restart) return 0; if (o.burnt || o.dismantling || (RIG[o.type] && o.drilling)) return 0; if (RIG[o.type] && o.released) up = 5; if (o.off) up *= d.bld ? 0 : 0.5; return up; }
 function monthTick(){
+  lessonTick();
   if (S.loans.some(l => l.shady) && hash(S.month, 7, 77, S.seed) < 0.05){ for (const v of S.vil) bump(v, 'Shady money', -3); news('The local paper finds out where part of the Company’s money comes from. Mood −3 everywhere.'); happen('shady'); }
   if (S.cash < 0 && !S.brokeTold){ S.brokeTold = true; happen('broke'); } else if (S.cash > 2000) S.brokeTold = false;
   if (!S.secret && S.month < CFG.END && S.vil[0].mood + (S.vil[0].deep || 0) <= -10){ startSecret(); return; }
@@ -990,7 +1060,7 @@ function monthTick(){
       else news('A note under the office door: the private loan is a year overdue.'); } }
   for (const o of S.obj){
     const d = DEF[o.type] || {}, up = upkeepOf(o);
-    if (up){ costs += up; acct(RIG[o.type] && o.released ? 'Capped wellheads (inspection)' : 'Running costs: ' + d.n, -up); }
+    if (up){ costs += up; if (o.type === 'office' && !o.off){ acct('Membership fee, Géothermie-Helvetica', -5); acct(d.acc, 5 - up); } else acct(RIG[o.type] && o.released ? 'Capped wellheads (inspection)' : d.acc || 'Running costs: ' + d.n, -up); }
     const pipe = S.pipes.find(p => p.from === o.id), lnk = S.plines.find(l => l.from === o.id), blocked = isBlocked(o);
     if (pipe && S.t < pipe.ready) S.vil[pipe.to].heat = 'build';
     let inc = 0; o.mw = null;
@@ -1026,7 +1096,7 @@ function monthTick(){
     const suits = mine('suit', 26), stands = mine('stand', 18), opst = S.obj.some(o => o.type === 'oppstand' && o.v === v.id);
     if (stands.length > 1){ rm(stands.pop()); put('Vandalised stand', -3); news('The second information stand in ' + v.name + ' is repainted overnight. In manure brown.'); }
     if (suits.length > 2){ put('Too many suits', -1.5*(suits.length - 2)); rm(suits.pop()); news('A third consultant in ' + v.name + ' is chased off with a broom.'); }
-    let eff = Math.min(suits.length, 2); if (opst && eff > 0) eff--;
+    const ws = suits.slice(0, 2).map(o => S.t - (o.t0 || 0) > 6 ? 0.5 : 1).sort((a, b) => b - a); if (opst) ws.pop(); const eff = ws.reduce((a, w) => a + w, 0);
     if (eff > 0) put('Men in suits', 0.6*eff*(stands.length ? 1.5 : 1)*pm*sk);
     if (stands.length && !(opst && !suits.length)) put('Information stand', 0.3*pm*sk);
     if (lob > 1) put('Lobby "embassy"', -0.8); else if (count('lobby') === 1) put('Maison de la géothermie', 0.4*pm);
@@ -1114,7 +1184,15 @@ function drawSecret(g, t, yc){ const z = S.secret; if (!z) return;
   for (const e of S.ents) if (e.burning && e.s !== undefined){ const q = roadPos(e.s); if (q.y > yc) continue; const p = P(q.x, q.y, 2), f = ((t*12 + e.s)|0) % 3; R(g, '#ff7a00', p[0] - 2, p[1] - 4 - f, 4, 4 + f); R(g, '#ffd166', p[0] - 1, p[1] - 2, 2, 2); }
   if (z.wreck && z.wreck[1] <= yc) helicopter(g, {x:z.wreck[0], y:z.wreck[1], ang:0.4}, 0);
   for (const b of z.booms){ const a = z.t - b.t0; if (a > 2.5) { const p = P(b.x, b.y, 0); R(g, 'rgba(40,40,40,.5)', p[0] - 4, p[1] - 14 - a*2, 8, 10); continue; } const p = P(b.x, b.y, 0), r = 4 + a*14; g.fillStyle = 'rgba(255,' + Math.round(220 - a*80) + ',80,' + (1 - a/2.5) + ')'; g.beginPath(); g.arc(p[0], p[1] - 6, r, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,230,' + Math.max(0, 1 - a*1.5) + ')'; g.beginPath(); g.arc(p[0], p[1] - 6, r*0.45, 0, 7); g.fill(); }
-  for (const e of S.ents) if (e.k === 'jet'){ const p = P(e.x, e.y, 60); g.fillStyle = '#4a5058'; g.beginPath(); g.moveTo(p[0] + 7, p[1] + 3.5); g.lineTo(p[0] - 5, p[1] - 2); g.lineTo(p[0] - 7, p[1] + 2); g.lineTo(p[0] - 2, p[1] + 1.5); g.lineTo(p[0] - 3, p[1] + 5); g.closePath(); g.fill(); R(g, '#ffb347', p[0] - 8, p[1] - 0.5, 2, 1.5); } }
+  for (const e of S.ents) if (e.k === 'jet'){ f35(g, e.x, e.y, 0, 'rgba(0,0,0,.18)'); f35(g, e.x, e.y, 60); } }
+/* an F-35 seen from above, laid in the ground plane: chined nose, trapezoid wings, twin canted fins, one nozzle */
+const F35 = [[16,0],[11,0.9],[7,1.9],[4,2.6],[2,2.7],[-2,9.4],[-6.3,9.4],[-7,3.4],[-8,3.4],[-12.2,7],[-15,7],[-14,2.2],[-15,1.2],[-15,-1.2],[-14,-2.2],[-15,-7],[-12.2,-7],[-8,-3.4],[-7,-3.4],[-6.3,-9.4],[-2,-9.4],[2,-2.7],[4,-2.6],[7,-1.9],[11,-0.9]];
+function f35(g, x, y, z, shadow){ const o = P(x, y, z), ex = P(x + 1, y, z), ey = P(x, y + 1, z), k = 1.5; g.save(); g.translate(o[0], o[1]); g.transform((ex[0] - o[0])*k, (ex[1] - o[1])*k, (ey[0] - o[0])*k, (ey[1] - o[1])*k, 0, 0);
+  const poly = (pts, c) => { g.fillStyle = c; g.beginPath(); pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.fill(); };
+  poly(F35, shadow || '#5c636c'); if (!shadow){ g.strokeStyle = '#2b3036'; g.lineWidth = 0.35; g.stroke(); poly([[11,0.9],[4,2.6],[-13,1.6],[-13,-1.6],[4,-2.6],[11,-0.9]], '#6c747d'); for (const sg of [1, -1]){ poly([[-6,1.6*sg],[-12.5,3.6*sg],[-13.5,3.6*sg],[-9,1.4*sg]], '#454b52'); poly([[-1,3.5*sg],[-4.5,8.4*sg],[-5.4,8.4*sg],[-3,3.2*sg]], '#666e77'); }
+    g.fillStyle = '#c9a54a'; g.beginPath(); g.ellipse(7.5, 0, 3, 0.95, 0, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.5)'; g.fillRect(7, -0.4, 2, 0.3);
+    poly([[-15,1.1],[-17.5,0.7],[-17.5,-0.7],[-15,-1.1]], '#2b3036'); poly([[-17.5,0.6],[-20 - Math.random()*2,0],[-17.5,-0.6]], '#ffb347'); }
+  g.restore(); }
 function end(kind){ S.over = {kind, fc:forecast(), sold:S.sold}; plan = null; linking = null; sel = null; $('#card').hidden = true; tool = null;
   let best = 0; try { best = Number(localStorage.getItem('jf3_best') || 0); if (S.sold > best) localStorage.setItem('jf3_best', String(S.sold)); localStorage.removeItem('jf3_save'); } catch (e) {} S.over.best = Math.max(best, S.sold); showEnd(); }
 /* ================================================================== entities: everything that moves on the block */
@@ -1218,6 +1296,17 @@ function person0(g, x, y, f, shirt, sign, hat, o){ o = o || {}; const p = P(x, y
   if (o.shield){ const sx0 = face > 0 ? X + 1.3 : X - 2.9; R(g, ink, sx0, Y - 6, 1.6, 4.4); R(g, '#a9bccd', sx0 + 0.3, Y - 5.7, 1, 3.8); }
   if (sign){ const wv = Math.round(Math.sin(o.wave || 0)*2)/2; R(g, skin, X + 1.5, Y - 6.5 + wv, 0.6, 2); R(g, '#5a4632', X + 1.8, Y - 12 + wv, 0.5, 7);
     g.font = '4px "Pixelify Sans"'; const w = g.measureText(sign).width + 2; R(g, ink, X + 0.3, Y - 15.8 + wv, w + 1, 4.6); R(g, '#f6f6f2', X + 0.8, Y - 15.3 + wv, w, 3.6); T(g, sign, X + 1.8, Y - 12.4 + wv, '#b3261e', 4); } }
+/* the association's man: dark suit, red tie, sunglasses, a briefcase, and a handshake for the syndic, who wears the sash */
+function suitMan(g, x, y, t, o){ const map = o && o.id !== undefined, mx = x + 2.2, my = y - 2.2, shake = map ? Math.round(Math.sin(t*7))*0.3 : 0;
+  if (map){ person(g, mx, my, 0, '#6f5d4a', null, '#9a9a9a', {face:-1}); const q = P(mx, my, 0); g.save(); g.translate(q[0], q[1]); g.scale(0.78, 0.78); g.translate(-q[0], -q[1]); for (let i = 0; i < 4; i++) R(g, i % 2 ? '#fff' : '#c8102e', q[0] - 1 + i*0.55, q[1] - 5 + i*0.7, 0.6, 0.8); g.restore(); }
+  const p = P(x, y, 0); g.save(); g.translate(p[0], p[1]); g.scale(0.82, 0.82); g.translate(-p[0], -p[1]); const X = p[0], Y = p[1], ink = '#1c2225', jk = '#20242c', skin = '#f2d2b6';
+  R(g, 'rgba(0,0,0,.22)', X - 2, Y - 0.5, 4.5, 1); R(g, '#111317', X - 1, Y - 2, 0.8, 2); R(g, '#111317', X + 0.3, Y - 2, 0.8, 2); R(g, '#000', X - 1.2, Y - 0.4, 1.1, 0.4); R(g, '#000', X + 0.2, Y - 0.4, 1.1, 0.4);
+  R(g, ink, X - 1.4, Y - 5.6, 3.1, 3.8); R(g, jk, X - 1.1, Y - 5.3, 2.5, 3.3); R(g, '#f4f4f2', X - 0.15, Y - 5.3, 0.7, 1.3); R(g, '#c8102e', X + 0.05, Y - 5.0, 0.3, 1.8);
+  R(g, ink, X - 1.1, Y - 7.8, 2.5, 2.5); R(g, skin, X - 0.8, Y - 7.5, 1.9, 1.9); R(g, '#2b2522', X - 1.1, Y - 8.1, 2.5, 0.9); R(g, '#0d0f12', X - 0.7, Y - 6.9, 1.9, 0.55);
+  R(g, jk, X - 2.2, Y - 5, 1, 2.2); R(g, '#5a3d2a', X - 3, Y - 3, 1.8, 1.4); R(g, '#c8a24a', X - 2.3, Y - 3.2, 0.4, 0.3);
+  if (map){ R(g, jk, X + 1.5, Y - 4.6 + shake, 1.6, 0.8); R(g, skin, X + 3.1, Y - 4.6 + shake, 0.8, 0.8); }
+  g.restore();
+  if (map && ((t + o.id*1.7) % 7) < 1.6){ const k = ((t/7 + o.id)|0); if (k % 2) say(x, y, 10, ['Synergies.', 'Win-win.', 'Mon cher syndic…', 'Entre nous…', 'Transition énergétique.'][k % 5]); else say(mx, my, 10, ['Et la route?', 'Hmm.', 'Un petit verre?', 'On verra.'][k % 4]); } }
 function policeman(g, x, y, riot, face){ person(g, x, y, 0, riot ? '#2a2d33' : '#2a4fa0', null, riot ? '#1c2225' : '#152a5e', {face, shield:riot}); }
 /* speech bubbles are queued while the scene draws and painted on top */
 const BUB = [];
@@ -1238,7 +1327,7 @@ function chatter(o, px, py, t, lines){ if (o.id === undefined) return; const c =
   if (slot % 2 === 0) say(px, py, 17, talk[slot]); else say(c.x, c.y, 10, talk[slot]); }
 /* vehicles: oriented boxes. dir: 'x' (east-west) or 'y' (north-south). x,y = centre of footprint */
 function vehicle(g, k, x, y, dir, col, anim, fw){ // x,y = centre of the footprint; dir 'x' (east-west) or 'y' (north-south); fw -1 = driving towards -x/-y
-  const sz = {car:[6.5,3.2], blackcar:[6.8,3.2], bus:[11,3.6], lorry:[11,3.6], tractor:[6,3.2], policevan:[8.5,3.4], riotbus:[12,3.8], van:[8.5,3.4], vib:[9.5,3.6], pickup:[7,3.2], army:[11,3.8], univan:[8.5,3.4]}[k] || [6.5,3.2];
+  const sz = {car:[6.5,3.2], blackcar:[6.8,3.2], policecar:[6.5,3.2], bus:[11,3.6], lorry:[11,3.6], tractor:[6,3.2], policevan:[8.5,3.4], riotbus:[12,3.8], van:[8.5,3.4], vib:[9.5,3.6], pickup:[7,3.2], army:[11,3.8], univan:[8.5,3.4]}[k] || [6.5,3.2];
   const L = sz[0], Wd = sz[1], X = dir === 'y' ? Wd : L, Y = dir === 'y' ? L : Wd, x0 = x - X/2, y0 = y - Y/2, ln = 'rgba(0,0,0,.5)', glass = '#9cc4dd', blink = ((performance.now()/260)|0) % 2;
   const back = fw < 0, fl = l => back ? 1 - l : l, front = !back;      // the drawn end face (east/south) is the bonnet when driving forward, the tail when reversing
   const seg = (l0, l1, ins, z, h, c, o) => { if (back){ const a = 1 - l1; l1 = 1 - l0; l0 = a; } return dir === 'y' ? box(g, x0 + ins, y0 + l0*L, Wd - 2*ins, (l1 - l0)*L, h, c, Object.assign({line:ln}, o), z) : box(g, x0 + l0*L, y0 + ins, (l1 - l0)*L, Wd - 2*ins, h, c, Object.assign({line:ln}, o), z); };
@@ -1248,9 +1337,9 @@ function vehicle(g, k, x, y, dir, col, anim, fw){ // x,y = centre of the footpri
   const wheel = (l, r) => { l = fl(l); const p = dir === 'y' ? P(x0 + Wd, y0 + l*L, r) : P(x0 + l*L, y0 + Wd, r); g.fillStyle = '#16181c'; g.beginPath(); g.arc(p[0], p[1], r, 0, 7); g.fill(); R(g, '#9aa0aa', p[0] - 0.3, p[1] - 0.3, 0.6, 0.6); };
   const roofLights = h => { const p = P(x, y, h + 0.2); R(g, blink ? '#ff3b30' : '#5a1a16', p[0] - 1.3, p[1] - 0.8, 1, 0.8); R(g, blink ? '#1a2a5a' : '#3b8bff', p[0] + 0.3, p[1] - 0.8, 1, 0.8); };
   shadowAt(g, x0 - 0.5, y0 - 0.3, X, Y);
-  if (k === 'car' || k === 'blackcar'){ const c = k === 'blackcar' ? '#1b1e24' : (col || '#2f4f7a');
-    seg(0, 1, 0, 0.5, 1.1, c); seg(0.22, 0.78, 0.25, 1.6, 1.1, glass, {top:shade(c, 1.2), left:glass, right:shade(glass, 0.8)}); side(0.48, 0.53, 1.6, 2.7, c);
-    lights(1.0, 1.4); wheel(0.2, 0.75); wheel(0.8, 0.75); }
+  if (k === 'car' || k === 'blackcar' || k === 'policecar'){ const c = k === 'blackcar' ? '#1b1e24' : k === 'policecar' ? '#f4f4f0' : (col || '#2f4f7a');
+    seg(0, 1, 0, 0.5, 1.1, c); if (k === 'policecar'){ side(0, 1, 0.8, 1.15, '#2a4fa0'); side(0, 1, 1.15, 1.4, '#d7e000'); } seg(0.22, 0.78, 0.25, 1.6, 1.1, glass, {top:shade(c, 1.2), left:glass, right:shade(glass, 0.8)}); side(0.48, 0.53, 1.6, 2.7, c);
+    lights(1.0, 1.4); wheel(0.2, 0.75); wheel(0.8, 0.75); if (k === 'policecar') roofLights(2.8); }
   else if (k === 'bus' || k === 'policevan' || k === 'riotbus' || k === 'van'){
     const c = {bus:'#f2c230', policevan:'#f4f4f0', riotbus:'#2f3742', van:'#f1f1ee'}[k], H = k === 'riotbus' ? 3.4 : k === 'bus' ? 3.1 : 2.8;
     seg(0, 1, 0, 0.5, H, c, {top:k === 'bus' ? '#f6f6f2' : shade(c, 1.1)});
@@ -1318,7 +1407,7 @@ function obj(g, o, t){
       for (const dx of [-3.5, 2.5]){ box(g, x + dx, y + 4.3, 1.4, 0.9, 0.8, '#8a6a4a', {line:'rgba(0,0,0,.35)'}); const p = P(x + dx + 0.7, y + 4.7, 0.8); g.fillStyle = '#3f8f4e'; g.beginPath(); g.arc(p[0], p[1] - 0.8, 1, 0, 7); g.fill(); } break; }
     case 'stand': { const p = P(x, y, 0); R(g, 'rgba(0,0,0,.14)', p[0] - 3, p[1] - 0.5, 6, 1.2); R(g, '#555', p[0] - 0.3, p[1] - 7, 0.7, 7); g.fillStyle = '#2a6fb0'; g.beginPath(); g.ellipse(p[0], p[1] - 7, 4.5, 1.6, 0, 0, 7); g.fill(); R(g, '#f2f2f2', p[0] - 2.5, p[1] - 2.5, 5, 2); break; }
     case 'oppstand': { const p = P(x, y, 0); R(g, 'rgba(0,0,0,.14)', p[0] - 3, p[1] - 0.5, 6, 1.2); R(g, '#555', p[0] - 0.3, p[1] - 7, 0.7, 7); g.fillStyle = '#b3261e'; g.beginPath(); g.ellipse(p[0], p[1] - 7, 4.5, 1.6, 0, 0, 7); g.fill(); R(g, '#f2f2f2', p[0] - 3, p[1] - 2.5, 6, 2); T(g, 'NON', p[0], p[1] - 0.9, '#b3261e', 3.2, 'center'); break; }
-    case 'suit': person(g, x, y, t, '#1d2743', null, '#1c2225'); break;
+    case 'suit': { if (o.id !== undefined) vehicle(g, 'blackcar', x - 3, y - 6, 'x', null); suitMan(g, x, y, t, o); break; }
     case 'police': case 'riot': { const tg = o.id === undefined ? null : S.obj.find(b => b.opp && b.type !== 'march' && Math.hypot(b.x - x, b.y - y) <= 26), fc = tg ? faceTo(x, y, tg.x, tg.y) : 1;
       if (o.type === 'police'){ policeman(g, x - 1.5, y, false, fc); policeman(g, x + 1.5, y + 1, false, fc); if (!tg && o.id !== undefined && ((t + o.id*2.1) % 14) < 1.4) say(x, y, 10, 'Bonjour!'); }
       else for (let i = 0; i < 4; i++) policeman(g, x - 3 + i*2, y + (i%2), true, fc); break; }
@@ -1333,12 +1422,14 @@ function obj(g, o, t){
       { const p = P(x + 7.5, y - 1.5, 0); R(g, '#666', p[0], p[1] - 7, 0.5, 7); R(g, '#f2f2f2', p[0] - 1.2, p[1] - 8.6, 2.8, 2); R(g, '#e46a2a', p[0] - 0.4, p[1] - 6.8, 1.4, 0.4); }
       { const a = P(x + 6, y + 4.5, 0), b = P(x + 9, y + 4.5, 0); R(g, '#7a5a3a', a[0], a[1] - 4, 0.5, 4); R(g, '#7a5a3a', b[0], b[1] - 4, 0.5, 4); g.strokeStyle = '#7a5a3a'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(a[0], a[1] - 4); g.lineTo(b[0] + 0.5, b[1] - 4); g.stroke();
         const sw = Math.sin(t*2.5)*0.8, m = [(a[0] + b[0])/2 + 0.2, (a[1] + b[1])/2 - 4]; g.strokeStyle = '#555'; g.lineWidth = 0.25; g.beginPath(); g.moveTo(m[0], m[1]); g.lineTo(m[0] + sw, m[1] + 2.6); g.stroke(); R(g, '#b3261e', m[0] + sw - 0.6, m[1] + 2.6, 1.3, 0.4); } break; }
-    case 'office': { const roof = (x0, y0, x1, y1, h, hr, wall, rf) => { const ym = (y0 + y1)/2; box(g, x0, y0, x1 - x0, y1 - y0, h, wall, {top:wall, line:'rgba(0,0,0,.4)'}); wpoly(g, [[x0, y0, h], [x1, y0, h], [x1, ym, hr], [x0, ym, hr]], shade(rf, 0.8), 'rgba(0,0,0,.4)', 0.3); wpoly(g, [[x0, ym, hr], [x1, ym, hr], [x1, y1, h], [x0, y1, h]], rf, 'rgba(0,0,0,.4)', 0.3); wpoly(g, [[x1, y0, h], [x1, y1, h], [x1, ym, hr]], shade(wall, 0.75), 'rgba(0,0,0,.4)', 0.3); }; shadowAt(g, x - 5, y - 3.5, 10, 7); roof(x - 4.5, y - 3, x + 3.5, y + 3, 4.4, 6.6, '#f1ede4', '#8a3a2e'); for (let r = 0; r < 2; r++) for (let i = 0; i < 3; i++){ const w = P(x - 3.4 + i*2.4, y + 3, 1.2 + r*1.8); R(g, '#7fa8c4', w[0] - 0.6, w[1] - 1.2, 1.2, 1.2); R(g, '#fff', w[0] - 0.6, w[1] - 0.05, 1.2, 0.15); } if (o.id !== undefined) billboard(g, x - 1.5, y + 4.4, 3.4, ['GÉO-HELVETICA'], 2.2, '#2f7a6a'); const f = P(x + 4.5, y - 2.5, 0); R(g, '#555', f[0], f[1] - 12, 0.5, 12); R(g, '#d52b1e', f[0] + 0.5, f[1] - 12, 3.4, 3.4); R(g, '#fff', f[0] + 1.9, f[1] - 11.3, 0.6, 2); R(g, '#fff', f[0] + 1.2, f[1] - 10.6, 2, 0.6); R(g, '#2f7a6a', f[0] + 0.5, f[1] - 8.4, 3.4, 2.2); break; }
+    case 'office': { const roof = (x0, y0, x1, y1, h, hr, wall, rf) => { const ym = (y0 + y1)/2; box(g, x0, y0, x1 - x0, y1 - y0, h, wall, {top:wall, line:'rgba(0,0,0,.4)'}); wpoly(g, [[x0, y0, h], [x1, y0, h], [x1, ym, hr], [x0, ym, hr]], shade(rf, 0.8), 'rgba(0,0,0,.4)', 0.3); wpoly(g, [[x0, ym, hr], [x1, ym, hr], [x1, y1, h], [x0, y1, h]], rf, 'rgba(0,0,0,.4)', 0.3); wpoly(g, [[x1, y0, h], [x1, y1, h], [x1, ym, hr]], shade(wall, 0.75), 'rgba(0,0,0,.4)', 0.3); }; shadowAt(g, x - 5, y - 3.5, 10, 7); roof(x - 4.5, y - 3, x + 3.5, y + 3, 4.4, 6.6, '#f1ede4', '#8a3a2e'); for (let r = 0; r < 2; r++) for (let i = 0; i < 3; i++){ const w = P(x - 3.4 + i*2.4, y + 3, 1.2 + r*1.8); R(g, '#7fa8c4', w[0] - 0.6, w[1] - 1.2, 1.2, 1.2); R(g, '#fff', w[0] - 0.6, w[1] - 0.05, 1.2, 0.15); } if (o.id !== undefined) billboard(g, x - 1.5, y + 4.4, 3.4, ['GÉO-ÉNERGIE HELVÈTE'], 2.2, '#6a4c93'); const f = P(x + 4.5, y - 2.5, 0); R(g, '#555', f[0], f[1] - 12, 0.5, 12); R(g, '#d52b1e', f[0] + 0.5, f[1] - 12, 3.4, 3.4); R(g, '#fff', f[0] + 1.9, f[1] - 11.3, 0.6, 2); R(g, '#fff', f[0] + 1.2, f[1] - 10.6, 2, 0.6); R(g, '#6a4c93', f[0] + 0.5, f[1] - 8.4, 3.4, 2.2); R(g, '#f2c230', f[0] + 1.6, f[1] - 7.8, 1.2, 1); break; }
     case 'experts': { shadowAt(g, x - 4, y - 1.6, 8, 3.2); box(g, x - 4, y - 1.6, 8, 3.2, 2.8, '#d9822b', {line:'rgba(0,0,0,.45)'}); for (let l = -3.3; l < 4; l += 0.9){ const p = P(x + l, y + 1.6, 0.2); R(g, 'rgba(0,0,0,.18)', p[0], p[1] - 2.4, 0.3, 2.4); } const w = P(x + 1.5, y + 1.6, 1.6); R(g, '#9cc4dd', w[0], w[1] - 1, 2, 1);
-      const d = P(x - 2.5, y, 2.8); R(g, '#666', d[0], d[1] - 2, 0.4, 2); g.fillStyle = '#e8e8e8'; g.beginPath(); g.ellipse(d[0] + 0.2, d[1] - 2.4, 1.6, 0.9, -0.5, 0, 7); g.fill(); break; }
+      const d = P(x - 2.5, y, 2.8); R(g, '#666', d[0], d[1] - 2, 0.4, 2); g.fillStyle = '#e8e8e8'; g.beginPath(); g.ellipse(d[0] + 0.2, d[1] - 2.4, 1.6, 0.9, -0.5, 0, 7); g.fill(); wpoly(g, [[x - 4, y + 1.6, 2.1], [x + 4, y + 1.6, 2.1], [x + 4, y + 1.6, 2.5], [x - 4, y + 1.6, 2.5]], '#2f7a6a'); { const pl = P(x - 1, y + 1.6, 0.9); R(g, '#2f7a6a', pl[0] - 2.2, pl[1] - 1.7, 4.4, 1.7); R(g, '#f2a33a', pl[0] + 1.5, pl[1] - 1.5, 0.5, 1.3); T(g, 'GÉO·H', pl[0] - 0.4, pl[1] - 0.35, '#fff', 1.6, 'center'); } break; }
     case 'engineers': { shadowAt(g, x - 4.5, y - 2.5, 9, 5); box(g, x - 4.5, y - 2.5, 9, 2.6, 2.6, '#4a6d8c', {line:'rgba(0,0,0,.45)'}); box(g, x - 4.5, y + 0.3, 9, 2.4, 2.6, '#5d7f9c', {line:'rgba(0,0,0,.45)'}); box(g, x - 4.5, y - 2.5, 5, 2.6, 2.4, '#3f5f7a', {line:'rgba(0,0,0,.45)'}, 2.6);
       for (let i = 0; i < 3; i++) box(g, x + 1.5, y + 3.2 + i*0.7, 4, 0.6, 0.6, '#9a9a96', {line:'rgba(0,0,0,.35)'}, i*0.6); const h = P(x - 2, y - 1.2, 5.2); R(g, '#f2c230', h[0] - 1, h[1] - 0.6, 2, 0.6); break; }
-    case 'prhut': { shadowAt(g, x - 3, y - 2, 6, 4); box(g, x - 3, y - 2, 6, 4, 2.8, '#a87a4f', {top:'#7a4a3a', line:'rgba(0,0,0,.45)'}); for (let i = 0; i < 6; i++){ const p = P(x - 3 + i, y + 2, 2.9); R(g, i % 2 ? '#fff' : '#d52b1e', p[0], p[1] - 0.8, 1, 0.8); } const w = P(x, y + 2, 1.5); R(g, '#f8e7b0', w[0] - 1, w[1] - 1, 2, 1.2); billboard(g, x + 3.5, y + 3, 4.6, ['INFO'], 3.4, '#1f5fa8'); break; }
+    case 'prhut': { shadowAt(g, x - 3.5, y - 2.5, 7, 5); box(g, x - 3, y - 2, 6, 4, 2.8, '#a87a4f', {top:'#7a4a3a', line:'rgba(0,0,0,.45)'}); for (let i = 0; i < 6; i++){ const p = P(x - 3 + i, y + 2, 2.9); R(g, i % 2 ? '#fff' : '#2a4fa0', p[0], p[1] - 0.8, 1, 0.8); } { const w = P(x - 1.6, y + 2, 1.4); R(g, '#3a2a1e', w[0] - 1.2, w[1] - 1.2, 2.4, 1.3); R(g, '#f8e7b0', w[0] - 1, w[1] - 1, 2, 0.5); const cm = P(x - 1.6, y + 2, 1.2); R(g, '#c9ced3', cm[0] - 0.4, cm[1] - 0.9, 0.8, 0.9); } box(g, x + 0.6, y + 2.4, 1.6, 1, 1.1, '#e9dcc0', {line:'rgba(0,0,0,.35)'}); { const c = P(x + 1.1, y + 2.9, 1.1); R(g, '#fff', c[0] - 0.3, c[1] - 0.6, 0.6, 0.6); R(g, '#d9a35a', c[0] + 0.4, c[1] - 0.4, 0.8, 0.4); }
+      if (o.id !== undefined) vehicle(g, 'policecar', x + 7.5, y - 3, 'y', null); policeman(g, x + 4.4, y + 1, false, 1); { const h = P(x + 4.4, y + 1, 0); R(g, '#fff', h[0] + 1.2, h[1] - 4.5, 0.7, 0.7); }
+      billboard(g, x - 0.5, y - 2, 4.4, ['BUVETTE'], 2.4, '#2a4fa0'); if (o.id !== undefined && o.on && ((t + o.id) % 11) < 1.4) say(x + 4.4, y + 1, 9, ['Merci!', 'Toujours un plaisir.', 'On passe ce soir.'][((t/11)|0) % 3]); break; }
     case 'workshop': { shadowAt(g, x - 6, y - 4, 12, 8); box(g, x - 6, y - 4, 12, 8, 4.6, '#9aa3ab', {line:'rgba(0,0,0,.4)'}); for (let i = 0; i < 4; i++) wpoly(g, [[x - 6 + i*3, y - 4, 4.6], [x - 6 + i*3, y + 4, 4.6], [x - 3 + i*3, y + 4, 6.4], [x - 3 + i*3, y - 4, 6.4]], i % 2 ? '#b8c0c7' : '#c9d0d6', 'rgba(0,0,0,.35)', 0.3);
       const dr = P(x - 1, y + 4, 0); R(g, '#3b4148', dr[0] - 2, dr[1] - 3.4, 4, 3.4); for (let i = 0; i < 3; i++) box(g, x + 7, y - 3 + i*1.6, 1.2, 1.2, 0.9, '#c8571b', {line:'rgba(0,0,0,.3)'}); break; }
     case 'waterlab': { shadowAt(g, x - 4, y - 3, 8.5, 6); box(g, x - 4, y - 2.5, 6, 5, 3.2, '#f4f6f7', {top:'#cfd8dc', line:'rgba(0,0,0,.35)'}); wpoly(g, [[x - 4, y + 2.5, 2.4], [x + 2, y + 2.5, 2.4], [x + 2, y + 2.5, 2.8], [x - 4, y + 2.5, 2.8]], '#1f6fc4'); for (let i = 0; i < 2; i++){ const w = P(x - 3 + i*2.4, y + 2.5, 1.5); R(g, '#9cc4dd', w[0] - 0.6, w[1] - 1, 1.3, 1); } { const c0 = P(x + 3.6, y, 0), c1 = P(x + 3.6, y, 4.2); g.fillStyle = '#c9d6df'; g.fillRect(c0[0] - 1.5, c1[1], 3, c0[1] - c1[1]); g.fillStyle = '#e4ecf1'; g.beginPath(); g.ellipse(c1[0], c1[1], 1.5, 0.75, 0, 0, 7); g.fill(); g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 0.25; g.stroke(); } const d = P(x + 3.6, y + 1.5, 2.6); g.fillStyle = '#1f6fc4'; g.beginPath(); g.moveTo(d[0], d[1] - 1.8); g.quadraticCurveTo(d[0] + 1, d[1] - 0.5, d[0], d[1]); g.quadraticCurveTo(d[0] - 1, d[1] - 0.5, d[0], d[1] - 1.8); g.fill(); break; }
@@ -1571,7 +1662,7 @@ function drawSection(g, t){
 }
 /* ================================================================== HUD, palette, cards */
 function buildPalette(){
-  const pal = $('#pal'), GC = {Company:'#6a4c93', Explore:'#2f6fb0', Drill:'#c8571b', Connect:'#1f8a7a', Persuade:'#3f8f4e', Force:'#b3261e'}; let h = '', grp = '';
+  const pal = $('#pal'), GC = {Company:'#6a4c93', Association:'#2f7a6a', Explore:'#2f6fb0', Drill:'#c8571b', Connect:'#1f8a7a', Persuade:'#3f8f4e', Force:'#b3261e'}; let h = '', grp = '';
   for (const k in DEF){ const d = DEF[k]; if (d.hide) continue; if (d.g !== grp){ grp = d.g; h += '<h3 style="--g:' + GC[grp] + '">' + grp + '</h3>'; }
     h += '<button class="it" style="--g:' + GC[d.g] + '" data-t="' + k + '" title="' + (d.en ? d.en + ': ' : '') + d.h.replace(/"/g, '&quot;') + '" aria-pressed="false"><canvas width="36" height="36"></canvas><span><b>' + d.n + '</b><small>' + (d.c || (d.cost ? fmt(d.cost) : '') + (d.up && d.cost ? ' + ' + fmt(d.up).replace('CHF ', '') + '/mo' : '')) + '</small></span></button>'; }
   pal.innerHTML = h;
@@ -1613,6 +1704,7 @@ function hud(){
   else if (view === 'section') hs = 'Line ' + S.lines[line].name + '. Drag to move, + and − to zoom. Click a rig at the surface, then Draw well. Where the bands break there is probably a fault; only drilling shows the rock.';
   else if (view === 'map') hs = cutLine !== null ? 'The block is cut along line ' + S.lines[cutLine].name + '. Click the face to open it flat.' : 'Click a dotted grid line to cut the block. Click a village to hear it.';
   if (hs){ if (hint.textContent !== hs){ hint.textContent = hs; hint.dataset.plan = ''; } hint.hidden = false; } else if (!plan) hint.hidden = true;
+  if (officeHold && $('#ledger').hidden){ officeHold = false; if (!S.event && !S.offer && !S.secret && !S.over) S.paused = officeWas; } else if (officeHold) S.paused = true;
   if (toastT && performance.now() > toastT){ $('#toast').hidden = true; toastT = 0; }
   const ro = $('#readout'); const tr = sel && sel.id && byId(sel.id); if (view === 'section' && tr && tr.type === 'testrig' && tr.log){ if (ro.textContent !== tr.log) ro.textContent = tr.log; ro.hidden = false; } else ro.hidden = true; hint.classList.toggle('withlog', !ro.hidden);
   if (sel) renderCard(); if (!$('#polls').hidden) renderPolls(); if (!$('#wire').hidden) renderWire(); if (!$('#camp').hidden) renderCampaign(); if (!$('#ledger').hidden) renderLedger(); $('#campchip').hidden = !campOpen(); renderSteps();
@@ -1656,8 +1748,83 @@ function wishEnd(v, ok){ const d = WISH[v.wish.k]; if (ok){ bump(v, 'Wish grante
   v.lastWish = v.wish.k; v.wish = null; v.wishNext = S.month + 4; }
 function wishHtml(v){ const w = v.wish; if (!w) return ''; const d = WISH[w.k], left = w.until - S.month;
   return '<div class="wish"><b>Wish:</b> ' + d.t + '. ' + (d.cost ? '<button class="btn main" data-a="wish" data-v="' + v.id + '">Grant it (' + fmt(d.cost) + ')</button>' : d.keep ? left + ' month' + (left === 1 ? '' : 's') + ' to go, if you keep it that way.' : left + ' month' + (left === 1 ? '' : 's') + ' left.') + '</div>'; }
+/* lessons: the university, the association's experts and the information stand each explain the trade, in their own voice. A small drawing each. */
+const SVG = b => '<svg class="lsvg" viewBox="0 0 260 130" role="img">' + b + '</svg>';
+const sL = (x1, y1, x2, y2, c) => '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" class="' + (c || 'ln') + '"/>';
+const sA = (x1, y1, x2, y2, c) => { const a = Math.atan2(y2 - y1, x2 - x1), h = 6, p = (s) => (x2 - h*Math.cos(a + s)).toFixed(1) + ',' + (y2 - h*Math.sin(a + s)).toFixed(1); return sL(x1, y1, x2, y2, c) + '<polygon points="' + x2 + ',' + y2 + ' ' + p(0.45) + ' ' + p(-0.45) + '" class="' + (c || 'ln') + ' f"/>'; };
+const sR = (x, y, w, h, c) => '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" class="' + c + '"/>';
+const sT = (x, y, s, c, a) => '<text x="' + x + '" y="' + y + '" class="' + (c || 'tx') + '"' + (a ? ' text-anchor="' + a + '"' : '') + '>' + s + '</text>';
+const sP = (d, c) => '<path d="' + d + '" class="' + (c || 'ln') + '"/>';
+const sC = (x, y, r, c) => '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" class="' + c + '"/>';
+const LSRC = {chair:{who:'Antenne universitaire', voice:'Lecture', cls:'board'}, experts:{who:'Géothermie-Helvetica · knowledge transfer', voice:'Technical note', cls:'memo'}, stand:{who:'Stand d’information', voice:'Leaflet', cls:'leaflet'}};
+const LESSONS = [
+  {k:'doublet', src:'chair', t:'Two wells, one loop',
+   d:() => SVG(sR(0, 30, 260, 45, 'l1') + sR(0, 75, 260, 30, 'l3') + sR(0, 105, 260, 25, 'l2') + sR(108, 8, 44, 18, 'bx') + sT(130, 21, 'heat', 'tx s', 'middle') + sP('M60 98 L60 17 L104 17', 'hot w') + sP('M156 17 L200 17 L200 98', 'cold w') + sA(70, 17, 100, 17, 'hot') + sA(160, 17, 190, 17, 'cold') + sA(192, 96, 70, 96, 'mix d') + sT(52, 56, 'P', 'tx b', 'end') + sT(208, 56, 'I', 'tx b') + sT(130, 87, 'water-bearing layer', 'tx s', 'middle') + sT(130, 121, 'the cooled water creeps back towards P', 'tx s', 'middle') + sT(66, 46, 'hot', 'tx s') + sT(194, 46, 'cooled', 'tx s', 'end')),
+   b:'A doublet is two wells into the same water-bearing layer. The production well (P) brings hot water up, a heat exchanger takes the heat, and the injection well (I) puts the cooled water back, so the layer keeps its pressure. The distance between the two well bottoms matters. Too close, and the cold water reaches P within a few years. Too far, and the wells may not be connected at all. Nobody knows the right distance before pumping.'},
+  {k:'twokinds', src:'chair', t:'Water in the rock, or rock to be cracked',
+   d:() => SVG(sR(0, 20, 125, 98, 'l3') + sR(135, 20, 125, 98, 'l2') + [[15,40],[40,60],[70,45],[95,70],[25,85],[60,95],[100,100],[50,30],[85,30],[110,50]].map(p => sC(p[0], p[1], 4, 'drop')).join('') + sL(62, 0, 62, 75, 'hot w') + sA(62, 70, 62, 14, 'hot') + sP('M150 110 L170 80 L165 60 L185 40 M185 40 L205 55 L220 30 M170 80 L200 90 L225 70 L245 85', 'crack') + sL(197, 0, 197, 62, 'cold w') + sA(197, 20, 197, 58, 'cold') + sA(200, 62, 222, 70, 'cold') + sA(194, 62, 172, 74, 'cold') + sT(62, 128, 'hydrothermal', 'tx s', 'middle') + sT(197, 128, 'petrothermal', 'tx s', 'middle')),
+   b:'Some layers, like the Muschelkalk, are porous or fractured and already hold warm water: drill in and pump it up. That is hydrothermal. Granite is hotter at depth but tight. Water has to be pressed in until cracks open and join the wells. That is petrothermal, or stimulated. It reaches more heat and carries more uncertainty, mostly about how the rock will answer.'},
+  {k:'gradient', src:'chair', t:'How hot is deep?',
+   d:() => SVG(sL(30, 26, 30, 120) + sL(30, 26, 250, 26) + sT(26, 30, '0', 'tx s', 'end') + sT(26, 120, '5 km', 'tx s', 'end') + sT(250, 20, '°C', 'tx s', 'end') + '<polygon points="34,26 236,118 190,118 34,26" class="band"/>' + sL(34, 26, 213, 118, 'hot w') + sL(80, 26, 80, 120, 'cold d') + sL(145, 26, 145, 120, 'hot d') + sT(80, 18, 'heating: 60 °C', 'tx s', 'middle') + sT(170, 18, 'power: 100 °C +', 'tx s', 'middle') + sT(254, 80, 'the honest band', 'tx s', 'end')),
+   b:'On average the ground gets about 3 °C warmer every 100 m. “On average” hides a lot: faults, flowing water and old basins bend the curve. A heat station is happy from about 60 °C. A power plant wants well above 100 °C, which here usually means granite and several kilometres. The band in the drawing is the honest version.',
+   x:() => { const w = S.obj.find(o => o.type === 'testrig' && o.log); return w ? 'Your exploration well on line ' + S.lines[w.line].name + ' measured about ' + tempAt(w.line, sx(w.x), w.depth) + ' °C at ' + M(w.depth) + '.' : ''; }},
+  {k:'quakes', src:'chair', t:'Why water can shake the ground',
+   d:() => SVG('<polygon points="0,20 150,20 95,130 0,130" class="l1"/><polygon points="150,20 260,20 260,130 95,130" class="l2"/>' + sL(150, 20, 95, 130, 'crack') + sL(60, 0, 60, 80, 'cold w') + sA(64, 80, 112, 86, 'cold') + sA(64, 92, 106, 100, 'cold') + sA(180, 110, 170, 60, 'ln') + sA(40, 40, 50, 110, 'ln') + '<polygon points="122,70 126,78 134,78 128,83 131,91 122,86 113,91 116,83 110,78 118,78" class="star"/>' + sT(188, 98, 'pressure lowers', 'tx s') + sT(188, 110, 'the friction', 'tx s') + sT(200, 40, 'stress already stored', 'tx s', 'middle')),
+   b:'The ground is full of faults that are already loaded, like a drawer that sticks. Water under pressure seeps into them and lowers the friction. Most of the time that gives quakes too small to feel. Sometimes one is felt in the villages; rarely one does damage. You cannot see from the surface which fault is close to slipping. Monitoring lets you notice early; it does not tell you in advance.'},
+  {k:'seismic', src:'chair', t:'What the trucks are listening to', when:() => S.lines.some(l => l.segs && l.segs.length),
+   d:() => SVG(sR(0, 30, 260, 100, 'l1') + sP('M0 75 Q130 65 260 80', 'refl') + sP('M0 105 Q130 95 260 112', 'refl') + sR(20, 18, 26, 12, 'bx') + [60, 100, 140, 180, 220].map(x => '<polygon points="' + x + ',30 ' + (x - 4) + ',22 ' + (x + 4) + ',22" class="geo"/>').join('') + sA(33, 30, 80, 70, 'hot') + sA(80, 70, 120, 30, 'hot') + sA(33, 30, 120, 99, 'cold') + sA(120, 99, 200, 30, 'cold') + sT(33, 14, 'vibroseis', 'tx s', 'middle') + sT(140, 14, 'geophones listen', 'tx s', 'middle') + sT(255, 92, 'echo from a boundary', 'tx s', 'end')),
+   b:'The vibroseis trucks shake the ground; geophones along the line record the echoes from boundaries between harder and softer rock. The first pass gives rough depths. More geophones and more shots sharpen them. A 3D grid lets the geologists name the layers with some confidence. It is still a picture of echoes, not a photograph of rock. Only a well says what is really down there.'},
+  {k:'heatpower', src:'chair', t:'Heat or power', when:() => has('workshop') || S.month > 18,
+   d:() => SVG(sR(6, 20, 104, 22, 'hotf') + sT(58, 35, 'from the well: 100', 'tx s w', 'middle') + sA(112, 31, 130, 20, 'ln') + sA(112, 31, 130, 70, 'ln') + sR(134, 10, 10, 18, 'yel') + sT(150, 23, 'electricity: about 10', 'tx s') + sR(134, 34, 90, 10, 'grey') + sT(150, 55, 'into the air: about 90', 'tx s') + sR(134, 70, 85, 18, 'hotf') + sT(176, 83, 'heat to houses', 'tx s w', 'middle') + sT(176, 100, '(if a village is close)', 'tx s', 'middle')),
+   b:'A turbine running on water at 120–150 °C turns only about a tenth of the heat into electricity; the rest goes into the air above the coolers. Selling the heat itself is far more efficient, but heat does not travel well: a pipe of more than a few kilometres eats the margin. Power is easy to sell and wasteful. Heat is efficient and needs neighbours.'},
+  {k:'reading', src:'experts', t:'Reading a section',
+   d:() => SVG(sR(0, 0, 260, 130, 'l1') + sP('M0 35 Q30 30 60 36 T120 34', 'refl') + sP('M130 46 Q160 40 190 46 T260 44', 'refl') + sP('M0 70 Q30 64 60 70 T120 68', 'refl') + sP('M130 82 Q160 76 190 82 T260 80', 'refl') + sL(124, 10, 128, 120, 'crack') + '<ellipse cx="200" cy="108" rx="24" ry="6" class="bright"/>' + sT(60, 26, 'strong reflector', 'tx s', 'middle') + sT(132, 124, 'break: a fault', 'tx s') + sT(200, 100, 'bright spot', 'tx s', 'middle')),
+   b:'A strong reflector usually marks soft rock over hard rock, or the other way round. Where reflections break and jump, there is probably a fault: good for water, worrying for quakes. A bright spot can be gas, coal, or nothing much. Our readings in the Office panel say “probably” for a reason.'},
+  {k:'traffic', src:'experts', t:'The traffic light',
+   d:() => SVG(sR(18, 14, 34, 100, 'bx') + sC(35, 32, 11, 'gr') + sC(35, 64, 11, 'yel') + sC(35, 96, 11, 'red') + sL(70, 110, 250, 110) + [[80,4],[95,6],[110,5],[125,10],[140,14],[155,22],[170,30],[185,18],[200,44],[215,12],[230,8]].map(p => sL(p[0], 110, p[0], 110 - p[1]*1.8, p[1] > 25 ? 'hot w' : 'ln w')).join('') + sL(70, 70, 250, 70, 'yel d') + sL(70, 40, 250, 40, 'hot d') + sT(72, 64, 'yellow: lower the pressure', 'tx s') + sT(72, 34, 'red: stop pumping', 'tx s') + sT(160, 124, 'after the stop, one more', 'tx s', 'middle')),
+   b:'Usual practice: seismometers around the site, data in public, and three thresholds agreed in advance. Green: carry on. Yellow: lower the pressure and tell people. Red: stop pumping. Quakes can still follow after the pumps stop, sometimes the largest one. The thresholds are a promise to the valley rather than a guarantee.'},
+  {k:'karst', src:'experts', t:'Springs and the limestone',
+   d:() => SVG(sR(0, 30, 260, 50, 'l1') + sR(0, 80, 260, 50, 'l2') + sP('M20 40 Q60 55 90 45 T160 60 Q200 70 240 50', 'karst') + sP('M40 70 Q80 60 120 70', 'karst') + sR(150, 22, 20, 8, 'bx') + sT(160, 18, 'fountain', 'tx s', 'middle') + sL(90, 0, 90, 125, 'casing') + sL(98, 0, 98, 125, 'casing') + sA(100, 60, 145, 58, 'hot d') + sT(108, 98, 'cement keeps the mud in', 'tx s')),
+   b:'The limestone near the surface is full of channels. Water moves through it in days, not years, and comes out at the village springs. Steel casing and a good cement job keep the drilling mud out of it. A bad cement job shows up later, in someone’s fountain. A bond log tells you more about the cement. It costs money and it is still no promise.'},
+  {k:'bend', src:'experts', t:'Bending a well', when:() => has('engineers'),
+   d:() => SVG(sR(0, 22, 260, 108, 'l1') + sR(30, 6, 16, 16, 'bx') + sR(150, 10, 40, 12, 'bx') + sT(170, 8, 'village', 'tx s', 'middle') + sP('M38 22 L38 55 Q42 90 120 110 L200 118', 'hot w') + sL(38, 55, 38, 120, 'ln d') + sT(48, 80, '30°', 'tx s') + sC(205, 118, 5, 'red') + sT(214, 108, 'target', 'tx s')),
+   b:'A directional well starts straight down and then bends, a few degrees per 100 m. It can meet a fault zone at a better angle, stay away from a spring, or put two well bottoms far apart from one pad. Each metre costs more, and the drill string complains.'},
+  {k:'swell', src:'experts', t:'Rock that swells', when:() => S.month > 6,
+   d:() => SVG(sP('M0 30 L80 30 Q130 14 180 30 L260 30 L260 130 L0 130 Z', 'l1') + sR(0, 70, 260, 26, 'l3') + sR(110, 10, 16, 12, 'bx') + sR(134, 8, 16, 12, 'bx') + sL(60, 0, 60, 120, 'casing') + sA(64, 108, 90, 86, 'cold') + sA(130, 70, 130, 40, 'ln') + sT(200, 86, 'anhydrite + water', 'tx s', 'middle') + sT(200, 120, '= gypsum, more volume', 'tx s', 'middle')),
+   b:'Anhydrite is harmless while dry. When water reaches it, it slowly turns into gypsum and takes up more room: the ground can rise by centimetres a year, and houses crack. It usually happens when a well connects a water-bearing layer with an anhydrite layer. Tight casing through those layers matters more than speed.'},
+  {k:'basics', src:'stand', t:'Geothermal energy in thirty seconds',
+   d:() => SVG('<ellipse cx="130" cy="150" rx="140" ry="70" class="core"/>' + sR(100, 30, 60, 30, 'house') + '<polygon points="95,30 130,10 165,30" class="roof"/>' + sA(80, 110, 112, 64, 'hot') + sA(130, 106, 130, 64, 'hot') + sA(180, 110, 148, 64, 'hot') + sT(130, 124, 'warm inside', 'tx s', 'middle')),
+   b:'The Earth is warm inside. We bring that warmth up to your radiator. Local, renewable, available day and night.', fine:'Drawing not to scale.'},
+  {k:'safe', src:'stand', t:'Is it safe?',
+   d:() => SVG(sP('M10 70 L80 70 L84 66 L88 74 L92 68 L96 70 L150 70 L153 67 L156 72 L159 70 L250 70', 'ln w') + sT(130, 40, 'what you feel: almost nothing', 'tx', 'middle') + sT(130, 104, 'monitored day and night', 'tx s', 'middle')),
+   b:'Small tremors are normal and watched around the clock. Most are too weak to be felt.', fine:'Most.'},
+  {k:'frack', src:'stand', t:'Is this fracking?', when:() => has('workshop') || S.month > 12,
+   d:() => SVG(sR(0, 0, 260, 130, 'l2') + sP('M30 100 L90 60 L140 70 L220 30', 'crack') + sA(60, 20, 84, 54, 'cold') + sA(150, 20, 136, 58, 'cold') + sT(130, 120, 'stimulation (not that other word)', 'tx s', 'middle')),
+   b:'No. We do not frack. We stimulate the rock: water under pressure gently widens existing cracks so that it can collect the heat.', fine:'Any resemblance to other methods is a matter of vocabulary.'},
+  {k:'you', src:'stand', t:'What is in it for you?',
+   d:() => SVG(sR(10, 50, 40, 30, 'bx') + sT(30, 44, 'station', 'tx s', 'middle') + sL(50, 70, 170, 70, 'hot w') + sA(150, 70, 168, 70, 'hot') + [175, 200, 225].map(x => sR(x, 55, 20, 20, 'house') + '<polygon points="' + (x - 3) + ',55 ' + (x + 10) + ',44 ' + (x + 23) + ',55" class="roof"/>').join('') + sT(130, 110, 'heat from your valley, for your valley', 'tx s', 'middle')),
+   b:'Heat from your valley, for your valley. Stable prices, fewer oil tanks, and jobs on site.', fine:'Connection subject to a pipe.'}];
+const INTRO = {chair:['The professor is late, as usual.', 'Twelve students, two farmers and a journalist.', 'The projector does not work. The professor draws.', 'A doctoral student takes the lecture; the professor is at a conference.'], experts:['A note from the association’s expert office.', 'From the expert office, with a coffee stain.', 'Circulated to members only.'], stand:['From the rack at the stand.', 'Handed out with a pen and a sweet.', 'The leaflet, folded in three.']};
+const lsKey = o => o.type === 'stand' ? 'stand' : o.type;
+function lessonNext(src){ S.lessons = S.lessons || {}; const L = S.lessons[src] || (S.lessons[src] = {av:1, read:[]}); if (L.read.length >= L.av) return null; return LESSONS.find(l => l.src === src && !L.read.includes(l.k) && (!l.when || l.when())) || null; }
+function lessonTick(){ for (const src of ['chair', 'experts', 'stand']){ const on = S.obj.some(o => lsKey(o) === src && (src === 'stand' || (o.on && !o.off && !o.burnt))); if (!on) continue; S.lessons = S.lessons || {}; const L = S.lessons[src] || (S.lessons[src] = {av:1, read:[]}); if (L.av <= L.read.length && Math.random() < 0.45) L.av++; } }
+function lessonCard(o){ const src = lsKey(o), nx = lessonNext(src), L = (S.lessons || {})[src] || {read:[]}, all = LESSONS.filter(l => l.src === src).length;
+  let s = '<div class="sub" style="margin-top:6px">' + LSRC[src].voice + 's heard: ' + L.read.length + ' of ' + all + '.</div>', a = '';
+  if (nx) a += '<button class="btn main" data-a="lesson" data-v="' + nx.k + '">' + (src === 'chair' ? 'Attend: ' : src === 'stand' ? 'Take a leaflet: ' : 'Read: ') + nx.t + '</button>';
+  else s += '<div class="sub">' + (L.read.length >= all ? 'You have heard everything they have to say.' : 'Nothing new right now. Come back in a month or two.') + '</div>';
+  if (L.read.length) a += '<button class="btn" data-a="notes">Your notes</button>'; return [s, a]; }
+function lessonHtml(l, intro){ const x = l.x ? l.x() : '', c = LSRC[l.src];
+  return '<div class="lesson ' + c.cls + '"><div class="lhead"><small>' + c.who + ' · ' + c.voice + '</small><h2>' + l.t + '</h2>' + (intro ? '<div class="lintro">' + intro + '</div>' : '') + '</div>' + l.d() + '<p>' + l.b + '</p>' + (x ? '<p class="lx">' + x + '</p>' : '') + (l.fine ? '<p class="fine">' + l.fine + '</p>' : ''); }
+let lessonWas = null;
+function showLesson(k){ const l = LESSONS.find(z => z.k === k); if (!l) return; const L = S.lessons[l.src] || (S.lessons[l.src] = {av:1, read:[]}); if (!L.read.includes(k)) L.read.push(k);
+  if (lessonWas === null) lessonWas = S.paused; S.paused = true; $('#overlay').hidden = false; $('#overlay').innerHTML = lessonHtml(l, pick(INTRO[l.src])) + '<div class="acts"><button class="btn main" data-a="closelesson">Got it</button><button class="btn" data-a="notes">All notes</button></div></div>'; sfx('click'); }
+function closeLesson(){ $('#overlay').hidden = true; if (lessonWas !== null && !S.event && !S.offer){ S.paused = lessonWas; } lessonWas = null; }
+function notesHtml(){ const L = S.lessons || {}; let h = '<p class="sub">What the university, the association’s experts and the information stand have explained so far. Click a title to open it. New lessons come from clicking those buildings on the map while they run.</p><div class="cols">';
+  for (const src of ['chair', 'experts', 'stand']){ const rd = ((L[src] || {}).read || []).map(k => LESSONS.find(l => l.k === k)).filter(Boolean), all = LESSONS.filter(l => l.src === src).length;
+    h += '<section class="ocard"><h5>' + LSRC[src].who + ' · ' + rd.length + ' of ' + all + '</h5>' + (rd.length ? rd.map(l => '<details><summary>' + l.t + '</summary>' + lessonHtml(l) + '</div></details>').join('') : '<p class="sub">' + (S.obj.some(o => lsKey(o) === src && !o.burnt) ? 'Nothing heard yet. Click it on the map.' : src === 'chair' ? 'Needs the Antenne universitaire.' : src === 'experts' ? 'Needs the Antenne d’expertise.' : 'Needs an information stand near a village.') + '</p>') + '</section>'; }
+  return h + '</div>'; }
 /* the Office panel: finance and loans, the experts' readings of the sections, decisions, and the company's network of buildings */
-let officeTab = 'fin';
+let officeTab = 'fin', officeHold = false, officeWas = false;
 const GUESS = d => d < 45 ? 'the limestone' : d < 95 ? 'the marls' : d < 135 ? 'the Muschelkalk, the aquifer target' : d < 150 ? 'the salt beds' : d < 172 ? 'the sandstone' : d < 210 ? 'old coal-bearing rock' : 'the crystalline basement';
 function sectionReading(li){ const l = S.lines[li], out = [];
   for (const sg of l.segs.filter(x => !x.active || x.pass > 1)){ const pv = sg.active ? sg.pass - 1 : sg.pass, xm = sx((sg.x0 + sg.x1)/2), r3 = pv >= 3, step = pv >= 2 ? 50 : 100, items = [], seen = {};
@@ -1671,7 +1838,7 @@ function sectionReading(li){ const l = S.lines[li], out = [];
     out.push({where:(m(sg.x0)/1000).toFixed(1) + '–' + (m(sg.x1)/1000).toFixed(1) + ' km', pass:pv, items}); }
   return out; }
 /* business trajectory: small multiples, one unit per chart (never two y-scales) */
-function trendSVG(hist, series, o){ o = o || {}; const W = 300, H = o.h || 78, L = 34, Rt = 30, T = 6, B = 14, n = hist.length; if (n < 2) return '';
+function trendSVG(hist, series, o){ o = o || {}; const W = o.w || 300, H = o.h || 78, L = 34, Rt = 30, T = 6, B = 14, n = hist.length; if (n < 2) return '';
   let lo = o.min !== undefined ? o.min : Infinity, hi = o.max !== undefined ? o.max : -Infinity; for (const sr of series) for (const h of hist){ const v = sr.v(h); lo = Math.min(lo, v); hi = Math.max(hi, v); } if (o.bars){ lo = Math.min(lo, 0); hi = Math.max(hi, 0); } if (hi - lo < 1e-6) hi = lo + 1;
   const X = i => L + i*(W - L - Rt)/(n - 1), Y = v => T + (hi - v)*(H - T - B)/(hi - lo), fv = o.fmt || (v => fmt(v));
   let g = '<svg class="trend" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + o.label + '">';
@@ -1683,29 +1850,35 @@ function trendSVG(hist, series, o){ o = o || {}; const W = 300, H = o.h || 78, L
   const cw = (W - L - Rt)/Math.max(1, n - 1);
   for (let i = 0; i < n; i++){ const h = hist[i]; g += '<g class="hv"><rect x="' + (X(i) - cw/2) + '" y="0" width="' + cw + '" height="' + H + '" fill="transparent"/><line x1="' + X(i) + '" x2="' + X(i) + '" y1="' + T + '" y2="' + (H - B) + '" stroke="#15181c" stroke-width="0.6"/><title>' + MONTHS[(h.m - 1 + 12) % 12] + ', year ' + (((h.m - 1)/12|0) + 1) + ': ' + series.map(sr => sr.n + ' ' + fv(sr.v(h))).join(' · ') + '</title></g>'; }
   return g + '</svg>'; }
+function openOffice(tab){ if (tab) officeTab = tab; for (const p of ['#polls', '#wire', '#camp']) $(p).hidden = true; $('#ledger').hidden = false; if (!officeHold){ officeHold = true; officeWas = S.paused; } S.paused = true; renderLedger(); }
 function renderLedger(){ const el = $('#ledger'), A = (S.acct && S.acct.last) || {}, rows = Object.entries(A).filter(r => Math.abs(r[1]) >= 0.5).sort((a, b) => a[1] - b[1]);
-  const tab = (k, n) => '<button class="btn" data-a="otab" data-v="' + k + '" aria-pressed="' + (officeTab === k) + '">' + n + '</button>';
-  let h = '<button class="x" data-a="closeledger" aria-label="Close">×</button><h4>Office</h4><div class="acts" style="margin:4px 0 6px">' + tab('fin', 'Finance') + tab('sec', 'Sections') + tab('dec', 'Decisions') + tab('net', 'Network') + '</div>';
-  if (officeTab === 'fin'){
-    { const hi = (S.hist || []).slice(-60); h += '<h4>Business trajectory</h4>' + (hi.length < 2 ? '<div class="sub">The curves start after the first two months.</div>' : '<div class="sub">Last ' + hi.length + ' months. Hover for the numbers.</div><div class="lg"><span><i style="background:#2f6fb0"></i>Cash</span><span><i style="background:#c8571b"></i>Debt</span></div>' + trendSVG(hi, [{n:'Cash', c:'#2f6fb0', v:x => x.cash}, {n:'Debt', c:'#c8571b', v:x => x.debt}], {label:'Cash and debt by month'}) + '<div class="sub" style="margin:0">Monthly result (income minus costs)</div>' + trendSVG(hi, [{n:'Result', v:x => x.net}], {bars:1, h:62, label:'Monthly result'}) + '<div class="sub" style="margin:0">Vote forecast</div>' + trendSVG(hi, [{n:'Yes', c:'#2f6fb0', v:x => x.fc}], {min:0, max:100, ref:50.1, refLabel:'50.1%', h:62, fmt:v => v.toFixed(0) + '%', label:'Vote forecast by month'})); }
-    h += '<h4 style="margin-top:6px">Last month</h4><div class="sub">Money, line by line.</div><table class="acc">' + (rows.length ? rows.map(r => '<tr><td>' + r[0] + '</td><td class="' + (r[1] < 0 ? 'neg' : 'pos') + '">' + (r[1] > 0 ? '+' : '') + fmt(r[1]) + '</td></tr>').join('') : '<tr><td>No money moved last month.</td><td></td></tr>') + '<tr><td><b>Net</b></td><td><b>' + fmt(rows.reduce((a, r) => a + r[1], 0)) + '</b></td></tr></table>';
-    h += '<h4 style="margin-top:8px">Loans</h4><div class="sub">Credit line ' + fmt(creditLimit()) + ': a base amount, 60% of what you have built, and two years of net income. Loans are ' + fmt(CFG.LOAN_STEP) + ', repaid over ' + CFG.LOAN_TERM/12 + ' years.</div>';
-    h += '<table><tr><th>Loan</th><th>Balance</th><th>Per month</th><th>Left</th></tr>' + (S.loans.length ? S.loans.slice().sort((a, b) => (b.rate || 0) - (a.rate || 0)).map(l => '<tr><td>#' + l.id + (l.shady ? ' <span class="neg">private</span>' : '') + '</td><td>' + fmt(l.bal) + ' · ' + ((l.rate || CFG.LOAN_RATE)*100).toFixed(1) + '%</td><td>' + fmt(l.pay) + '</td><td>' + (l.shady ? 'due in ' + l.left + ' mo.' : l.left + ' mo.') + ' <button class="btn" data-a="repay1" data-v="' + l.id + '">Repay</button></td></tr>').join('') : '<tr><td colspan="4">No loans.</td></tr>') + '</table>';
-    h += '<div>Debt service <b>' + fmt(loanPay()) + '</b> a month. Running costs of sites, offices and forces: <b>' + fmt(S.obj.reduce((a, o) => a + upkeepOf(o), 0)) + '</b> a month.</div><div>The bank rates the Company <b>' + standing() + '</b> and lends at <b>' + (bankRate()*100).toFixed(1) + '%</b> now: it looks at how much of the line is used, last month’s result, the polls and the springs.</div><div class="acts">' + (debt() + CFG.LOAN_STEP <= creditLimit() ? '<button class="btn main" data-a="borrow">Borrow ' + fmt(CFG.LOAN_STEP) + ' at ' + (bankRate()*100).toFixed(1) + '%</button>' : '<button class="btn main" data-a="shady">The lender in town: ' + fmt(SHADY.amt) + ' at ' + (SHADY.rate*100) + '%</button>') + '<button class="btn" data-a="repay">Repay what you can</button></div>' + (S.cash < 0 ? '<div class="neg">The account is empty: rigs stop drilling until there is money again.</div>' : ''); }
+  const tab = (k, n) => '<button class="btn" data-a="otab" data-v="' + k + '" aria-pressed="' + (officeTab === k) + '">' + n + '</button>', card = (t, b, cls) => '<section class="ocard' + (cls ? ' ' + cls : '') + '"><h5>' + t + '</h5>' + b + '</section>';
+  const tile = (n, v, sub, cls) => '<div class="tile"><small>' + n + '</small><b class="' + (cls || '') + '">' + v + '</b><span>' + (sub || '') + '</span></div>';
+  let h = '<header class="ohead"><div class="obrand"><i class="logo"></i><div><b>' + COMPANY + '</b><small>' + (has('office') ? DEF.office.n + ' · member of Géothermie-Helvetica' : 'No office in the valley yet') + ' · ' + MONTHS[S.month % 12] + ', year ' + (year() + 1) + '</small></div></div><nav class="otabs">' + tab('fin', 'Finance') + tab('sec', 'Sections') + tab('net', 'Buildings') + tab('notes', 'Notes') + tab('dec', 'Decisions') + '</nav><span class="opause">Paused</span><button class="btn" data-a="closeledger">Close (Esc)</button></header><div class="obody"><div class="owrap">';
+  if (officeTab === 'fin'){ const net = rows.reduce((a, r) => a + r[1], 0), run = S.obj.reduce((a, o) => a + upkeepOf(o), 0), hi = (S.hist || []).slice(-60);
+    h += '<div class="tiles">' + tile('Cash', fmt(S.cash), S.cash < 0 ? 'Rigs stop until there is money' : 'in the account', S.cash < 0 ? 'neg' : '') + tile('Debt', fmt(debt()), S.loans.length + ' loan' + (S.loans.length === 1 ? '' : 's') + ' · line ' + fmt(creditLimit())) + tile('Last month', (net > 0 ? '+' : '') + fmt(net), 'income minus costs', net < 0 ? 'neg' : 'pos') + tile('Running costs', fmt(run) + '/mo', 'sites, buildings, forces') + tile('The bank', standing().replace(/^./, c => c.toUpperCase()), 'lends at ' + (bankRate()*100).toFixed(1) + '% now') + '</div><div class="cols fin">';
+    h += card('Business trajectory', hi.length < 2 ? '<p class="sub">The curves start after the first two months.</p>' : '<div class="lg"><span><i style="background:#2f6fb0"></i>Cash</span><span><i style="background:#c8571b"></i>Debt</span></div>' + trendSVG(hi, [{n:'Cash', c:'#2f6fb0', v:x => x.cash}, {n:'Debt', c:'#c8571b', v:x => x.debt}], {label:'Cash and debt by month', w:520, h:150}) + '<div class="sub">Monthly result</div>' + trendSVG(hi, [{n:'Result', v:x => x.net}], {bars:1, w:520, h:90, label:'Monthly result'}) + '<div class="sub">Vote forecast</div>' + trendSVG(hi, [{n:'Yes', c:'#2f6fb0', v:x => x.fc}], {min:0, max:100, ref:50.1, refLabel:'50.1%', w:520, h:90, fmt:v => v.toFixed(0) + '%', label:'Vote forecast by month'}), 'wide');
+    h += card('Loans', '<table><tr><th>Loan</th><th>Balance</th><th>Rate</th><th>Per month</th><th>Left</th><th></th></tr>' + (S.loans.length ? S.loans.slice().sort((a, b) => (b.rate || 0) - (a.rate || 0)).map(l => '<tr><td>#' + l.id + (l.shady ? ' <span class="neg">private</span>' : '') + '</td><td>' + fmt(l.bal) + '</td><td>' + ((l.rate || CFG.LOAN_RATE)*100).toFixed(1) + '%</td><td>' + fmt(l.pay) + '</td><td>' + (l.shady ? '<span class="neg">due in ' + l.left + ' mo.</span>' : l.left + ' mo.') + '</td><td><button class="btn" data-a="repay1" data-v="' + l.id + '">Repay</button></td></tr>').join('') : '<tr><td colspan="6">No loans.</td></tr>') + '</table>'
+      + '<div class="acts">' + (debt() + CFG.LOAN_STEP <= creditLimit() ? '<button class="btn main" data-a="borrow">Borrow ' + fmt(CFG.LOAN_STEP) + ' at ' + (bankRate()*100).toFixed(1) + '%</button>' : '<button class="btn main" data-a="shady">The lender in town: ' + fmt(SHADY.amt) + ' at ' + (SHADY.rate*100) + '%</button>') + '<button class="btn" data-a="repay">Repay what you can</button></div>'
+      + '<p class="sub">Debt service ' + fmt(loanPay()) + ' a month. The bank looks at how much of the credit line is used, last month’s result, the polls and the springs. Bank loans are ' + fmt(CFG.LOAN_STEP) + ', repaid over ' + CFG.LOAN_TERM/12 + ' years.</p>');
+    h += card('Last month, line by line', '<table class="acc">' + (rows.length ? rows.map(r => '<tr><td>' + r[0] + '</td><td class="' + (r[1] < 0 ? 'neg' : 'pos') + '">' + (r[1] > 0 ? '+' : '') + fmt(r[1]) + '</td></tr>').join('') : '<tr><td>No money moved last month.</td><td></td></tr>') + '<tr class="tot"><td>Net</td><td>' + fmt(net) + '</td></tr></table>') + '</div>'; }
   else if (officeTab === 'sec'){
-    if (!has('experts')) h += '<div class="sub">Nobody here reads seismic sections yet. A Bureau de géologie next to the office does.</div>';
-    else { h += '<div class="sub">Read at the middle of each stretch. First pass: rough depths, guessed layers. Second pass: sharper depths. Third pass: named layers.</div>'; let any = false;
-      for (const l of S.lines){ const rd = sectionReading(l.id); if (!rd.length) continue; any = true; h += '<h4 style="margin-top:6px">Line ' + l.name + '</h4>' + rd.map(r => '<div><b>' + r.where + '</b> <span class="sub">' + ['', 'first pass', 'second pass', 'third pass'][Math.min(3, r.pass)] + '</span><ul class="dec">' + (r.items.length ? r.items.map(t => '<li>' + t + '</li>').join('') : '<li>No clear reflectors.</li>') + '</ul></div>').join(''); }
-      if (!any) h += '<div>No finished surveys yet.</div>'; } }
+    if (!has('experts')) h += card('Sections', '<p>Nobody here reads seismic sections yet. The association’s Antenne d’expertise does.</p>');
+    else { h += '<p class="sub">Read at the middle of each stretch. First pass: rough depths, guessed layers. Second pass: sharper depths. Third pass: named layers.</p><div class="cols">'; let any = false;
+      for (const l of S.lines){ const rd = sectionReading(l.id); if (!rd.length) continue; any = true; h += card('Line ' + l.name, rd.map(r => '<div class="stretch"><b>' + r.where + '</b> <span class="tag p' + Math.min(3, r.pass) + '">' + ['', 'first pass', 'second pass', 'third pass'][Math.min(3, r.pass)] + '</span><ul class="dec">' + (r.items.length ? r.items.map(t => '<li>' + t + '</li>').join('') : '<li>No clear reflectors.</li>') + '</ul></div>').join('')); }
+      h += (any ? '' : card('Sections', '<p>No finished surveys yet.</p>')) + '</div>'; } }
   else if (officeTab === 'dec'){
-    h += '<div class="sub">Your recent decisions and what they did.</div><ol class="dec">' + ((S.log || []).slice(0, 16).map(l => '<li><span class="sub">' + MONTHS[l.m % 12] + ', yr ' + ((l.m/12|0) + 1) + '</span> <b>' + l.what + '</b><div>' + (l.cash ? (l.cash > 0 ? '+' : '') + fmt(l.cash) : 'no cost') + (l.dm.length ? ' · ' + l.dm.map(x => x[0] + ' ' + (x[1] > 0 ? '+' : '−') + Math.abs(x[1]).toFixed(1)).join(', ') : '') + '</div></li>').join('') || '<li>No decisions yet.</li>') + '</ol>'; }
+    h += card('Your recent decisions', '<ol class="dec">' + ((S.log || []).slice(0, 24).map(l => '<li><span class="sub">' + MONTHS[l.m % 12] + ', yr ' + ((l.m/12|0) + 1) + '</span> <b>' + l.what + '</b><div>' + (l.cash ? (l.cash > 0 ? '+' : '') + fmt(l.cash) : 'no cost') + (l.dm.length ? ' · ' + l.dm.map(x => x[0] + ' ' + (x[1] > 0 ? '+' : '−') + Math.abs(x[1]).toFixed(1)).join(', ') : '') + '</div></li>').join('') || '<li>No decisions yet.</li>') + '</ol>'); }
+  else if (officeTab === 'notes') h += notesHtml();
   else {
-    h += '<div class="sub">Switched off, a building costs nothing and unlocks nothing. Switching it back on takes its full build time.</div><table>';
-    for (const k of Object.keys(DEF).filter(k => DEF[k].bld)){ const d = DEF[k], o = S.obj.find(b => b.type === k && !b.burnt), opens = Object.keys(DEF).filter(t => (DEF[t].req || []).includes(k) && !DEF[t].hide).map(t => DEF[t].n.toLowerCase());
-      const st = !o ? (missing(k).length ? '<span class="sub">' + needTxt(k) + '</span>' : 'not built · ' + fmt(d.cost) + ' + ' + fmt(d.up) + '/mo') : o.dismantling ? 'being dismantled' : o.waitRoad ? 'waiting for a road' : !o.on ? (o.restart ? 'rehiring' : 'being built') : o.off ? '<span class="neg">switched off</span>' : '<span class="pos">running</span>';
-      h += '<tr><td><b>' + d.n + '</b><div class="sub" style="margin:0">' + (opens.length ? 'Unlocks ' + opens.join(', ') : '') + '</div></td><td>' + st + '</td></tr>'; }
-    h += '</table>'; }
-  if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } }
+    h += '<p class="sub">Switched off, a building costs nothing and unlocks nothing. Switching it back on takes its full build time. Click a built one on the map for its lessons and switches.</p>';
+    for (const gr of ['Company', 'Association']){ h += '<h3 class="ogrp g-' + gr + '">' + (gr === 'Company' ? COMPANY : 'Géothermie-Helvetica, services bought by the month') + '</h3><div class="bgrid">';
+      for (const k of Object.keys(DEF).filter(k => DEF[k].bld && DEF[k].g === gr)){ const d = DEF[k], o = S.obj.find(b => b.type === k && !b.burnt), opens = Object.keys(DEF).filter(t => (DEF[t].req || []).includes(k) && !DEF[t].hide).map(t => DEF[t].n);
+        const st = !o ? (missing(k).length ? ['lock', needTxt(k)] : ['', 'not built · ' + fmt(d.cost) + ' + ' + fmt(d.up) + '/mo']) : o.dismantling ? ['', 'being dismantled'] : o.waitRoad ? ['', 'waiting for a road'] : !o.on ? ['', o.restart ? 'rehiring' : 'being built'] : o.off ? ['neg', 'switched off'] : ['pos', 'running · ' + fmt(d.up) + '/mo'];
+        h += '<div class="bcard ' + (o && o.on && !o.off ? 'on' : '') + '"><b>' + d.n + '</b><small>' + (d.en || '') + '</small><span class="st ' + st[0] + '">' + st[1] + '</span>' + (opens.length ? '<div class="sub">Unlocks: ' + opens.join(', ') + '</div>' : '') + '</div>'; }
+      h += '</div>'; } }
+  h += '</div></div>';
+  if (el.dataset.h !== h){ const sc = el.querySelector('.obody'), top = sc ? sc.scrollTop : 0; el.innerHTML = h; el.dataset.h = h; const s2 = el.querySelector('.obody'); if (s2) s2.scrollTop = top; } }
 function renderPolls(){ const el = $('#polls'), all = S.vil.reduce((a, u) => a + u.pop, 0), fc = forecast();
   let h = '<button class="x" data-a="closepolls" aria-label="Close">×</button><h4>Polls</h4><div class="sub">Forecast <b class="' + (fc >= 50.1 ? 'pos' : 'neg') + '">' + fc.toFixed(1) + '%</b> yes, weighted by voters. ' + Math.max(0, CFG.END - S.month) + ' months to the vote. Click a village for details.</div><table>';
   for (const v of S.vil){ const c = Object.entries(v.causes).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]))[0], d = v.delta || 0;
@@ -1750,9 +1923,9 @@ function renderCard(){
     else if (o.type === 'tractor' || o.type === 'camp'){ const vv = S.vil[o.v];
       s = o.type === 'tractor' ? 'Blocks the road to a site. Leaves after two months, or when a police patrol arrives.' : 'Stops the site. If it stays ' + ((byId(o.target) || {}).fenced ? 'six' : 'three') + ' months, the site burns. It leaves when the village calms down, or when a public-order unit arrives.';
       if (o.talking !== undefined) s += '<div class="sub">Your liaison officer is talking to them…</div>'; else if (o.talked) s += '<div class="sub">They listened once and stayed. They will not talk again.</div>';
-      else { s += '<div class="sub">A liaison officer goes over with coffee. Whether they pack up is up to them.</div>'; if (has('prhut')) acts += '<button class="btn main" data-a="talk">Talk to them (' + fmt(20) + ')</button>'; else s += '<div class="sub">Talking needs the Point info chantier.</div>'; } }
+      else { s += '<div class="sub">A liaison officer goes over with coffee. Whether they pack up is up to them.</div>'; if (has('office')) acts += '<button class="btn main" data-a="talk">Talk to them (' + fmt(20) + ')</button>'; else s += '<div class="sub">Talking needs the project office.</div>'; } }
     else if (opp) s = {banner:'Lowers the mood nearby until the village warms up.', oppstand:'Cancels one of your suits or your stand here.', rumour:'Going round the village. It fades after a few months, or a man in a suit nearby ends it.', march:'A month of bad press in town.', activists:'Double the pace of the opposition. They leave three months after the last police unit.', counterfest:'Cancels your second fest.'}[o.type];
-    if (o.type === 'rumour'){ s = (o.text ? '<q>' + o.text + '</q> ' : '') + s; if (has('prhut')) acts += '<button class="btn" data-a="correct">Publish a correction (' + fmt(15) + ')</button>'; else s += '<div class="sub">The Point info chantier could answer it.</div>'; }
+    if (o.type === 'rumour'){ s = (o.text ? '<q>' + o.text + '</q> ' : '') + s; if (has('office')) acts += '<button class="btn" data-a="correct">Publish a correction (' + fmt(15) + ')</button>'; else s += '<div class="sub">The project office could answer it.</div>'; }
     if (SITE[o.type] && !o.on && !o.burnt && !o.restart && !o.dismantling) acts += '<button class="btn" data-a="rm">Cancel the site</button>';
     if (o.restart && !o.on && !o.burnt) acts += '<button class="btn" data-a="stoprehire">Stop rehiring</button>';
     if (SITE[o.type] && o.on && !o.burnt && !o.waitRoad){
@@ -1778,6 +1951,7 @@ function renderCard(){
         if (!o.drilling && !o.released) acts += '<button class="btn" data-a="onoff">' + (o.off ? 'Switch on' : 'Switch off') + '</button>'; }
       if (DEF[o.type].bld){ const d = DEF[o.type], opens = Object.keys(DEF).filter(k => (DEF[k].req || []).includes(o.type) && !DEF[k].hide).map(k => DEF[k].n.toLowerCase());
         s += (o.off ? '<span class="neg">Switched off.</span> Nothing it unlocks works. Switching on means rehiring: ' + ((d.build || 0) < 1 ? Math.round((d.build || 0)*4.3) + ' weeks' : d.build + ' months') + '. ' : 'Running, ' + fmt(d.up || 0) + ' a month. ') + d.h + (opens.length ? '<div class="sub">Unlocks: ' + opens.join(', ') + '.</div>' : '');
+        if (LSRC[o.type] && !o.off){ const lc = lessonCard(o); s += lc[0]; acts += lc[1]; }
         acts += '<button class="btn" data-a="onoff">' + (o.off ? 'Switch on (' + ((d.build || 0) < 1 ? Math.round((d.build || 0)*4.3) + ' weeks' : d.build + ' months') + ')' : 'Switch off') + '</button>'; }
       if (o.type === 'testrig') s += o.log ? 'Drilled to ' + M(o.depth || 200) + '. The log is shown in the section.' : 'Drilling.';
       if (o.type === 'station' || o.type === 'plant'){ const r = o.off ? {why:'Switched off.'} : isBlocked(o) ? {why:'Blocked by protesters.'} : doublet(o), P = byId(o.prod), I = byId(o.inj), nm = w => w ? 'rig on ' + S.lines[w.line].name + ' near ' + nearestVillage(w.x, w.y).name : 'none';
@@ -1791,7 +1965,7 @@ function renderCard(){
         if (o.on) acts += '<button class="btn" data-a="onoff">' + (o.off ? 'Switch on' : 'Switch off' ) + '</button>'; }
       if (view === 'map' && o.line !== undefined) acts += '<button class="btn" data-a="open">Open section</button>';
       if (!o.drilling) acts += '<button class="btn" data-a="rm">Dismantle (' + (DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0) < 1 ? Math.round((DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0))*4.3) + ' weeks' : (DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0)) + ' months') + ')</button>';
-    } else if (!opp && !SITE[o.type] && DEF[o.type] && !o.burnt){ if (!s) s = DEF[o.type].h; if (o.type !== 'congress') acts += '<button class="btn" data-a="rm">' + (o.type === 'police' || o.type === 'riot' ? 'Withdraw' : 'Remove') + '</button>'; }
+    } else if (!opp && !SITE[o.type] && DEF[o.type] && !o.burnt){ if (!s) s = DEF[o.type].h; if (o.type === 'suit' && o.on) s = S.t - (o.t0 || 0) > 6 ? 'Everybody in ' + v.name + ' knows him by now. They call him “le Monsieur”, and the handshake has lost its surprise. In another village it would still work.' : 'Shaking hands with the syndic of ' + v.name + '. Rumours nearby fade faster, banners come down.'; if (o.type === 'stand' && o.on !== false){ const lc = lessonCard(o); s += lc[0]; acts += lc[1]; } if (o.type !== 'congress') acts += '<button class="btn" data-a="rm">' + (o.type === 'police' || o.type === 'riot' ? 'Withdraw' : 'Remove') + '</button>'; }
     if (o.burnt) acts = '<button class="btn" data-a="rm">Clear the ruin</button>';
     if (o.dismantling){ const left = o.dismantling - S.t; s = '<span class="neg">Being dismantled: gone in about ' + (left < 1 ? Math.max(1, Math.round(left*4.3)) + ' week' + (Math.round(left*4.3) > 1 ? 's' : '') : left.toFixed(1) + ' months') + '.</span> ' + s; acts = ''; }
     h += '<div>' + s + '</div>' + (acts ? '<div class="acts">' + acts + '</div>' : '');
@@ -1910,7 +2084,7 @@ function clickWorld(p){
 }
 function act(a, v){
   if (a === 'close'){ sel = null; $('#card').hidden = true; return; } if (a === 'closepolls'){ $('#polls').hidden = true; return; } if (a === 'closewire'){ $('#wire').hidden = true; return; }
-  if (a === 'choose'){ choose(Number(v)); return; } if (a === 'closecamp'){ $('#camp').hidden = true; return; } if (a === 'otab'){ officeTab = v; renderLedger(); return; } if (a === 'closeledger'){ $('#ledger').hidden = true; return; }
+  if (a === 'choose'){ choose(Number(v)); return; } if (a === 'closecamp'){ $('#camp').hidden = true; return; } if (a === 'otab'){ officeTab = v; renderLedger(); return; } if (a === 'lesson'){ showLesson(v); return; } if (a === 'closelesson'){ closeLesson(); return; } if (a === 'notes'){ closeLesson(); openOffice('notes'); return; } if (a === 'closeledger'){ $('#ledger').hidden = true; return; }
   if (a === 'camp'){ const [k, vid] = String(v).split(':'); const r = campaign(k, Number(vid)); if (r !== 'ok') toast(r); return; }
   if (a === 'treat'){ const vv = S.vil[Number(v)]; if (!canPay(1500)) return toast('A treatment plant costs ' + fmt(1500) + '.'); S.cash -= 1500; acct('Water treatment', -1500); if (vv.spring.lvl === 2) vv.spring.lvl = 0; else vv.spring.treated = true; news('A treatment plant for the spring of ' + vv.name + '. ' + (vv.spring.lvl ? 'The water is drinkable again; nobody trusts it.' : 'The boil-water notice is lifted.')); return; }
   if (a === 'wish'){ const vv = S.vil[Number(v)], w = vv && vv.wish, d = w && WISH[w.k]; if (d && d.cost){ if (!canPay(d.cost)){ toast('That costs ' + fmt(d.cost) + '.'); return; } S.cash -= d.cost; acct('Village wishes', -d.cost); sfx('coin'); wishEnd(vv, true); } return; }
@@ -1967,14 +2141,14 @@ function bind(){
   c.addEventListener('pointerup', e => { if (lift(e)) return; if (drag && !moved) clickWorld(toWorld(e)); drag = null; });
   c.addEventListener('pointerleave', () => { hover = null; }); c.addEventListener('pointercancel', e => { lift(e); drag = null; });
   c.addEventListener('wheel', e => { e.preventDefault(); if (view === 'section'){ if (e.ctrlKey || e.metaKey){ const r = c.getBoundingClientRect(); secZoom(cam.z*(e.deltaY < 0 ? 1.15 : 1/1.15), (e.clientX - r.left)/r.width, (e.clientY - r.top)/r.height); } else if (e.shiftKey) cam.x = clamp(cam.x + e.deltaY*0.5/cam.z, 0, secMaxX()); else cam.y = clamp(cam.y + e.deltaY*0.5/cam.z, 0, secMaxY()); } else setZoom(zoom*(e.deltaY < 0 ? 1.15 : 1/1.15), e.clientX, e.clientY); }, {passive:false});
-  $('#pal').addEventListener('click', e => { const b = e.target.closest('.it'); if (!b || !S.started || S.over) return; if (b.dataset.t){ const d = DEF[b.dataset.t]; if (missing(b.dataset.t).length){ toast(d.n + ' ' + needTxt(b.dataset.t) + '. See the Office panel, Network.'); officeTab = 'net'; $('#ledger').hidden = false; renderLedger(); return; } pickTool(b.dataset.t); } });
+  $('#pal').addEventListener('click', e => { const b = e.target.closest('.it'); if (!b || !S.started || S.over) return; if (b.dataset.t){ const d = DEF[b.dataset.t]; if (missing(b.dataset.t).length){ toast(d.n + ' ' + needTxt(b.dataset.t) + '. See the Office panel, Network.'); openOffice('net'); return; } pickTool(b.dataset.t); } });
   $('#stage').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) act(b.dataset.a, b.dataset.v); });
   $('#sp0').onclick = () => { S.paused = true; }; $('#sp1').onclick = () => { if (S.offer || S.event) return; S.paused = false; S.speed = 1; audio(); }; $('#sp4').onclick = () => { if (S.offer || S.event) return; S.paused = false; S.speed = 4; audio(); }; $('#sp05').onclick = () => { if (S.offer || S.event) return; S.paused = false; S.speed = 0.5; audio(); };
   $('#mute').onclick = () => { S.muted = !S.muted; }; const pane = (id, fn) => { const open = $(id).hidden; for (const p of ['#polls', '#wire', '#camp', '#ledger']) $(p).hidden = true; $(id).hidden = !open; if (open) fn(); };
-  $('#loanbtn').onclick = () => { officeTab = 'fin'; if (!$('#ledger').hidden){ renderLedger(); return; } pane('#ledger', renderLedger); }; $('#votebtn').onclick = () => pane('#polls', renderPolls); $('#news').onclick = () => pane('#wire', renderWire); $('#campbtn').onclick = () => pane('#camp', renderCampaign); $('#ledgerbtn').onclick = () => pane('#ledger', renderLedger);
+  $('#debtchip').onclick = () => openOffice('fin'); $('#debtchip').onkeydown = e => { if (e.key === 'Enter') openOffice('fin'); }; $('#votebtn').onclick = () => pane('#polls', renderPolls); $('#news').onclick = () => pane('#wire', renderWire); $('#campbtn').onclick = () => pane('#camp', renderCampaign); $('#ledgerbtn').onclick = () => { if ($('#ledger').hidden) openOffice(); else $('#ledger').hidden = true; };
   $('#votebtn').onkeydown = e => { if (e.key === 'Enter') pane('#polls', renderPolls); };
   window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; const k = e.key;
-    if (k === ' ' && S.started && !S.offer && !S.event){ S.paused = !S.paused; e.preventDefault(); } if (k === 'Escape'){ tool = null; anchor = null; plan = null; linking = null; sel = null; $('#card').hidden = true; for (const p of ['#polls', '#wire', '#camp', '#ledger']) $(p).hidden = true; if (view === 'section') closeSection(); else cutLine = null; }
+    if (k === ' ' && S.started && !S.offer && !S.event && $('#ledger').hidden && lessonWas === null){ S.paused = !S.paused; e.preventDefault(); } if (k === 'Escape'){ if (lessonWas !== null) closeLesson(); tool = null; anchor = null; plan = null; linking = null; sel = null; $('#card').hidden = true; for (const p of ['#polls', '#wire', '#camp', '#ledger']) $(p).hidden = true; if (view === 'section') closeSection(); else cutLine = null; }
     if ((k === '[' || k === ']') && S.started){ if (view === 'section'){ const y0 = cam.y; openSection(clamp(line + (k === '[' ? -1 : 1), 0, S.lines.length - 1)); cam.y = y0; } else stepCut(k === '[' ? -1 : 1); }
     if (view === 'section'){ if (k === 'ArrowUp'){ cam.y = clamp(cam.y - 24, 0, secMaxY()); e.preventDefault(); } if (k === 'ArrowDown'){ cam.y = clamp(cam.y + 24, 0, secMaxY()); e.preventDefault(); } } });
   window.addEventListener('resize', fit);
@@ -2003,7 +2177,7 @@ function boot(fresh){
   if (!bound){ buildPalette(); bind(); bound = true; requestAnimationFrame(tt => { lastT = tt; frame(tt); }); }
   zoom = $('#stage').clientWidth < 700 ? 2 : 1; fit(); showContract(hasSave);
 }
-window.JF = {_draw:(g, o, t) => obj(g, o, t), _veh:(g, k) => vehicle(g, k, 0, 0, 'x', null, 1), OX, OY, borrowShady, repayOne, bankRate, startSecret, addMood, unlockAll:() => { for (const k of Object.keys(DEF).filter(k => DEF[k].bld)) S.obj.push({id:S.nextId++, type:k, x:-400, y:-400, on:true, arrived:true, t0:0, ready:0, w:1, hh:1, test:true}); }, buildRoad, roadPlan, pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, borrow, commitPlan, stimulate, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, secMaxY()); }, select:s => { sel = s; renderCard(); },
+window.JF = {LESSONS, lessonHtml, f35, _draw:(g, o, t) => obj(g, o, t), _veh:(g, k) => vehicle(g, k, 0, 0, 'x', null, 1), OX, OY, borrowShady, repayOne, bankRate, startSecret, addMood, unlockAll:() => { for (const k of Object.keys(DEF).filter(k => DEF[k].bld)) S.obj.push({id:S.nextId++, type:k, x:-400, y:-400, on:true, arrived:true, t0:0, ready:0, w:1, hh:1, test:true}); }, buildRoad, roadPlan, pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, borrow, commitPlan, stimulate, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, secMaxY()); }, select:s => { sel = s; renderCard(); },
   newGame:seed => { newGame(seed); S.started = true; S.paused = false; view = 'map'; cutLine = null; baseMap = null; fit(); $('#overlay').hidden = true; }, setCut:li => { cutLine = li; }, get cutLine(){ return cutLine; }};
 const ready = document.fonts && document.fonts.load ? document.fonts.load('12px "Pixelify Sans"').catch(() => {}) : Promise.resolve();
 ready.then(() => boot(false));
