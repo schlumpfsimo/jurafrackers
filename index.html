@@ -441,8 +441,9 @@ const year = () => (S.month/12)|0;
 const bf = () => S.obj.some(o => o.type === 'lobby' && BLD_ON(o)) ? 0.9 : 1;
 const BLD_ON = o => o.on && !o.off && !o.burnt && !o.dismantling;
 const has = t => S.obj.some(o => o.type === t && BLD_ON(o));
-const missing = tk => ((DEF[tk] || {}).req || []).filter(t => !has(t));
-const needTxt = tk => 'needs ' + missing(tk).map(t => DEF[t].n.toLowerCase()).join(' and ');
+const drilledWell = () => S.obj.some(o => RIG[o.type] && o.well && o.well.length && !o.burnt);
+const missing = tk => ((DEF[tk] || {}).req || []).filter(t => !has(t)).concat(tk === 'fest' && !drilledWell() ? ['well'] : []);
+const needTxt = tk => 'needs ' + missing(tk).map(t => t === 'well' ? 'a drilled well' : DEF[t].n.toLowerCase()).join(' and ');
 const resDone = k => has({deep:'engineers', dir:'workshop', noise:'engineers'}[k]);
 const objAt = (x,y) => { let b = null, bd = 1e9; for (const o of S.obj) if (Math.abs(o.x - x) <= (o.w || 7) && Math.abs(o.y - y) <= (o.hh || 8)){ const d = Math.hypot(o.x - x, o.y - y); if (d < bd){ bd = d; b = o; } } return b; };
 const vilAt = (x,y) => S.vil.find(v => Math.abs(v.x - x) <= v.w/2 + 4 && Math.abs(v.y - y) <= v.h/2 + 6);
@@ -1061,10 +1062,13 @@ function onReady(o){
 function upkeepOf(o){ const d = DEF[o.type] || {}; let up = d.up || 0; if (SITE[o.type] && !o.on && !o.restart) return 0; if (o.burnt || o.dismantling || (RIG[o.type] && o.drilling)) return 0; if (RIG[o.type] && o.released) up = 5; if (o.off) up *= d.bld ? 0 : 0.5; return up; }
 function monthTick(){
   lessonTick();
+  { const dd = debt(), lim = creditLimit(); if (dd > lim*1.05 && S.loans.some(l => !l.shady)){ const call = Math.min(dd - lim, S.loans.filter(l => !l.shady).reduce((a, l) => a + l.bal, 0)); let left = call; for (const l of S.loans.filter(l => !l.shady).sort((a, b) => (b.rate || 0) - (a.rate || 0))){ const x = Math.min(l.bal, left); l.bal -= x; left -= x; if (l.bal <= 0.5) S.loans.splice(S.loans.indexOf(l), 1); if (left <= 0) break; } S.cash -= call; acct('Credit called in by the bank', -call); news('The bank lowers the credit line to ' + fmt(lim) + ' and calls in the difference: ' + fmt(call) + '.'); }
+    if (dd > 8000 && !S.debtTold){ S.debtTold = true; news('The local paper prints the Company’s debt: ' + fmt(dd) + '. Readers ask who pays if it fails.'); } else if (dd < 6000) S.debtTold = false; }
+  for (const v of S.vil) if ((v.deep || 0) < 0) v.deep = Math.min(0, v.deep + 0.5);   // deep anger fades slowly when nothing feeds it
   { const hot = S.vil.filter(v => v.heat === 'on'); S.warmUsed = S.warmUsed || []; if (hot.length && Math.random() < 0.12){ const left = WARMJOKE.map((t, i) => i).filter(i => !S.warmUsed.includes(i)); if (left.length){ const i = pick(left); S.warmUsed.push(i); news(WARMJOKE[i].replace('{v}', pick(hot).name)); } } }
   if (S.loans.some(l => l.shady) && hash(S.month, 7, 77, S.seed) < 0.05){ for (const v of S.vil) bump(v, 'Shady money', -3); news('The local paper finds out where part of the Company’s money comes from. Mood −3 everywhere.'); happen('shady'); }
   if (S.cash < 0 && !S.brokeTold){ S.brokeTold = true; happen('broke'); } else if (S.cash > 2000) S.brokeTold = false;
-  if (!S.secret && S.month < CFG.END && S.vil[0].mood + (S.vil[0].deep || 0) <= -10){ startSecret(); return; }
+  if (!S.secret && S.month < CFG.END){ const t0 = S.vil[0]; S.rage = t0.mood + (t0.deep || 0) <= -10 ? (S.rage || 0) + 1 : 0; if (S.rage >= 3){ startSecret(); return; } }
   autoPolice(); for (const p of S.obj.slice()) if (p.auto && p.on && !S.obj.some(b => b.opp && Math.hypot(b.x - p.x, b.y - p.y) <= 30)) withdraw(p);
   const rnd = k => hash(S.month, k, 91, S.seed), mo = S.month % 12, winter = (mo >= 10 || mo <= 2) ? CFG.WINTER : 1; S.season = mo;
   let income = 0, costs = 0, interest = 0; S.producing = false; for (const v of S.vil) v.heat = '';
@@ -1104,7 +1108,7 @@ function monthTick(){
   const riots = S.obj.filter(o => o.type === 'riot'), force = S.obj.filter(o => o.type === 'police' || o.type === 'riot');
   for (const v of S.vil){
     const c = {}, put = (k,d) => { if (d) c[k] = (c[k] || 0) + d; };
-    put('Old habits', (42 - v.mood)*CFG.DRIFT);   // left alone, a valley settles into polite scepticism
+    { const d = 42 - v.mood; put('Old habits', d < 0 ? d*CFG.DRIFT : polluted(v) ? 0 : d*CFG.DRIFT*0.5); }   // left alone, a valley settles into polite scepticism: slowly from above, more slowly still from below, and never over a polluted spring
     const pm = v.mute > 0 ? 0 : (polluted(v) ? 0.5 : 1), sk = Math.sqrt(500/v.pop);
     const mine = (t,r) => S.obj.filter(o => o.type === t && o.on && nearestVillage(o.x, o.y) === v && vdist(v, o.x, o.y) <= r);
     const suits = mine('suit', 26), stands = mine('stand', 18), opst = S.obj.some(o => o.type === 'oppstand' && o.v === v.id);
@@ -1131,6 +1135,7 @@ function monthTick(){
       if (o.v === v.id){ if (o.type === 'banner') put('Banner in the field', -0.3); if (o.type === 'rumour') put('Rumour', -1); if (o.type === 'counterfest') put('Counter-fest', -2); }
     }
     if (riots.length) put('Police buses in the valley', -0.4*riots.length);
+    { const dd = debt(); if (dd > 8000) put('Company in debt', -0.5*Math.min(1.5, (dd - 8000)/8000)); }
     if (v.kept > S.month) put('Kept its wish', 0.4);
     if (S.camp && S.camp.posters && S.month >= S.camp.posters) put('Campaign posters', 0.8);
     if (v.rel > 0.01){ put('Stored anger', -v.relRate); v.rel -= v.relRate; }
@@ -2188,7 +2193,7 @@ function bind(){
   c.addEventListener('pointerup', e => { if (lift(e)) return; if (drag && !moved) clickWorld(toWorld(e)); drag = null; });
   c.addEventListener('pointerleave', () => { hover = null; }); c.addEventListener('pointercancel', e => { lift(e); drag = null; });
   c.addEventListener('wheel', e => { e.preventDefault(); if (view === 'section'){ if (e.ctrlKey || e.metaKey){ const r = c.getBoundingClientRect(); secZoom(cam.z*(e.deltaY < 0 ? 1.15 : 1/1.15), (e.clientX - r.left)/r.width, (e.clientY - r.top)/r.height); } else if (e.shiftKey) cam.x = clamp(cam.x + e.deltaY*0.5/cam.z, 0, secMaxX()); else cam.y = clamp(cam.y + e.deltaY*0.5/cam.z, 0, secMaxY()); } else setZoom(zoom*(e.deltaY < 0 ? 1.15 : 1/1.15), e.clientX, e.clientY); }, {passive:false});
-  $('#pal').addEventListener('click', e => { const b = e.target.closest('.it'); if (!b || !S.started || S.over) return; if (b.dataset.t){ const d = DEF[b.dataset.t]; if (missing(b.dataset.t).length){ toast(d.n + ' ' + needTxt(b.dataset.t) + '. See the Office panel, Buildings.'); openOffice('net'); return; } pickTool(b.dataset.t); } });
+  $('#pal').addEventListener('click', e => { const b = e.target.closest('.it'); if (!b || !S.started || S.over) return; if (b.dataset.t){ const d = DEF[b.dataset.t]; if (missing(b.dataset.t).length){ if (missing(b.dataset.t).every(t => t === 'well')){ toast(d.n + ' ' + needTxt(b.dataset.t) + ': the sausages are heated in its water.'); return; } toast(d.n + ' ' + needTxt(b.dataset.t) + '. See the Office panel, Buildings.'); openOffice('net'); return; } pickTool(b.dataset.t); } });
   $('#stage').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) act(b.dataset.a, b.dataset.v); });
   $('#sp0').onclick = () => { S.paused = true; }; $('#sp1').onclick = () => { if (S.offer || S.event || lessonWas !== null) return; S.paused = false; S.speed = 1; audio(); }; $('#sp4').onclick = () => { if (S.offer || S.event || lessonWas !== null) return; S.paused = false; S.speed = 4; audio(); }; $('#sp05').onclick = () => { if (S.offer || S.event || lessonWas !== null) return; S.paused = false; S.speed = 0.5; audio(); };
   $('#mute').onclick = () => { S.muted = !S.muted; }; const pane = (id, fn) => { const open = $(id).hidden; for (const p of ['#polls', '#wire', '#camp', '#ledger']) $(p).hidden = true; $(id).hidden = !open; if (open) fn(); };
