@@ -272,12 +272,12 @@ const CFG = {
 };
 const DEF = {
   office:{g:'Company',n:'Bureau de projet',en:'Project office',cost:300,up:20,build:1,bld:1,acc:'Project office, rent and staff',h:'The Company’s own desk in the valley, with its name by the door. Membership of Géothermie-Helvetica comes with it, invoice included. Opens rigs, exploration wells, heat stations, pipes, fences, stands, fests and the Office panel.'},
-  engineers:{g:'Company',n:'Ingénierie de forage',en:'Drilling engineers',cost:600,up:60,build:2,bld:1,near:'office',h:'Drilling engineers next to the office. Deep rigs, full-depth exploration wells, soundproofing, cement logs.'},
-  workshop:{g:'Company',n:'Atelier de forage directionnel',en:'Directional drilling',cost:1500,up:50,build:6,bld:1,near:'engineers',h:'Next to the engineers. Wells may bend up to 30°. Stimulation kit for the power plant.'},
+  engineers:{g:'Company',n:'Ingénierie de forage',en:'Drilling engineers',cost:600,up:45,build:2,bld:1,near:'office',h:'Drilling engineers next to the office. Deep rigs, full-depth exploration wells, soundproofing, cement logs.'},
+  workshop:{g:'Company',n:'Atelier de forage directionnel',en:'Directional drilling',cost:1500,up:35,build:6,bld:1,near:'engineers',h:'Next to the engineers. Wells may bend up to 30°. Stimulation kit for the power plant.'},
   waterlab:{g:'Company',n:'Laboratoire des eaux',en:'Water lab',cost:300,up:20,build:2,bld:1,h:'Weekly samples from every spring: small traces are caught before anyone notices. Treatment plants.'},
   seisnet:{g:'Company',n:'Surveillance sismique',en:'Seismic monitoring',cost:800,up:15,build:3,bld:1,h:'Seismometers across the valley, data public. Quakes cost less goodwill. With the workshop: the power plant.'},
   prhut:{g:'Company',n:'Buvette des gendarmes',en:'Police outreach',cost:80,up:15,build:0.5,bld:1,near:'office',acc:'Coffee, croissants, sundries (gendarmerie)',h:'A hut at the crossroads. Coffee and croissants are free for anyone in uniform, and at Christmas there is an envelope. Patrols come when you call: police, public-order units, the helicopter.'},
-  chair:{g:'Company',n:'Antenne universitaire',en:'University field station',cost:3000,up:80,build:12,bld:1,h:'A university field station. Third pass. The valley trusts professors a little more.'},
+  chair:{g:'Company',n:'Antenne universitaire',en:'University field station',cost:3000,up:40,build:6,bld:1,h:'A university field station. Third pass. The valley trusts professors a little more.'},
   experts:{g:'Association',n:'Centre de compétences',en:'Expertise centre',cost:250,up:40,build:1,bld:1,near:'office',h:'The association’s geologists, rented by the month. Second pass, readings of the sections, tracer tests, and short lessons on what you are looking at.'},
   lobby:{g:'Association',n:'Maison de la géothermie',en:'Lobby house',cost:400,up:30,build:2,bld:1,h:'The association’s showroom: a model rig, free coffee, a man who knows everyone. The man in the suit, the congress, school funding, the campaign.'},
   survey:{g:'Explore',n:'Prospection sismique',en:'Seismic survey',c:'CHF 40k per km',h:'Click a grid line: three vibroseis trucks shoot 1.5 km. Click near the end of a stretch to extend it. Shows layer boundaries and breaks, not the rock.'},
@@ -285,11 +285,11 @@ const DEF = {
   pass3:{g:'Explore',n:'Sismique 3D',en:'Third pass',c:'CHF 200k per km',h:'The university’s 3D crew: a van, a doctoral student and a grid of cables. Click a stretch that had its second pass: the readings name the layers.'},
   testrig:{g:'Explore',n:'Forage de prospection',en:'Exploration well',cost:3000,up:30,build:3,h:'A slim hole on the nearest seismic line: 2,200 m, or 5,000 m with the engineers. Logs name every layer and its temperature.'},
   light:{g:'Drill',n:'Foreuse légère',en:'Light rig',cost:800,up:250,build:1,h:'CHF 800k to bring in; CHF 20k a day drilling, 250k a month idle. Reaches 2,200 m. Snaps to the nearest seismic line.'},
-  deep:{g:'Drill',n:'Foreuse profonde',en:'Deep rig',cost:1800,up:500,build:2,need:'deep',h:'CHF 1.8 M to bring in; CHF 40k a day drilling, 500k a month idle. Reaches 5,000 m.'},
+  deep:{g:'Drill',n:'Foreuse profonde',en:'Deep rig',cost:1800,up:300,build:2,need:'deep',h:'CHF 1.8 M to bring in; CHF 40k a day drilling, 300k a month idle. Reaches 5,000 m.'},
   dir:{g:'Drill',n:'Directional rig',cost:1800,up:500,build:2,need:'dir',hide:1,h:'As the deep rig, and the well may bend up to 30 degrees from vertical.'},   // kept for old saves; research now upgrades every rig
   quiet:{g:'Drill',n:'Insonorisation',en:'Soundproofing',cost:300,need:'noise',h:'Click a rig. Half the noise.'},
   station:{g:'Drill',n:'Chaufferie géothermique',en:'Heat station',cost:4000,up:40,build:6,h:'Heat exchanger and heat pumps. Link a production and an injection well in the Muschelkalk, then lay a pipe to a village.'},
-  plant:{g:'Drill',n:'Centrale géothermique',en:'Power plant',cost:25000,up:150,build:3,h:'ORC turbine. The site is prepared first; link two wells in granite above 100 °C and stimulate the rock. Once hot water circulates the turbine is ordered and takes a year. Connect a power line.'},
+  plant:{g:'Drill',n:'Centrale géothermique',en:'Power plant',cost:15000,up:60,build:3,h:'ORC turbine. The site is prepared first; link two wells in granite above 100 °C and stimulate the rock. Once hot water circulates the turbine is ordered and takes about nine months. Connect a power line.'},
   pipe:{g:'Connect',n:'Réseau de chaleur',en:'Heat pipe',c:'CHF 1.5 M per km',h:'Click a heat station or plant, then a village. Follows the road unless the fields are shorter.'},
   pline:{g:'Connect',n:'Ligne électrique',en:'Power line',c:'CHF 300k per km',h:'Click a power plant. Runs to the grid at the east end of the valley.'},
   fence:{g:'Connect',n:'Clôture de chantier',en:'Fence',cost:50,build:1,h:'Click a site. Protesters take twice as long to get in.'},
@@ -529,9 +529,10 @@ function heatTested(){ let best = null; for (const w of S.obj) if (RIG[w.type] &
 function finOptions(tk){ const d = DEF[tk], c = d.cost || 0, r = bankRate(), o = [{k:'cash', n:'Pay ' + fmt(c), now:c}];
   if (d.bld && c >= FIN_MIN){ const loan = Math.round(c*2/3/10)*10, rr = Math.max(0.03, r - 0.005), am = loan/3/FIN_TERM;
     o.push({k:'mort', n:'Mortgage', loan, rate:rr, now:c - loan, pay:loan*rr/12 + am, amort:am, t:'The bank lends two thirds against the building at ' + (rr*100).toFixed(1) + '%. A third of the loan is repaid over 15 years, the rest stays as long as the building does.'}); }
+  if (tk === 'deep' && S.hotProven){ const sh = S.fed && S.fed.st === 'granted' ? 0.2 : 0.5; o.push({k:'drill', n:'Drilling loan', loan:0, share:sh, rate:r, now:c, pay:0, t:'The bank pays ' + Math.round(sh*100) + '% of the drilling of this well as it is drilled, at ' + (r*100).toFixed(1) + '% over 15 years, because hot granite is proven. Conditions: ' + PLANT_CONDS.map(q => lc(q.n)).join('; ') + '.'}); }
   if (tk === 'station'){ const w = heatTested(); if (w){ const mw = Math.min(w.flowLs*4.18*(w.flowT - 15)/1000, 7.5), inc = mw*730*0.42*CFG.HEAT_PRICE, cap = annuityPV(inc/1.3, r, FIN_TERM), loan = Math.floor(Math.min(0.6*c, cap)/10)*10;
     if (loan >= 200){ const pay = loan*(r/12)/(1 - Math.pow(1 + r/12, -FIN_TERM)); o.push({k:'heat', n:'Bank loan', loan, rate:r, now:c - loan, pay, t:'Against the tested well near ' + nearestVillage(w.x, w.y).name + ' (' + Math.round(w.flowLs) + ' L/s, ' + w.flowT + ' °C): ' + fmt(loan) + ' over 15 years at ' + (r*100).toFixed(1) + '%. The bank counts on about ' + fmt(inc) + ' of heat sales a month and wants the instalment covered 1.3 times.'}); } } }
-  if (tk === 'plant'){ const loan = Math.round(c*0.75/10)*10, rr = r + 0.005; o[0].now = c*PLANT_TR[0].f; o[0].n = 'Own money'; o[0].t = 'Site and planning now (' + fmt(c*PLANT_TR[0].f) + '), the turbine (' + fmt(c*PLANT_TR[1].f) + ') once the circulation test succeeds, commissioning (' + fmt(c*PLANT_TR[2].f) + ') when it is built.';
+  if (tk === 'plant'){ const loan = Math.round(c*0.8/10)*10, rr = r + 0.005; o[0].now = c*PLANT_TR[0].f; o[0].n = 'Own money'; o[0].t = 'Site and planning now (' + fmt(c*PLANT_TR[0].f) + '), the turbine (' + fmt(c*PLANT_TR[1].f) + ') once the circulation test succeeds, commissioning (' + fmt(c*PLANT_TR[2].f) + ') when it is built.';
     o.push({k:'proj', n:'Project loan', loan, rate:rr, now:c*PLANT_TR[0].f, pay:loan*(rr/12)/(1 - Math.pow(1 + rr/12, -FIN_TERM)), t:'Up to ' + fmt(loan) + ' at ' + (rr*100).toFixed(1) + '% over 15 years, paid out with the turbine and commissioning tranches. The site and planning (' + fmt(c*PLANT_TR[0].f) + ') come from your own money. Conditions at every payout: ' + PLANT_CONDS.map(q => lc(q.n)).join('; ') + '. If one is broken, the bank holds back the tranche.'}); }
   return o; }
 const PLANT_TR = [{n:'site and planning', f:0.1}, {n:'turbine', f:0.6}, {n:'commissioning', f:0.3}];
@@ -542,7 +543,7 @@ const FED_CONDS = [{n:'3D seismic of a target', ok:() => S.lines.some(l => l.seg
 const fedOk = () => FED_CONDS.every(q => q.ok());
 function fedApply(){ const F = S.fed; if (F && F.st === 'granted') return 'The contribution is already granted.'; if (F && F.st === 'stopped') return 'The Confederation does not reopen a stopped contribution.';
   if (!fedOk()) return 'The Federal Office of Energy needs: ' + FED_CONDS.filter(q => !q.ok()).map(q => lc(q.n)).join('; ') + '.';
-  S.fed = {st:'granted', got:0, m:S.month}; news('The Federal Office of Energy grants an exploration contribution: 60% of deep wells into the granite and of their stimulation, paid as the work is done, as long as the conditions hold.'); return 'ok'; }
+  S.fed = {st:'granted', got:0, m:S.month}; if (S.seisSpent) fedPay(S.seisSpent, 'the seismic surveys so far'); S.seisSpent = 0; news('The Federal Office of Energy grants its contribution: 60% of deep wells into the granite, their stimulation, the seismic surveys and the power plant, paid as the work is done, as long as the conditions hold.'); return 'ok'; }
 let pendingFin = null;   // the contract chosen in the commissioning window, applied when the build is placed
 function finFor(tk){ const opts = finOptions(tk), k = pendingFin && pendingFin.tk === tk ? pendingFin.k : 'cash'; return opts.find(o => o.k === k) || opts[0]; }
 let commWas = null;
@@ -552,17 +553,18 @@ function openComm(tk){ const d = DEF[tk], opts = finOptions(tk); if (commWas ===
 function closeComm(){ $('#comm').hidden = true; if (commWas !== null){ S.paused = commWas; commWas = null; } }
 function payBuild(tk, no, f){ const c = DEF[tk].cost || 0;
   if (tk === 'plant'){ const site = c*PLANT_TR[0].f; S.cash -= site; acct(DEF[tk].n + ': ' + PLANT_TR[0].n, -site); no.paid = site; no.ph = 'site'; no.fin = {k:f.k, rate:f.rate || 0, loan:f.loan || 0}; return; }
-  S.cash -= c; acct(DEF[tk].n, -c); no.paid = c;
+  S.cash -= c; acct(DEF[tk].n, -c); no.paid = c; if (tk === 'deep') no.fedBase = (no.fedBase || 0) + c;   // rig mobilisation is an eligible drilling cost
+  if (f.k === 'drill'){ no.drillLoan = f.share; no.loanRate = f.rate; }
   if (f.k === 'mort') addLoan(f.loan, f.rate, FIN_TERM, false, {kind:'mortgage', obj:no.id, name:'Mortgage: ' + DEF[tk].n, amort:f.amort});
   if (f.k === 'heat') addLoan(f.loan, f.rate, FIN_TERM, false, {kind:'heat', obj:no.id, name:'Heat loan: ' + DEF[tk].n + ' near ' + nearestVillage(no.x, no.y).name}); }
 /* the power plant is paid in tranches: the bank pays its share of the turbine and commissioning only while its conditions hold */
 function plantTranche(o, i){ const c = DEF.plant.cost*PLANT_TR[i].f, F = o.fin || {k:'cash'}; let fromLoan = 0;
-  if (F.k === 'proj'){ const bad = PLANT_CONDS.filter(q => !q.ok()); if (bad.length && !o.payAlone){ if (o.frozeAt !== i){ o.frozeAt = i; o.waitPay = i; news('The bank holds back the ' + PLANT_TR[i].n + ' tranche for the power plant: ' + bad.map(q => lc(q.n)).join('; ') + '. The order waits until that is put right, or the Company pays alone.'); } return false; } else if (!bad.length) fromLoan = Math.round(c*F.loan/(DEF.plant.cost*0.9)); }
-  if (!canPay(c - fromLoan)){ if (o.waitPay !== i){ o.waitPay = i; news('The ' + PLANT_TR[i].n + ' tranche for the power plant needs ' + fmt(c - fromLoan) + ' of the Company’s own money. The order waits.'); } return false; }
-  S.cash -= c; acct(DEF.plant.n + ': ' + PLANT_TR[i].n, -c); o.paid = (o.paid || 0) + c; o.waitPay = null; o.frozeAt = null; o.payAlone = false;
+  if (F.k === 'proj'){ const bad = PLANT_CONDS.filter(q => !q.ok()); if (bad.length && !o.payAlone){ if (o.frozeAt !== i){ o.frozeAt = i; o.waitPay = i; news('The bank holds back the ' + PLANT_TR[i].n + ' tranche for the power plant: ' + bad.map(q => lc(q.n)).join('; ') + '. The order waits until that is put right, or the Company pays alone.'); } return false; } else if (!bad.length) fromLoan = Math.round(S.fed && S.fed.st === 'granted' && fedOk() ? c*0.2 : c*F.loan/(DEF.plant.cost*0.9)); }
+  const fedC = S.fed && S.fed.st === 'granted' && fedOk() ? Math.round(c*0.6) : 0; if (!canPay(c - fromLoan - fedC)){ if (o.waitPay !== i){ o.waitPay = i; news('The ' + PLANT_TR[i].n + ' tranche for the power plant needs ' + fmt(c - fromLoan - fedC) + ' of the Company’s own money. The order waits.'); } return false; }
+  S.cash -= c; acct(DEF.plant.n + ': ' + PLANT_TR[i].n, -c); o.paid = (o.paid || 0) + c; o.waitPay = null; o.frozeAt = null; o.payAlone = false; fedPay(c, 'the ' + PLANT_TR[i].n + ' of the power plant');
   if (fromLoan){ let L = S.loans.find(l => l.obj === o.id && l.kind === 'project'); if (!L) addLoan(fromLoan, F.rate, FIN_TERM, false, {kind:'project', obj:o.id, name:'Project loan: power plant near ' + nearestVillage(o.x, o.y).name, conds:true});
     else { L.bal += fromLoan; L.amt += fromLoan; const r = L.rate/12; L.pay = L.bal*r/(1 - Math.pow(1 + r, -Math.max(12, L.left))); S.cash += fromLoan; acct('Bank loans received', fromLoan); } }
-  if (i === 1){ o.ph = 'build'; o.turbineAt = S.t + 12*bf(); news('The circulation test near ' + nearestVillage(o.x, o.y).name + ' succeeds. The turbine is ordered: about a year to build.'); }
+  if (i === 1){ o.ph = 'build'; o.turbineAt = S.t + 9*bf(); news('The circulation test near ' + nearestVillage(o.x, o.y).name + ' succeeds. The turbine is ordered: about nine months to deliver and build.'); }
   if (i === 2){ o.ph = 'run'; news('The power plant near ' + nearestVillage(o.x, o.y).name + ' is commissioned.'); }
   return true; }
 function plantTick(o){ if (o.type !== 'plant' || !o.ph || o.ph === 'run' || !o.on || o.burnt) return; if (o.waitPay != null){ plantTranche(o, o.waitPay); return; }
@@ -593,18 +595,18 @@ function place(type, x, y){
     case 'survey': {
       if (!ln) return 'Click on a grid line.'; anchor = null; const l = ln, [x0, x1] = surveySpan(l, x), len = m(x1 - x0), cost = Math.ceil(len/100)*CFG.SURVEY_K;
       if (len < 300) return 'Too short. Draw at least 300 m along the line.'; if (!canPay(cost)) return 'That stretch costs ' + fmt(cost) + '.';
-      S.cash -= cost; acct('Seismic surveys', -cost); happen('survey', {v:nearestVillage((x0 + x1)/2, l.y).id}); const sg = {id:S.nextId++, x0, x1, pass:1, prog:0, active:true, arrived:false, line:l.id}; l.segs.push(sg); spawnConvoy(l, sg);
+      S.cash -= cost; acct('Seismic surveys', -cost); S.seisSpent = (S.seisSpent || 0) + cost; happen('survey', {v:nearestVillage((x0 + x1)/2, l.y).id}); const sg = {id:S.nextId++, x0, x1, pass:1, prog:0, active:true, arrived:false, line:l.id}; l.segs.push(sg); spawnConvoy(l, sg);
       news('Vibroseis trucks set off for line ' + l.name + ' with a cable of geophones.'); return 'ok';
     }
     case 'pass2': {
       if (!ln) return 'Click a grid line.'; const sg = ln.segs.find(s => x >= s.x0 && x <= s.x1 && !s.active && s.pass < 2); if (!sg) return 'Click a finished survey stretch that has not had its second pass yet.';
       const cost = Math.ceil(m(sg.x1 - sg.x0)/100)*CFG.PASS2_K; if (!canPay(cost)) return 'That pass costs ' + fmt(cost) + '.';
-      S.cash -= cost; acct('Seismic surveys', -cost); sg.pass++; sg.prog = 0; sg.active = true; sg.arrived = false; spawnConvoy(ln, sg, 'pickup'); news('The geologists load a pickup with geophones and drive out to line ' + ln.name + '.'); return 'ok';
+      S.cash -= cost; acct('Seismic surveys', -cost); S.seisSpent = (S.seisSpent || 0) + cost; sg.pass++; sg.prog = 0; sg.active = true; sg.arrived = false; spawnConvoy(ln, sg, 'pickup'); news('The geologists load a pickup with geophones and drive out to line ' + ln.name + '.'); return 'ok';
     }
     case 'pass3': {
       if (!ln) return 'Click a grid line.'; const sg = ln.segs.find(s => x >= s.x0 && x <= s.x1 && !s.active && s.pass === 2); if (!sg) return 'Click a stretch that has had its second pass.';
       const cost = Math.ceil(m(sg.x1 - sg.x0)/100)*CFG.PASS3_K; if (!canPay(cost)) return 'That pass costs ' + fmt(cost) + '.';
-      S.cash -= cost; acct('Seismic surveys', -cost); sg.pass = 3; sg.prog = 0; sg.active = true; sg.arrived = false; spawnConvoy(ln, sg, 'univan'); news('The university’s 3D crew lays out a dense spread on line ' + ln.name + '. A doctoral student guards the cables.'); return 'ok';
+      S.cash -= cost; acct('Seismic surveys', -cost); S.seisSpent = (S.seisSpent || 0) + cost; sg.pass = 3; sg.prog = 0; sg.active = true; sg.arrived = false; spawnConvoy(ln, sg, 'univan'); news('The university’s 3D crew lays out a dense spread on line ' + ln.name + '. A doctoral student guards the cables.'); return 'ok';
     }
     case 'testrig': case 'light': case 'deep': case 'dir': case 'station': case 'plant': case 'lobby': case 'chair': case 'office': case 'experts': case 'engineers': case 'prhut': case 'workshop': case 'waterlab': case 'seisnet': case 'suit': case 'stand': case 'police': case 'riot': {
       if (!onGround) return 'Click on the ground.';
@@ -623,7 +625,7 @@ function place(type, x, y){
         if (onRoad(x, py)){ no.onRoad = true; news(DEF[type].n + ' on the road near ' + nearestVillage(x, py).name + '. Traffic stops; the village is cut off a little every month (mood −0.5).'); }
         if (z === 2){ S.cash -= 500; acct('Fines and compensation', -500); bump(sv, 'Rig in a water protection zone', -5); no.halt = S.t + 1; no.cantonHalt = no.halt; news('The canton fines the Company ' + fmt(500) + ' for building in the protection zone of the ' + sv.name + ' spring and stops work there for a month. Polluting drinking water on purpose can bring prison. Mood −5.'); }
         else if (z === 3) news(DEF[type].n + ' inside the outer protection zone (S3) of the ' + sv.name + ' spring: any spill here goes straight to the drinking water.'); }
-      if (type === 'station' || type === 'plant') news('Public consultation for the ' + DEF[type].n.toLowerCase() + ' near ' + nearestVillage(x, py).name + ': ' + (3 + ((hash(no.id, 2, 2, S.seed)*40)|0)) + ' objections filed. ' + (type === 'plant' ? 'The site is prepared in ' + DEF[type].build + ' months; the turbine is ordered once a circulation test through stimulated granite succeeds, and takes a year to build.' : 'Building takes ' + DEF[type].build + ' months including the procedure.'));
+      if (type === 'station' || type === 'plant') news('Public consultation for the ' + DEF[type].n.toLowerCase() + ' near ' + nearestVillage(x, py).name + ': ' + (3 + ((hash(no.id, 2, 2, S.seed)*40)|0)) + ' objections filed. ' + (type === 'plant' ? 'The site is prepared in ' + DEF[type].build + ' months; the turbine is ordered once a circulation test through stimulated granite succeeds, and takes about nine months.' : 'Building takes ' + DEF[type].build + ' months including the procedure.'));
       return 'ok';
     }
     case 'quiet': if (!o || !RIG[o.type]) return 'Click a rig.'; if (o.quiet) return 'Already quiet.'; S.cash -= def.cost; acct(def.n, -def.cost); o.quiet = true; return 'ok';
@@ -635,12 +637,17 @@ function place(type, x, y){
       const a = roadS(src.x, src.y), b = roadS(v.x, v.y), ex = clamp(src.x, v.x - v.w/2, v.x + v.w/2), ey = clamp(src.y, v.y - v.h/2, v.y + v.h/2), dl = m(Math.hypot(src.x - ex, src.y - ey)*1.2), rl = m(Math.abs(a.s - b.s) + a.d + b.d);
       const direct = dl < rl*0.7, len = direct ? dl : rl, cost = Math.ceil(len/100)*CFG.PIPE_K;                   // across the fields when the road goes the long way round
       if (len > CFG.PIPE_MAX*CFG.MPX) return 'Too far: ' + len + ' m along the road. Beyond ' + CFG.PIPE_MAX*CFG.MPX + ' m nothing arrives warm.';
-      if (!canPay(cost)) return 'That pipe costs ' + fmt(cost) + '.';
-      S.cash -= cost; acct('Heat pipes and power lines', -cost); S.assets += cost; S.pipes.push({from:src.id, to:v.id, s0:Math.min(a.s, b.s), s1:Math.max(a.s, b.s), a:[src.x, src.y], b:direct ? [ex, ey] : [v.x, v.y], direct, len, t0:S.t, ready:S.t + len/1500*bf()}); return 'ok';
+      const net = v.netBuilt ? 0 : Math.round(v.pop*2.5/10)*10;   // the network in the village streets, house connections and substations: built once
+      const own = src.type === 'plant' && src.ph === 'run' && src.fin && src.fin.k === 'proj' && PLANT_CONDS.every(q => q.ok()) ? Math.round((cost + net)*0.2) : cost + net; if (!canPay(own)) return 'The pipe costs ' + fmt(cost) + (net ? ', the network in ' + v.name + '’s streets ' + fmt(net) : '') + (own < cost + net ? '; ' + fmt(own) + ' of it from own money' : '') + '.';
+      const PL = src.type === 'plant' && src.ph === 'run' && src.fin && src.fin.k === 'proj' ? S.loans.find(l => l.obj === src.id && l.kind === 'project') : null, lend = PL && PLANT_CONDS.every(q => q.ok()) ? Math.round((cost + net)*0.8) : 0;
+      if (lend){ PL.bal += lend; PL.amt += lend; const r = PL.rate/12; PL.pay = PL.bal*r/(1 - Math.pow(1 + r, -Math.max(12, PL.left))); S.cash += lend; acct('Bank loans received', lend); news('The bank adds ' + fmt(lend) + ' for the heat pipe to ' + v.name + ' to the power plant’s project loan: the plant’s heat sales count as income.'); }
+      S.cash -= cost + net; acct('Heat pipes and power lines', -cost); if (net){ acct('Heat network in the villages', -net); v.netBuilt = true; news('The heat network in the streets of ' + v.name + ' is laid with the pipe: ' + fmt(net) + ' for trenches, house connections and substations.'); } S.assets += cost + net; S.pipes.push({from:src.id, to:v.id, s0:Math.min(a.s, b.s), s1:Math.max(a.s, b.s), a:[src.x, src.y], b:direct ? [ex, ey] : [v.x, v.y], direct, len, t0:S.t, ready:S.t + len/1500*bf()}); return 'ok';
     }
     case 'pline': {
       if (!o || o.type !== 'plant') return 'Click a power plant.'; if (S.plines.some(l => l.from === o.id)) return 'Already connected.';
-      const a = roadS(o.x, o.y), len = m(roadLen() - a.s + a.d), cost = Math.ceil(len/100)*CFG.LINE_K; if (!canPay(cost)) return 'That line costs ' + fmt(cost) + '.';
+      const a = roadS(o.x, o.y), len = m(roadLen() - a.s + a.d), cost = Math.ceil(len/100)*CFG.LINE_K, PL = o.fin && o.fin.k === 'proj' && PLANT_CONDS.every(q => q.ok()) ? S.loans.find(l => l.obj === o.id && l.kind === 'project') : null, lend = PL ? Math.round(cost*0.8) : 0;
+      if (!canPay(cost - lend)) return 'That line costs ' + fmt(cost) + (lend ? '; ' + fmt(cost - lend) + ' of it from own money' : '') + '.';
+      if (lend){ PL.bal += lend; PL.amt += lend; const r = PL.rate/12; PL.pay = PL.bal*r/(1 - Math.pow(1 + r, -Math.max(12, PL.left))); S.cash += lend; acct('Bank loans received', lend); news('The bank adds ' + fmt(lend) + ' for the power line to the project loan.'); }
       S.cash -= cost; acct('Heat pipes and power lines', -cost); S.assets += cost; S.plines.push({from:o.id, s0:a.s, s1:roadLen(), a:[o.x, o.y], ready:S.t + len/2500*bf()}); return 'ok';
     }
     case 'fest': {
@@ -914,12 +921,12 @@ const REACT = {
         {l:'Sell a share of the future heat', g:200, m:[[ALL, -2]], why:'Sold future heat to a fund', news:'A fund buys part of the future heat revenue. The valley reads about it in the business pages.'}]})]
 };
 const SILLY = {'A cow on the site':1, 'Nervous animals':1, 'Wedding photos':1, 'A blessing':1, 'A merchandise idea':1, 'A rehearsal room':1, 'Something for the crew':1};
-function maybeEvent(){ if (S.month < 3 || S.event || S.offer || S.over) return; const fresh = (S.hap || []).filter(h => !h.used && h.m >= S.month - 4 && REACT[h.k]);
-  if (S.month - (S.lastEvent || 0) < (fresh.length ? 2 : 3)) return;
+function maybeEvent(){ if (S.month < 3 || S.event || S.offer || S.over || S.month >= CFG.END - 6) return; const fresh = (S.hap || []).filter(h => !h.used && h.m >= S.month - 4 && REACT[h.k]), busy = deepBusy() || S.obj.some(o => o.type === 'deep' && o.drilling);
+  if (S.month - (S.lastEvent || 0) < (busy ? 5 : fresh.length ? 2 : 3)) return;
   if (fresh.length && Math.random() < 0.8){ for (const h of fresh.slice().reverse()){ h.used = true; const e = pick(REACT[h.k])(h); S.seen = S.seen || {}; if (e && S.month - (S.seen[e.title] ?? -99) >= 24){ S.seen[e.title] = S.month; S.lastEvent = S.month; S.event = e; S.paused = true; showEvent(); return; } } }
-  if (Math.random() > 0.45) return;
+  if (Math.random() > (busy ? 0.25 : 0.45)) return; const owed = S.vil.filter(v => S.obj.some(o => o.type === 'task' && o.v === v.id));
   const rigs = S.obj.some(o => (RIG[o.type] || o.type === 'testrig') && o.on && !o.released && !o.burnt && !o.dismantling); S.seen = S.seen || {};
-  for (let i = 0; i < 8; i++){ const e = pick(LETTERS)(); if (!e || SILLY[e.title] || S.month - (S.seen[e.title] ?? -99) < 48) continue; if (!rigs && /\b(rig|rigs|drill\w*|crew|noise)\b/i.test(e.title + ' ' + e.text)) continue; S.seen[e.title] = S.month; S.lastEvent = S.month; S.event = e; S.paused = true; showEvent(); return; } }
+  for (let i = 0; i < 8; i++){ const e = pick(LETTERS)(); if (!e || SILLY[e.title] || S.month - (S.seen[e.title] ?? -99) < 48 || owed.some(v => (e.from + ' ' + e.text).includes(v.name))) continue; if (!rigs && /\b(rig|rigs|drill\w*|crew|noise)\b/i.test(e.title + ' ' + e.text)) continue; S.seen[e.title] = S.month; S.lastEvent = S.month; S.event = e; S.paused = true; showEvent(); return; } }
 function fxText(o, k, rig){ k = k || LK; const bits = []; if (o.c && !rig) return 'A promise. Do it on the map within four months: ' + fmt(o.c*k) + '.'; if (o.c) bits.push('costs ' + fmt(o.c*k)); if (o.g && o.p === undefined) bits.push('brings ' + fmt(o.g*k)); if (o.bad && o.bad.c) bits.push('can cost ' + fmt(o.bad.c*k) + ' more'); if (o.note) bits.push(o.note);
   if (o.p === undefined) for (const [t, n] of o.m || []) bits.push((t === ALL ? 'everyone' : t.name) + ' ' + (n > 0 ? '+' : '−') + Math.abs(n));
   return bits.length ? bits.join(' · ') : (o.p === undefined ? 'nothing changes' : 'we will see how it goes'); }
@@ -962,7 +969,7 @@ const DRILL = {
   dayRate:{light:20, deep:40, dir:40},                              // the rig and its crew, per day while drilling
   perM:[45, 60, 70, 45, 110, 70, 90, 130, 80, 80, 90],              // bits, mud, cuttings disposal per 100 m, by rock
   casing:110, cbl:150, squeeze:200, cleanMud:180, saltMud:150, lcm:80, plug:250, kill:400, flare:60, fish:300, sidetrack:700, flowTest:400, tracer:60, pad:120,
-  subsidy:0.6                                                       // federal exploration contribution: 60% of what the well cost, paid when it is finished
+  subsidy:0.6                                                       // federal exploration contribution for deep wells, paid monthly while granted (see FED_CONDS)
 };
 const DPM = 30.4;
 const depthK = d => 1 + d/160;   // deeper metres cost more: longer pipe trips, more mud to circulate, heavier casing strings, harder bits
@@ -1000,7 +1007,7 @@ function validPoint(o, prev, q){
 function commitPlan(){
   const o = byId(plan.rig); if (!o || !plan.pts.length) return 'Draw the well first.'; if (!o.on) return 'The rig is not up yet.';
   const e = planEst(o, plan); if (!canPay(e.upfront + e.dayRate*DPM*0.5)) return 'You need ' + fmt(e.upfront) + ' now for casing and extras, plus money for the day rate.';
-  S.cash -= e.upfront; acct('Casing, cement and extras', -e.upfront); S.assets += e.upfront; o.off = false; o.test = null;
+  S.cash -= e.upfront; acct('Casing, cement and extras', -e.upfront); if (o.type === 'deep') o.fedBase = (o.fedBase || 0) + e.upfront; S.assets += e.upfront; o.off = false; o.test = null;
   if (!o.well.length){ o.shoe = plan.shoe; o.cbl = plan.cbl; o.top = plan.top; o.spent = 0; const cav = pathPts(o, plan.pts).some(p => p.d <= plan.shoe && rockL(o.line, p.x, p.d) === ROCK.WATER); o.cementOk = plan.cbl || hash(o.id, 3, 3, S.seed) < (cav ? 0.35 : 0.85); o.cav = cav;
     if (plan.cbl && hash(o.id, 3, 3, S.seed) >= (cav ? 0.35 : 0.85)){ S.cash -= DRILL.squeeze; acct('Casing, cement and extras', -DRILL.squeeze); news('The cement bond log shows gaps behind the casing near ' + nearestVillage(o.x, o.y).name + '. A cement squeeze closes them: ' + fmt(DRILL.squeeze) + '.'); } }
   o.spent = (o.spent || 0) + e.upfront;
@@ -1010,14 +1017,14 @@ function commitPlan(){
 function stepDrill(o, dm){
   const dr = o.drilling; if (S.event || S.offer) return;
   if (S.cash < 0){ const sb = ((DEF[o.type] || {}).up || 0)*dm; S.cash -= sb; acct('Rigs on standby (no money)', -sb); if (!o.cashStop){ o.cashStop = true; news('Drilling stops near ' + nearestVillage(o.x, o.y).name + ': the account is empty. The crew waits by the rig.'); } return; } o.cashStop = false;
-  let budget = dm; const rate = DRILL.dayRate[o.type] || 20; const cost = rate*DPM*dm; S.cash -= cost; acct('Rig day rates', -cost); o.spent += cost;
+  let budget = dm; const rate = DRILL.dayRate[o.type] || 20; const cost = rate*DPM*dm; S.cash -= cost; acct('Rig day rates', -cost); o.spent += cost; if (o.type === 'deep') o.fedBase = (o.fedBase || 0) + cost;
   if (S.t < (o.halt || 0)) return;
   if (dr.back){ const f0 = dr.seg === 0 ? tip(o) : dr.pts[dr.seg-1], t0 = dr.pts[dr.seg]; if (t0){ const L = Math.hypot(t0.x - f0.x, t0.d - f0.d) || 1; dr.f = Math.max(0, dr.f - dr.back/L); } dr.back = 0; }
   while (budget > 0 && dr.seg < dr.pts.length){
     const from = dr.seg === 0 ? tip(o) : dr.pts[dr.seg-1], to = dr.pts[dr.seg];
     const len = Math.hypot(to.x - from.x, to.d - from.d), t = rockL(o.line, dr.pos.x, dr.pos.d), sp = rateOf(t, dr.bit, dr.mud);
     const adv = Math.min(budget*sp, len - dr.f*len, 1); dr.f += adv/len; budget -= adv/sp;
-    const c = DRILL.perM[t]/10*adv*depthK(dr.pos.d); S.cash -= c; acct('Bits, mud and cuttings', -c); o.spent += c;
+    const c = DRILL.perM[t]/10*adv*depthK(dr.pos.d); S.cash -= c; acct('Bits, mud and cuttings', -c); o.spent += c; if (o.type === 'deep') o.fedBase = (o.fedBase || 0) + c;
     dr.pos = {x:from.x + (to.x - from.x)*dr.f, d:from.d + (to.d - from.d)*dr.f};
     const pt = rockL(o.line, dr.pos.x, dr.pos.d); reveal(o.line, dr.pos.x - 6, dr.pos.x + 6, dr.pos.d - 4, dr.pos.d + 3, 4);   // cuttings tell the rock at the bit
     o.hit = o.hit || {}; if (!o.hit[pt]){ o.hit[pt] = 1; onHit(o, pt, dr.pos.d); if (S.offer) return; }
@@ -1026,9 +1033,10 @@ function stepDrill(o, dm){
     if (drillEvent(o, pt, dr)) return;
     if (dr.f >= 0.999){ o.well.push({x:to.x, d:to.d, c:to.d <= (o.shoe || 0)}); dr.seg++; dr.f = 0; }
   }
-  if (dr.seg >= dr.pts.length){ o.drilling = null; const tb = tip(o), aq = openIn(o, ROCK.WARM), gr = openIn(o, ROCK.GRANITE), wT = aq ? aqT(o.line, tb.x, wellPts(o).find(p => rockL(o.line, p.x, p.d) === ROCK.WARM).d) : tempAt(o.line, tb.x, tb.d);
+  if (dr.seg >= dr.pts.length){ o.drilling = null; const tb = tip(o), aq = openIn(o, ROCK.WARM), gr = openIn(o, ROCK.GRANITE), wT = aq && !gr ? aqT(o.line, tb.x, wellPts(o).find(p => rockL(o.line, p.x, p.d) === ROCK.WARM).d) : tempAt(o.line, tb.x, tb.d);
     o.cost = (o.cost || 0) + o.spent; news('Well finished near ' + nearestVillage(o.x, o.y).name + ' at ' + M(tb.d) + ', water or rock at about ' + wT + ' °C. It cost ' + fmt(o.spent) + '.');
-    if (gr && o.type === 'deep') o.sub = (o.sub || 0) + fedPay(o.spent, 'the deep well near ' + nearestVillage(o.x, o.y).name); o.spent = 0; }
+    if (gr && wT >= 120 && !S.hotProven){ S.hotProven = true; news('Hot granite is proven: ' + wT + ' °C at ' + M(tb.d) + '. The bank now lends towards the next deep well and the power plant.'); offerInvest('plant'); }
+    o.spent = 0; }
 }
 /* trouble at the bit is a gamble, but not a blind one: it only happens in risky rock, and the programme shifts the odds.
    Karst swallows mud, the more so the heavier it is; gas sits in the coal trough (a bright spot on the seismic) and deep fault zones,
@@ -1063,7 +1071,7 @@ function drillEvent(o, t, dr){ if (S.event || S.offer) return false;
 const faultNear = (o, d) => faultsFor(o.line).some(f => Math.abs(sx(o.x) - (f.x + d*f.s)) < 40);
 function onHit(o, t, d){ const v = nearestVillage(o.x, o.y), T = tempAt(o.line, sx(o.x), d);
   if (t === ROCK.WARM){ news('The mud logger near ' + v.name + ' reports porous Muschelkalk limestone at ' + M(d) + ', water at about ' + aqT(o.line, sx(o.x), d) + ' °C. Only a flow test will tell how much water it gives.'); }
-  if (t === ROCK.GRANITE){ news('Crystalline basement under ' + v.name + ' at ' + M(d) + ', about ' + T + ' °C.'); if (T >= 100) offerInvest('plant'); }
+  if (t === ROCK.GRANITE){ news('Crystalline basement under ' + v.name + ' at ' + M(d) + ', about ' + T + ' °C.'); }
   if (t === ROCK.COAL) news('Coal fragments in the cuttings near ' + v.name + ' at ' + M(d) + '. The mud logger watches the gas readings.');
   if (t === ROCK.WATER) news('Karst water near ' + v.name + ' at ' + M(d) + '. Above the casing shoe this is the drinking water.'); }
 function doQuake(o, text, pos, small){ S.quakes.push({line:o.line, x:pos.x, d:pos.d, m:S.month}); const mag = small ? 1.9 + Math.random()*0.7 : 2.6 + Math.random()*1.6;
@@ -1080,14 +1088,17 @@ function quakeHit(epi, mag, induced, text){ const n = nearestVillage(epi.x, epi.
   crisis({kind:'quake', induced, mag, v:n.id, church, drop}); }
 /* the middle years: the canton's review, the committee, oil prices, elections, a quake somewhere else */
 function heatedCount(){ return S.vil.filter(v => v.heat === 'on').length; }
+/* the opposition reacts to what the Company does underground, not to the calendar */
+const deepStarted = () => S.obj.some(o => (o.type === 'deep' && ((o.well && o.well.length) || o.drilling)) || o.type === 'plant');
+const deepBusy = () => S.obj.some(o => (o.type === 'deep' && o.drilling) || (o.type === 'plant' && o.ph === 'site' && (o.pr || 0) > 0));
 function midTick(){ const m = S.month;
   if (m % 12 === 9 && m < CFG.END && drilledWell()) news('The autumn feast is next month. A Fête de la géothermie in November counts twice.');
   if (m === 60 && !S.review){ S.review = {k:'basement', due:84, t:'show what lies under the Muschelkalk: a well into the crystalline basement by January of year 8'};
     news('The canton’s five-year review of the concession: it was granted for electricity. The Company must ' + S.review.t + '. Otherwise it pays a deposit of ' + fmt(2000) + ' and loses credibility.'); }
   if (S.review && !S.review.done && m >= S.review.due){ S.review.done = true; const ok = S.obj.some(w => RIG[w.type] && w.well && w.well.length && openIn(w, ROCK.GRANITE));
     S.review.ok = ok; if (ok){ for (const v of S.vil) bump(v, 'Met the canton’s target', 2); news('The canton confirms the target is met.'); } else { S.cash -= 2000; acct('Deposit to the canton', -2000); for (const v of S.vil) bumpG(v, 'Missed the canton’s target', 'hi', -5); news('The target is missed. The canton takes a deposit of ' + fmt(2000) + ' and says so publicly.'); } }
-  if (m >= 48 && !S.cmte && fcBand()[2] < 68){ const t = S.vil[0], f = freeSpot(t.x - t.w/2 - 10, t.y + 6, 10, () => Math.random()) || {x:t.x - t.w/2 - 10, y:t.y + 6}; S.cmte = {s:1, id:add('committee', f.x, f.y, {v:0, opp:1, w:6, hh:7}).id}; news('A referendum committee forms in ' + t.name + ': “Jura sans fracking”. It collects signatures for the vote and files objections against every new site.'); }
-  if (S.cmte && byId(S.cmte.id)){ if (m - (S.cmte.hit || -9) > 2) S.cmte.s = Math.min(10, S.cmte.s + 0.35); }
+  if (m >= 12 && !S.cmte && deepStarted()){ const t = S.vil[0], f = freeSpot(t.x - t.w/2 - 10, t.y + 6, 10, () => Math.random()) || {x:t.x - t.w/2 - 10, y:t.y + 6}; S.cmte = {s:1, id:add('committee', f.x, f.y, {v:0, opp:1, w:6, hh:7}).id}; news('A referendum committee forms in ' + t.name + ': “Jura sans fracking”. It collects signatures for the vote and files objections against every new site.'); }
+  if (S.cmte && byId(S.cmte.id)){ const busy = deepBusy(); if (m - (S.cmte.hit || -9) > 2) S.cmte.s = clamp(S.cmte.s + (busy ? 0.45 : 0.15) - (!busy && S.vil.some(v => v.heat === 'on') ? 0.12 : 0), 0, 10); }
   if (m % 12 === 6 && m > 0){ const old = S.oil || 1; S.oil = clamp(old + (Math.random() - 0.45)*0.35, 0.7, 1.7); if (Math.abs(S.oil - old) > 0.12) news('Heating oil costs ' + Math.round(Math.abs(S.oil - old)*100) + '% ' + (S.oil > old ? 'more' : 'less') + ' than a year ago.' + (S.oil > old ? ' Geothermal heat looks cheaper.' : ' Geothermal heat looks dearer.')); }
   if (m === 48 && !S.minister){ S.minister = Math.random() < 0.5 ? 'friendly' : 'cold'; news(S.minister === 'friendly' ? 'Cantonal elections: the new energy minister supports deep geothermal energy. Permits move faster.' : 'Cantonal elections: the new energy minister is sceptical of deep geothermal energy. Permits take longer.'); }
   if (!S.elseQ){ S.elseQ = 30 + ((Math.random()*60)|0); } if (m === S.elseQ){ for (const v of S.vil) bump(v, 'Quake at another project', -3); news('A geothermal project in another canton sets off a magnitude 3 earthquake. That canton stops it. The papers here ask whether it could happen in the valley.'); } }
@@ -1138,7 +1149,7 @@ const STAGE_C = 300, STAGE_MO = 0.25, CIRC_C = 200, BLEED_C = 100;
 const stimOut = o => 1 - Math.exp(-(o.stages || 0)/5);
 function stimReady(pl){ const P0 = byId(pl.prod), I0 = byId(pl.inj); if (pl.type !== 'plant' || pl.ph !== 'site' || !pl.on) return 'Not now.'; if (!P0 || !I0 || !openIn(P0, ROCK.GRANITE) || !openIn(I0, ROCK.GRANITE)) return 'Link two wells with open hole in the granite first.'; if (S.t < (pl.stageUntil || 0)) return 'A stage is still being pumped.'; return ''; }
 function stimStage(pl){ const no = stimReady(pl); if (no) return no; if (!canPay(STAGE_C)) return 'A stage costs ' + fmt(STAGE_C) + '.';
-  S.cash -= STAGE_C; acct('Stimulation', -STAGE_C); fedPay(STAGE_C, 'a stimulation stage'); pl.stages = (pl.stages || 0) + 1; pl.stim = 0; pl.pr = (pl.pr || 0) + 1; pl.stageUntil = S.t + STAGE_MO;
+  S.cash -= STAGE_C; acct('Stimulation', -STAGE_C); fedPay(STAGE_C, 'a stimulation stage'); pl.stages = (pl.stages || 0) + 1; pl.stim = 0; pl.pr = (pl.pr || 0) + 1; pl.stageUntil = S.t + STAGE_MO; if (S.cmte && byId(S.cmte.id)) S.cmte.s = Math.min(10, S.cmte.s + 0.25);
   const I = byId(pl.inj), pos = tip(I), fs = faultsFor(I.line).map(f => ({f, x:f.x + pos.d*f.s})).sort((a, b) => Math.abs(a.x - pos.x) - Math.abs(b.x - pos.x))[0], R = 8 + pl.stages*2.5 + pl.pr*1.5, reach = fs && Math.abs(fs.x - pos.x) < R, rnd = () => Math.random();
   S.micro = S.micro || []; let maxM = 0; const n = 8 + ((rnd()*8)|0);
   for (let i = 0; i < n; i++){ let x, d; if (reach && rnd() < 0.45){ d = pos.d + (rnd() - 0.5)*R*1.4; x = fs.f.x + d*fs.f.s + (rnd() - 0.5)*4; } else { const a = rnd()*6.28, rr = Math.sqrt(rnd())*R; x = pos.x + Math.cos(a)*rr*1.3; d = pos.d + Math.sin(a)*rr*0.7; }
@@ -1154,7 +1165,7 @@ function circTest(pl){ if (pl.type !== 'plant' || pl.ph !== 'site') return 'Not 
   const r = doublet(pl, true), here = nearestVillage(pl.x, pl.y).name; if (!r.flow){ news('Circulation test near ' + here + ': ' + r.why); return 'ok'; }
   if (r.cold || r.mwE < 0.5){ news('Circulation test near ' + here + ': ' + Math.round(r.flow) + ' L/s at ' + r.T + ' °C come round. ' + (r.cold ? 'Below 100 °C there is no electricity.' : 'Not enough for a turbine: the rock needs more stages, or the wells are badly placed.')); return 'ok'; }
   news('Circulation test near ' + here + ': ' + Math.round(r.flow) + ' L/s at ' + r.T + ' °C come round, about ' + r.mwE.toFixed(1) + ' MW of electricity.'); pl.circOk = true; plantTranche(pl, 1); return 'ok'; }
-function offerInvest(k){ if (S.invest[k] || S.offer || S.event || S.over) return; S.offer = k; S.paused = true; showOffer(k); }
+function offerInvest(k){ if (S.invest[k] || S.over) return; if (S.offer || S.event){ S.offerQ = k; return; } S.offerQ = null; S.offer = k; S.paused = true; showOffer(k); }
 const aqT = (li, x, d) => tempAt(li, x, d) + 14;
 const wellT = o => { const tb = tip(o), wp = openIn(o, ROCK.WARM) && wellPts(o).find(p => rockL(o.line, p.x, p.d) === ROCK.WARM); return wp ? aqT(o.line, tb.x, wp.d) : tempAt(o.line, tb.x, tb.d); };   // aquifer water comes up warmer than the rock around it, as measured in deep wells
 const tempAt = (li, x, d) => Math.round(11 + d*0.315 + 6*(vn(x/140, d/60 + li, 12, S.seed) - 0.5));   // about 31.5 °C per km
@@ -1176,8 +1187,8 @@ function doublet(o, raw){
   if (!nI) return {why:'The injection well has no open hole in ' + (plant ? 'the granite' : 'the Muschelkalk aquifer') + ' to take the water back.', dry:true};
   if (plant && !(o.stages > 0)) return {why:'The granite has to be stimulated first.'};
   const bp = tip(P), bi = tip(I), T0 = plant ? tempAt(P.line, bp.x, bp.d) : aqT(P.line, bp.x, wellPts(P).find(p => rockL(P.line, p.x, p.d) === ROCK.WARM).d);
-  const perm = Math.min(1, permAt(P.line, bp.x, bp.d) + (o.acid ? 0.3 : 0)), injOk = Math.min(1, 0.3 + permAt(I.line, bi.x, bi.d)), open = Math.min(1, nP/(plant ? 40 : 12));
-  const flow = plant ? (10 + 80*perm*stimOut(o))*injOk*open : (4 + 40*perm)*injOk*open;
+  const perm = Math.min(1, permAt(P.line, bp.x, bp.d) + (o.acid ? 0.3 : 0)), injOk = Math.min(1, 0.3 + permAt(I.line, bi.x, bi.d) + (plant ? 0.7*stimOut(o) : 0)), open = Math.min(1, nP/(plant ? 40 : 12));
+  const flow = plant ? (6 + 70*stimOut(o)*(0.4 + perm))*injOk*open : (4 + 40*perm)*injOk*open;
   const gap = Math.hypot((bp.x - bi.x)*15.6, (P.line - I.line)*CFG.LINE_DY*CFG.MPX), onset = gap < 400 ? 30 : gap < 800 ? 50 : 76, cool = Math.max(0, (o.age || 0) - onset)*(gap < 400 ? 0.35 : 0.22);   // the cooled water reaches the production well after some years
   const T = T0 - cool, Tuse = T + (o.hp ? 10 : 0);
   const mwTh = flow*4.18*(Tuse - (plant ? 30 : 15))/1000*(1 - (o.scale || 0)), mwE = plant && T >= 100 ? flow*4.18*(T - 80)/1000*0.11*(1 - (o.scale || 0)) : 0;
@@ -1199,7 +1210,7 @@ function spoil(v, sev, why){ const sp = v.spring, before = sp.lvl || 0; if (befo
 const polluted = v => (v.spring.lvl || 0) >= 2;
 
 /* ================================================================== time */
-function running(){ return S.started && !S.paused && !S.over && !S.secret; }
+function running(){ return S.started && !S.paused && !S.over && !S.secret && !S.raid; }
 function advance(dm){ while (dm > 1e-9 && !S.over){ const step = Math.min(dm, S.month + 1 - S.t); S.t += step; dm -= step; continuous(step); if (S.t >= S.month + 1 - 1e-9){ S.month++; S.t = S.month; monthTick(); (S.hist = S.hist || []).push({m:S.month, cash:S.cash, debt:debt(), net:S.last.income - S.last.costs, fc:fcBand()[2]}); } } }
 function continuous(dm){
   { const W = S.wk = S.wk || {t0:S.t, sum:0, last:null}; W.sum += (S.last.income - S.last.costs)*dm; if (S.t - W.t0 >= 7/DPM){ W.last = W.sum; W.sum = 0; W.t0 = S.t; } }   // running costs and income spread over the month, so the week's total turns like a meter
@@ -1233,6 +1244,8 @@ function onReady(o){
 function upkeepOf(o){ const d = DEF[o.type] || {}; let up = (d.up || 0) + (o.hp && o.on && !o.off ? 40 : 0); if (SITE[o.type] && !o.on && !o.restart) return 0; if (o.burnt || o.dismantling || (RIG[o.type] && o.drilling)) return 0; if (RIG[o.type] && o.released) up = 5; if (o.type === 'plant' && o.ph && o.ph !== 'run') up = 40; if (o.off) up *= d.bld ? 0 : 0.5; return up; }
 function monthTick(){ S.inMT = true; try { monthTick0(); } finally { S.inMT = false; } }
 function monthTick0(){
+  if (S.offerQ && !S.offer && !S.event) offerInvest(S.offerQ);
+  if (S.fed && S.fed.st === 'granted' && S.seisSpent > 0){ fedPay(S.seisSpent, 'last month’s seismic surveys'); S.seisSpent = 0; }
   lessonTick(); taskTick(); crisisTick(); midTick();
   { const hw = 3 + undecided()*24; S.fcNoise = clamp((S.fcNoise || 0)*0.75 + (Math.random() - 0.5)*hw*0.6, -hw*0.8, hw*0.8); }
   { const dd = debt();
@@ -1246,11 +1259,15 @@ function monthTick0(){
   const rnd = k => hash(S.month, k, 91, S.seed), mo = S.month % 12, winter = (mo >= 10 || mo <= 2) ? CFG.WINTER : 1; S.season = mo;
   let income = 0, costs = 0, interest = 0; S.producing = false; for (const v of S.vil) v.heat = '';
   for (const l of S.loans.slice()){ const i = l.bal*(l.rate || CFG.LOAN_RATE)/12; interest += i; const princ = l.shady ? 0 : l.amort !== undefined ? Math.min(l.bal, l.left > 0 ? l.amort : 0) : Math.min(l.bal, l.pay - i); if (l.amort !== undefined) l.pay = i + princ; l.bal -= princ; l.left--; costs += l.pay; acct(l.shady ? 'Private loan interest' : 'Loan repayments', -l.pay); if (l.bal <= 0.5){ S.loans.splice(S.loans.indexOf(l), 1); continue; }
-    if (l.shady && l.left <= 0){ l.left = 12; const tg = S.obj.filter(o => (RIG[o.type] || o.type === 'station' || o.type === 'plant') && !o.burnt).sort(() => Math.random() - 0.5)[0];
-      if (tg){ tg.burnt = S.t; tg.on = false; tg.drilling = null; S.pipes = S.pipes.filter(p => p.from !== tg.id); S.plines = S.plines.filter(q => q.from !== tg.id); sfx('fire'); news('The ' + (RIG[tg.type] ? 'rig' : DEF[tg.type].n.toLowerCase()) + ' near ' + nearestVillage(tg.x, tg.y).name + ' burns at night. Nobody saw anything. The private loan is a year overdue.'); happen('burn', {v:nearestVillage(tg.x, tg.y).id}); }
-      else news('A note under the office door: the private loan is a year overdue.'); } }
+    if (l.shady && l.left <= 0 && l.warned){ startRaid(); return; }
+    if (l.shady && l.left <= 0){ l.left = 6; l.warned = true; const tg = S.obj.filter(o => (RIG[o.type] || o.type === 'station' || o.type === 'plant') && !o.burnt).sort(() => Math.random() - 0.5)[0];
+      if (tg){ tg.burnt = S.t; tg.on = false; tg.drilling = null; S.pipes = S.pipes.filter(p => p.from !== tg.id); S.plines = S.plines.filter(q => q.from !== tg.id); sfx('fire'); news('The ' + (RIG[tg.type] ? 'rig' : DEF[tg.type].n.toLowerCase()) + ' near ' + nearestVillage(tg.x, tg.y).name + ' burns at night. Nobody saw anything. The private loan is a year overdue. Six more months, says a note under the office door.'); happen('burn', {v:nearestVillage(tg.x, tg.y).id}); }
+      else news('A note under the office door: the private loan is a year overdue. Six more months.'); } }
   for (const o of S.obj){
-    plantTick(o); const d = DEF[o.type] || {}, up = upkeepOf(o);
+    plantTick(o); if (o.fedBase > 0){ if (S.fed && S.fed.st === 'granted') o.sub = (o.sub || 0) + fedPay(o.fedBase, 'last month’s drilling near ' + nearestVillage(o.x, o.y).name);
+      if (o.drillLoan){ const draw = Math.round(o.fedBase*o.drillLoan); if (PLANT_CONDS.every(q => q.ok())){ let L = S.loans.find(l => l.obj === o.id && l.kind === 'drill'); if (!L) addLoan(draw, o.loanRate || bankRate(), FIN_TERM, false, {kind:'drill', obj:o.id, name:'Drilling loan: deep well near ' + nearestVillage(o.x, o.y).name}); else { L.bal += draw; L.amt += draw; const r = L.rate/12; L.pay = L.bal*r/(1 - Math.pow(1 + r, -Math.max(12, L.left))); S.cash += draw; acct('Bank loans received', draw); } }
+        else if (!o.drillFroze){ o.drillFroze = true; news('The bank holds back its share of the drilling near ' + nearestVillage(o.x, o.y).name + ': ' + PLANT_CONDS.filter(q => !q.ok()).map(q => lc(q.n)).join('; ') + '.'); } }
+      o.fedBase = 0; } const d = DEF[o.type] || {}, up = upkeepOf(o);
     if (up){ costs += up; if (o.type === 'office' && !o.off){ acct('Membership fee, Géothermie-Helvetica', -5); acct(d.acc, 5 - up); } else acct(RIG[o.type] && o.released ? 'Capped wellheads (inspection)' : d.acc || 'Running costs: ' + d.n, -up); }
     const pipes = S.pipes.filter(p => p.from === o.id), pipe = pipes[0], lnk = S.plines.find(l => l.from === o.id), blocked = isBlocked(o);
     for (const pp of pipes) if (S.t < pp.ready && S.vil[pp.to].heat !== 'on') S.vil[pp.to].heat = 'build';
@@ -1381,6 +1398,21 @@ function drawSecret(g, t, yc){ const z = S.secret; if (!z) return;
   if (z.wreck && z.wreck[1] <= yc) helicopter(g, {x:z.wreck[0], y:z.wreck[1], ang:0.4}, 0);
   for (const b of z.booms){ const a = z.t - b.t0; if (a > 2.5) { const p = P(b.x, b.y, 0); R(g, 'rgba(40,40,40,.5)', p[0] - 4, p[1] - 14 - a*2, 8, 10); continue; } const p = P(b.x, b.y, 0), r = 4 + a*14; g.fillStyle = 'rgba(255,' + Math.round(220 - a*80) + ',80,' + (1 - a/2.5) + ')'; g.beginPath(); g.arc(p[0], p[1] - 6, r, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,230,' + Math.max(0, 1 - a*1.5) + ')'; g.beginPath(); g.arc(p[0], p[1] - 6, r*0.45, 0, 7); g.fill(); }
   for (const e of S.ents) if (e.k === 'jet'){ f35(g, e.x, e.y, 0, true); f35(g, e.x, e.y, 60); } }
+/* the lender in town collects. Afterwards the ending reads like any other bankruptcy. */
+function startRaid(){ const of = S.obj.find(o => o.type === 'office' && !o.burnt) || S.obj.find(o => DEF[o.type] && DEF[o.type].bld && !o.burnt) || {x:S.vil[0].x + 20, y:S.vil[0].y + 10};
+  S.raid = {t:0, stage:0, fires:[], at:[of.x, of.y]}; S.paused = true; plan = null; tool = null; linking = null; sel = null; $('#card').hidden = true; for (const p of ['#polls', '#wire', '#camp', '#ledger', '#comm']) $(p).hidden = true;
+  const L = roadLen(), tgt = roadS(of.x, of.y).s, rp = roadPos(tgt), side = of.y < rp.y ? -1 : 1, from = tgt < L/2 ? -1 : 1;
+  for (let i = 0; i < 5; i++) S.ents.push({k:'blackvan', s:from < 0 ? -12 - i*12 : L + 12 + i*12, vs:-from*30, lane:-from, target:tgt + from*(4 + i*7), raid:1, park:true, px:rp.x + (rp.dx ? from*(4 + i*7) : side*6), py:rp.y + (rp.dx ? side*6 : from*(4 + i*7)), pdir:rp.dx ? 'x' : 'y'});
+  news('Five black vans without plates come up the valley road.'); }
+function raidTick(dt){ const z = S.raid; z.t += dt;
+  if (z.stage === 0 && (z.t > 6 || S.ents.some(e => e.raid && e.parked))){ z.stage = 1; z.shoot = z.t; news('Shots at the ' + DEF.office.n.toLowerCase() + '.'); sfx('quake'); shake = 0.6; }
+  if (z.stage === 1 && z.t > z.shoot + 2.5){ z.stage = 2; for (const o of S.obj.filter(o => ['office','experts','engineers','workshop','waterlab','seisnet','prhut','lobby'].includes(o.type) && !o.burnt)){ o.burnt = S.t; o.on = false; z.fires.push([o.x, o.y]); } if (!z.fires.length) z.fires.push(z.at); sfx('fire'); news('The Company’s offices are burning.'); }
+  if (z.stage === 2 && z.t > z.shoot + 5){ z.stage = 3; const L = roadLen(), tgt = roadS(z.at[0], z.at[1]).s; for (let i = 0; i < 4; i++) S.ents.push({k:i % 2 ? 'policecar' : 'policevan', s:tgt < L/2 ? L + 10 + i*14 : -10 - i*14, vs:(tgt < L/2 ? -1 : 1)*34, lane:tgt < L/2 ? -1 : 1, target:tgt + (i - 2)*6, park:true, px:z.at[0] + (i - 2)*6, py:z.at[1] + 10, pdir:'x', siren:1});
+    for (const e of S.ents) if (e.raid){ e.parked = false; e.leaving = true; e.target = undefined; e.vs = e.vs > 0 ? 50 : -50; } news('Police from three cantons arrive. The vans are gone.'); }
+  if (z.stage === 3 && z.t > z.shoot + 11){ z.stage = 4; end('debt'); } }
+function drawRaid(g, t, yc){ const z = S.raid; if (!z) return;
+  for (const [x, y] of z.fires){ if (y > yc) continue; const p = P(x, y, 0), f = ((t*10 + x)|0) % 3; R(g, 'rgba(60,60,60,.35)', p[0] - 3 + f, p[1] - 22 - f*2, 6, 8); R(g, '#ff7a00', p[0] - 3, p[1] - 7 - f, 6, 7 + f); R(g, '#ffd166', p[0] - 1.5, p[1] - 4 - f*0.5, 3, 4); }
+  if (z.stage >= 1 && z.stage <= 2) for (const e of S.ents) if (e.raid && e.parked && Math.random() < 0.35){ const p = P(e.px, e.py, 2); R(g, '#fff6c0', p[0] - 1 + (Math.random() - 0.5)*4, p[1] - 2 + (Math.random() - 0.5)*2, 2, 2); } }
 /* district heating: a pre-insulated twin pipe laid in a trench along the road. While it is built: an open trench, a spoil heap, barrier tape and a digger at the head. Done: a strip of fresh backfill that grows over, yellow marker posts and valve covers. */
 function pipePath(p){ if (p.direct) return [p.a, p.b]; const off = q => [q.x - q.dy*2.5, q.y + q.dx*2.5], sa = roadS(p.a[0], p.a[1]).s, sb = roadS(p.b[0], p.b[1]).s, pts = [p.a];
   const fw = sa <= sb, n = Math.max(1, Math.ceil((p.s1 - p.s0)/2)); for (let i = 0; i <= n; i++){ const t = fw ? i/n : 1 - i/n; pts.push(off(roadPos(p.s0 + (p.s1 - p.s0)*t))); } pts.push(p.b); return pts; }
@@ -1451,7 +1483,8 @@ function tickEnts(dt0){
     if (e.parked) continue;
     if (e.owner !== null && e.owner !== undefined){ const o = byId(e.owner); if (!o){ e.owner = null; e.leaving = true; e.vs = e.s < L/2 ? -18 : 18; }
       else if ((e.target - e.s)*Math.sign(e.vs) <= 0){ o.arrived = true; if (e.park){ e.parked = true; e.s = e.target; } else { e.owner = null; e.leaving = true; e.vs = e.s < L/2 ? -18 : 18; e.lane = e.vs > 0 ? 1 : -1; } continue; } }
-    const ahead = Math.sign(e.vs); let stop = false; const siren = e.k === 'policevan' || e.k === 'riotbus';   // police drive round blockades and queues
+    if ((e.raid || e.siren) && e.target !== undefined && !e.leaving && (e.target - e.s)*Math.sign(e.vs) <= 0){ e.parked = true; e.s = e.target; continue; }
+    const ahead = Math.sign(e.vs); let stop = false; const siren = e.k === 'policevan' || e.k === 'riotbus' || e.raid || e.siren;   // police drive round blockades and queues
     if (!siren) for (const bs of blocks) if ((bs - e.s)*ahead > 0 && (bs - e.s)*ahead < 9) stop = true;
     if (!stop && !siren) for (const q of S.ents) if (q !== e && q.s !== undefined && !q.parked && q.lane === e.lane && Math.sign(q.vs) === ahead && (q.s - e.s)*ahead > 0 && (q.s - e.s)*ahead < 9 && q.stopped) stop = true;
     e.stopped = stop; if (stop) continue;
@@ -1572,12 +1605,13 @@ function vehicle(g, k, x, y, dir, col, anim, fw){ // x,y = centre of the footpri
   if (k === 'car' || k === 'blackcar' || k === 'policecar'){ const c = k === 'blackcar' ? '#1b1e24' : k === 'policecar' ? '#f4f4f0' : (col || '#2f4f7a');
     seg(0, 1, 0, 0.5, 1.1, c); if (k === 'policecar'){ side(0, 1, 0.8, 1.15, '#2a4fa0'); side(0, 1, 1.15, 1.4, '#d7e000'); } seg(0.22, 0.78, 0.25, 1.6, 1.1, glass, {top:shade(c, 1.2), left:glass, right:shade(glass, 0.8)}); side(0.48, 0.53, 1.6, 2.7, c);
     lights(1.0, 1.4); wheel(0.2, 0.75); wheel(0.8, 0.75); if (k === 'policecar') roofLights(2.8); }
-  else if (k === 'bus' || k === 'policevan' || k === 'riotbus' || k === 'van'){
-    const c = {bus:'#f2c230', policevan:'#f4f4f0', riotbus:'#2f3742', van:'#f1f1ee'}[k], H = k === 'riotbus' ? 3.4 : k === 'bus' ? 3.1 : 2.8;
+  else if (k === 'bus' || k === 'policevan' || k === 'riotbus' || k === 'van' || k === 'blackvan'){
+    const c = {bus:'#f2c230', policevan:'#f4f4f0', riotbus:'#2f3742', van:'#f1f1ee', blackvan:'#17191e'}[k], H = k === 'riotbus' ? 3.4 : k === 'bus' ? 3.1 : 2.8;
     seg(0, 1, 0, 0.5, H, c, {top:k === 'bus' ? '#f6f6f2' : shade(c, 1.1)});
     if (k === 'policevan'){ side(0, 1, 1.2, 1.7, '#2a4fa0'); side(0, 1, 1.7, 2.0, '#d7e000'); side(0.55, 0.95, 2.2, 3.0, glass); }
     else if (k === 'riotbus'){ side(0.05, 0.95, 2.3, 3.5, '#5a6f80'); for (let l = 0.08; l < 0.95; l += 0.05) side(l, l + 0.012, 2.3, 3.5, '#1c2026'); side(0, 1, 1.3, 1.7, '#2a4fa0'); }
     else if (k === 'bus'){ side(0.05, 0.95, 2.1, 3.3, glass); for (let l = 0.2; l < 0.95; l += 0.15) side(l, l + 0.02, 2.1, 3.3, c); side(0, 1, 1.2, 1.5, '#c8102e'); }
+    else if (k === 'blackvan') side(0.6, 0.95, 2.0, 2.9, '#2a2e36');
     else { side(0.55, 0.95, 2.0, 2.9, glass); side(0.05, 0.5, 1.4, 1.7, '#3f8f4e'); const p = P(x, y + Wd/2, 1); T(g, 'ZH', p[0] - 2, p[1] + 1.5, '#1c2225', 3.5); }
     end(0.12, 0.88, H*0.62, H + 0.3, front ? glass : shade(c, 0.8)); lights(1.0, 1.4);
     wheel(0.17, 0.8); wheel(0.82, 0.8); if (k === 'policevan' || k === 'riotbus') roofLights(H + 0.5); }
@@ -1793,7 +1827,7 @@ function drawMap(g, t){
     if (st && hover && hover.x !== undefined){ const a = P(st.x, st.y, 0), b = P(hover.x, hover.y, 0); g.strokeStyle = linking.role === 'prod' ? '#c8571b' : '#1f5fa8'; g.lineWidth = 1; g.setLineDash([2, 1.5]); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.setLineDash([]); } }
   BUB.length = 0; draws.sort((a,b) => a.k - b.k); for (const d of draws) d.f(); drawBubbles(g);
   for (const e of S.ents) if (e.k === 'heli') helicopter(g, e, t);
-  drawSecret(g, t, yc);
+  drawSecret(g, t, yc); drawRaid(g, t, yc);
   /* interaction overlays */
   if (anchor && tool === 'survey' && hover && hover.x !== undefined){ const l = S.lines[anchor.line]; const a = P(Math.min(anchor.x, hover.x), l.y, 0), b = P(Math.max(anchor.x, hover.x), l.y, 0); g.strokeStyle = 'rgba(242,194,48,.9)'; g.lineWidth = 2; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
   if (anchor && anchor.id){ const a = byId(anchor.id); if (a){ const p = P(a.x, a.y, 26); R(g, '#b3261e', p[0] - 4, p[1], 8, 1); } }
@@ -1982,7 +2016,7 @@ const WISH = {
   school:{t:'a new sports hall for the school', months:12, done:v => S.obj.some(o => o.type === 'school' && o.on && o.v === v.id)} };
 function wishTick(){
   for (const v of S.vil){ const w = v.wish;
-    if (!w){ if (S.month >= 3 && S.month < CFG.END - 8 && (v.wishNext || 0) <= S.month && hash(S.month, v.id, 31, S.seed) < 0.3){ const ks = Object.keys(WISH).filter(k => (!WISH[k].ok || WISH[k].ok(v)) && k !== v.lastWish && !(v.granted || []).includes(k)), k = ks[(hash(S.month, v.id, 32, S.seed)*ks.length)|0], d = WISH[k]; if (!d) continue;
+    if (!w){ if (S.month >= 3 && S.month < CFG.END - 12 && !S.vil.some(u => u.wish) && (v.wishNext || 0) <= S.month && hash(S.month, v.id, 31, S.seed) < 0.3){ const ks = Object.keys(WISH).filter(k => (!WISH[k].ok || WISH[k].ok(v)) && k !== v.lastWish && !(v.granted || []).includes(k)), k = ks[(hash(S.month, v.id, 32, S.seed)*ks.length)|0], d = WISH[k]; if (!d) continue;
         v.wish = {k, until:S.month + (d.months || 6)}; news(v.name + ' would like ' + d.t + (d.cost ? ' (' + fmt(d.cost) + ')' : '') + ' by ' + MONTHS[v.wish.until % 12] + ', year ' + ((v.wish.until/12|0) + 1) + '. A granted wish is remembered for two years.'); } continue; }
     const d = WISH[w.k];
     if (d.keep && !d.keep(v)){ wishEnd(v, false); continue; }
@@ -2120,12 +2154,12 @@ function renderLedger(){ const el = $('#ledger'), A = (S.acct && S.acct.last) ||
     h += card('Last month, line by line', '<table class="acc">' + (rows.length ? rows.map(r => '<tr><td>' + r[0] + '</td><td class="' + (r[1] < 0 ? 'neg' : 'pos') + '">' + (r[1] > 0 ? '+' : '') + fmt(r[1]) + '</td></tr>').join('') : '<tr><td>No money moved last month.</td><td></td></tr>') + '<tr class="tot"><td>Net</td><td>' + fmt(net) + '</td></tr></table>') + '</div>'; }
   else if (officeTab === 'con'){ const ck = ok => ok ? '<span class="pos">✓</span>' : '<span class="neg">✗</span>', F = S.fed;
     h += '<div class="cols">';
-    h += card('Loans', '<table><tr><th>Contract</th><th>Balance</th><th>Rate</th><th>Per month</th><th></th></tr>' + (S.loans.length ? S.loans.slice().sort((a, b) => (b.rate || 0) - (a.rate || 0)).map(l => '<tr><td>' + (l.shady ? '<span class="neg">Private loan</span>, due in ' + l.left + ' mo.' : (l.name || 'Bank loan #' + l.id)) + (l.kind === 'project' ? '<br><small>' + PLANT_CONDS.map(q => ck(q.ok()) + ' ' + q.n).join(' · ') + '</small>' : '') + '</td><td>' + fmt(l.bal) + '</td><td>' + ((l.rate || CFG.LOAN_RATE)*100).toFixed(1) + '%</td><td>' + fmt(l.pay) + '</td><td><button class="btn" data-a="repay1" data-v="' + l.id + '">Repay</button></td></tr>').join('') : '<tr><td colspan="5">No loans.</td></tr>') + '</table>'
+    h += card('Loans', '<table><tr><th>Contract</th><th>Balance</th><th>Rate</th><th>Per month</th><th></th></tr>' + (S.loans.length ? S.loans.slice().sort((a, b) => (b.rate || 0) - (a.rate || 0)).map(l => '<tr><td>' + (l.shady ? '<span class="neg">Private loan</span>, due in ' + l.left + ' mo.' : (l.name || 'Bank loan #' + l.id)) + ((l.kind === 'project' || l.kind === 'drill') ? '<br><small>' + PLANT_CONDS.map(q => ck(q.ok()) + ' ' + q.n).join(' · ') + '</small>' : '') + '</td><td>' + fmt(l.bal) + '</td><td>' + ((l.rate || CFG.LOAN_RATE)*100).toFixed(1) + '%</td><td>' + fmt(l.pay) + '</td><td><button class="btn" data-a="repay1" data-v="' + l.id + '">Repay</button></td></tr>').join('') : '<tr><td colspan="5">No loans.</td></tr>') + '</table>'
       + '<div class="acts"><button class="btn" data-a="repay">Repay what you can</button><button class="btn" data-a="shady">The lender in town: ' + fmt(SHADY.amt) + ' at ' + (SHADY.rate*100) + '%</button></div>'
       + '<p class="sub">The bank lends against builds, ordered from the toolbar: a mortgage on buildings, a loan on a heat station once a well is tested, a project loan on a power plant. Debt service ' + fmt(loanPay()) + ' a month.</p>', 'wide');
     for (const pl of S.obj.filter(o => o.type === 'plant' && o.ph)) h += card('Power plant near ' + nearestVillage(pl.x, pl.y).name, '<table>' + PLANT_TR.map((t, i) => '<tr><td>' + t.n.replace(/^./, c => c.toUpperCase()) + '</td><td>' + fmt(DEF.plant.cost*t.f) + '</td><td>' + (i === 0 || pl.ph === 'run' || (i === 1 && pl.ph === 'build') ? '<span class="pos">paid</span>' : pl.waitPay === i ? '<span class="neg">waiting for money</span>' : i === 1 ? 'after a circulation test' : 'when the turbine is built') + '</td></tr>').join('') + '</table>' + (pl.fin && pl.fin.k === 'proj' ? '<p class="sub">Project loan up to ' + fmt(pl.fin.loan) + '. The bank pays its share of each tranche only while every condition holds.</p>' : '<p class="sub">Paid with own money.</p>'));
     h += card('Federal exploration contribution', '<ul class="dec">' + FED_CONDS.map(q => '<li>' + ck(q.ok()) + ' ' + q.n + '</li>').join('') + '</ul>'
-      + (F && F.st === 'granted' ? '<p><b class="pos">Granted.</b> 60% of deep wells into the granite and of their stimulation, paid as the work is done. Received so far: ' + fmt(F.got) + '.</p>' : F && F.st === 'stopped' ? '<p><b class="neg">Stopped.</b></p>' : '<div class="acts"><button class="btn main" data-a="fedapply">Apply</button></div>')
+      + (F && F.st === 'granted' ? '<p><b class="pos">Granted.</b> 60% of deep wells into the granite, their stimulation, seismic surveys and the power plant, paid as the work is done. Received so far: ' + fmt(F.got) + '.</p>' : F && F.st === 'stopped' ? '<p><b class="neg">Stopped.</b></p>' : '<div class="acts"><button class="btn main" data-a="fedapply">Apply</button></div>')
       + '<div class="acts">' + (S.seismo ? '' : '<button class="btn" data-a="publish">Publish all drilling and seismic data (' + fmt(20) + ')</button>') + (S.tlPlan ? '' : '<button class="btn" data-a="tlplan">File a traffic-light plan (' + fmt(50) + ')</button>') + '</div>');
     h += '</div>'; }
   else if (officeTab === 'sec'){
@@ -2271,7 +2305,7 @@ function planBar(){
     + '<span class="grp">Bit ' + tg('pbit', 'tricone', plan.bit, 'Tricone') + tg('pbit', 'pdc', plan.bit, 'PDC') + '</span><span class="grp">Mud weight ' + tg('pmud', 'light', plan.mud, 'Light') + tg('pmud', 'normal', plan.mud, 'Normal') + tg('pmud', 'heavy', plan.mud, 'Heavy') + '</span><span class="grp"><button class="btn" data-a="psalt" aria-pressed="' + plan.saltMud + '">' + (plan.saltMud ? '☑' : '☐') + ' Salt-saturated mud (' + fmt(DRILL.saltMud) + ')</button></span></div>';
   if (!plan.pts.length) h += '<div class="sub">' + (first ? 'Cased and cemented down to the shoe, open below it. Karst groundwater sits in the top 400–550 m. ' : '') + 'Material per metre rises with depth: at 1,500 m a metre costs about twice what it does at the surface, at 4,000 m almost four times. PDC bits cut faster and wear more; tricone bits are slower and steady. Light mud is faster but holds back less gas and loose rock; heavy mud holds them but is lost in cavities and fractures. Each stage can have its own mud.</div>';
   if (plan.pts.length){ const end = plan.pts[plan.pts.length - 1];
-    h += '<div class="pl"><b>' + M(e.len) + '</b> of hole, bottom at <b>' + M(end.d) + '</b> · estimate <b>' + fmt(e.total) + '</b> (' + fmt(e.upfront) + ' now for casing and extras, the rest as it is drilled) · about <b>' + (e.days/DPM).toFixed(1) + ' months</b> if nothing goes wrong · the federal government refunds 60% when finished, if the water is at least 60 °C.</div>';
+    h += '<div class="pl"><b>' + M(e.len) + '</b> of hole, bottom at <b>' + M(end.d) + '</b> · estimate <b>' + fmt(e.total) + '</b> (' + fmt(e.upfront) + ' now for casing and extras, the rest as it is drilled) · about <b>' + (e.days/DPM).toFixed(1) + ' months</b> if nothing goes wrong' + (o.type === 'deep' && S.fed && S.fed.st === 'granted' ? ' · the Federal Office of Energy pays 60% month by month while its conditions hold' : '') + (o.drillLoan ? ' · the bank lends ' + Math.round(o.drillLoan*100) + '% as it is drilled' : '') + '.</div>';
     h += '<div class="strata">' + rd.slice(0, 14).map(r => r.rock !== undefined ? '<span class="k">' + M(r.from) + '–' + M(r.to) + ' ' + RNAME[r.rock] + '</span>' : r.brk ? '<span class="b">broken reflections ' + M(r.from) + '–' + M(r.to) + '</span>' : r.bright ? '<span class="b">bright spot at ' + M(r.at) + '</span>' : '<span class="g">' + (r.strong ? 'strong ' : '') + 'reflector at ' + M(r.at) + '</span>').join('') + (e.blind ? '<span class="u">' + M(e.blind) + ' unsurveyed</span>' : '') + '</div>';
     h += '<div>Regional gradient about 31.5 °C per km: roughly ' + Math.round(11 + end.d*0.315) + ' °C at the bottom. The Muschelkalk aquifer lies at about 1.0–1.2 km here, granite from about 1.8–2.6 km.</div>';
     if (first && plan.shoe < 45) h += '<div class="neg">The shoe at ' + M(plan.shoe) + ' is above the usual base of the karst (400–550 m).</div>'; }
@@ -2296,7 +2330,7 @@ function showContract(hasSave){
 }
 function showOffer(k){ lessonWas = null;
   const txt = k === 'warm' ? {h:'Amendment I: a utility from a neighbouring canton', p:'A cantonal energy company from Aargau offers <b>CHF 8 million</b> for a stake, "to accelerate the energy transition". Their logo goes on the rig. The valley will notice where the money comes from.', c:8000, m:-3}
-    : {h:'Amendment: a utility from a neighbouring canton', p:'A cantonal energy company from another canton offers <b>CHF 10 million</b> for a stake in the power project, "to accelerate the energy transition". Their logo goes on the rig. The valley will notice where the money comes from.', c:10000, m:-4};
+    : {h:'Amendment: a utility from a neighbouring canton', p:'A cantonal energy company from another canton offers <b>CHF 20 million</b> for a stake in the power project, "to accelerate the energy transition". Their logo goes on the rig. The valley will notice where the money comes from.', c:20000, m:-4};
   S.offerData = txt; $('#overlay').hidden = false;
   $('#overlay').innerHTML = '<div class="contract"><h1>' + txt.h + '</h1><div class="sub">' + MONTHS[S.month % 12] + ', year ' + (year() + 1) + '</div><p>' + txt.p + '</p><div class="acts"><button class="btn main" data-a="accept">Sign the amendment</button><button class="btn" data-a="decline">Stay Jurassien</button></div></div>';
 }
@@ -2407,7 +2441,7 @@ function act(a, v){
   if (a === 'tracer'){ if (!canPay(DRILL.tracer)) return toast('A tracer test costs ' + fmt(DRILL.tracer) + '.'); S.cash -= DRILL.tracer; acct('Casing, cement and extras', -DRILL.tracer); o.traced = true; const hit = S.vil.filter(vv => linked(o, vv)); news('Dye poured in at the site near ' + nearestVillage(o.x, o.y).name + (hit.length ? ' comes out at the spring' + (hit.length > 1 ? 's' : '') + ' of ' + hit.map(vv => vv.name).join(' and ') + '. Whatever leaks here goes there.' : ' turns up at no spring in the valley. Leaks here reach no drinking water.')); renderCard(); return; }
   if (a === 'pad'){ if (!canPay(DRILL.pad)) return toast('Sealing the pad costs ' + fmt(DRILL.pad) + '.'); S.cash -= DRILL.pad; acct('Casing, cement and extras', -DRILL.pad); o.pad = true; return; }
   if (a === 'release'){ o.released = true; o.off = false; spawnLeave(o); news('The rig near ' + nearestVillage(o.x, o.y).name + ' is driven away. A capped wellhead stays.'); return; }
-  if (a === 'rerigdeep'){ const c = DEF.deep.cost; if (!canPay(c)) return toast('The deep rig costs ' + fmt(c) + ' to bring in.'); S.cash -= c; acct(DEF.deep.n, -c); S.assets += c; if (!o.released) spawnLeave(o); o.type = 'deep'; o.released = false; o.off = false; o.on = false; o.arrived = true; o.t0 = S.t; o.ready = S.t + DEF.deep.build*bf(); o.hh = 18; spawnArrival(o);
+  if (a === 'rerigdeep'){ const c = DEF.deep.cost; if (!canPay(c)) return toast('The deep rig costs ' + fmt(c) + ' to bring in.'); S.cash -= c; acct(DEF.deep.n, -c); S.assets += c; o.fedBase = (o.fedBase || 0) + c; if (!o.released) spawnLeave(o); o.type = 'deep'; o.released = false; o.off = false; o.on = false; o.arrived = true; o.t0 = S.t; o.ready = S.t + DEF.deep.build*bf(); o.hh = 18; spawnArrival(o);
     news('The light rig near ' + nearestVillage(o.x, o.y).name + ' makes way for the deep rig. The old well becomes the top of a deeper one: draw it on from the bottom.'); renderCard(); return; }
   if (a === 'rerig'){ const c = DEF[o.type].cost; if (!canPay(c)) return toast('Mobilisation costs ' + fmt(c) + '.'); S.cash -= c; acct(DEF[o.type].n, -c); o.released = false; o.arrived = true; spawnArrival(o); return; }
   if (a === 'flowtest'){ if (!canPay(DRILL.flowTest)) return toast('A flow test costs ' + fmt(DRILL.flowTest) + '.'); S.cash -= DRILL.flowTest; acct('Flow tests', -DRILL.flowTest); o.test = flowTest(o); news('Flow test near ' + nearestVillage(o.x, o.y).name + ': ' + o.test); return; }
@@ -2467,6 +2501,7 @@ let bound = false, acc = 0;
 function frame(now){
   const dt = Math.min(0.1, (now - lastT)/1000); lastT = now; const t = now/1000;
   if (S.secret && !S.over){ secretTick(dt); tickEnts(dt); }
+  if (S.raid && !S.over){ raidTick(dt); tickEnts(dt); }
   if (running()){ advance(dt*S.speed/CFG.MONTH_SEC); tickEnts(dt); if (S.obj.some(o => o.drilling)){ acc += dt; if (acc > 1.4){ acc = 0; sfx('drill'); } } }
   const g = $('#game').getContext('2d'); g.imageSmoothingEnabled = false; if (view === 'map') drawMap(g, t); else drawSection(g, t); hud(); planBar();
   requestAnimationFrame(frame);
@@ -2478,7 +2513,7 @@ function boot(fresh){
   if (!bound){ buildPalette(); bind(); bound = true; requestAnimationFrame(tt => { lastT = tt; frame(tt); }); }
   zoom = $('#stage').clientWidth < 700 ? 2 : 1; fit(); showContract(hasSave);
 }
-window.JF = {act:(a, v) => act(a, v), her, maybeEvent, roadFree, quakeHit, crisisSay, villageYes, doTask, fcBand, LESSONS, lessonHtml, f35, roadS, scr:(x, y, z) => { const c = $('#game'), r = c.getBoundingClientRect(), p = P(x, y, z || 0); return [r.left + p[0]/CW*r.width, r.top + p[1]/CH*r.height]; }, _draw:(g, o, t) => obj(g, o, t), _veh:(g, k) => vehicle(g, k, 0, 0, 'x', null, 1), OX, OY, borrowShady, repayOne, bankRate, startSecret, addMood, unlockAll:() => { for (const k of Object.keys(DEF).filter(k => DEF[k].bld)) S.obj.push({id:S.nextId++, type:k, x:-400, y:-400, on:true, arrived:true, t0:0, ready:0, w:1, hh:1, test:true}); }, buildRoad, roadPlan, pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, finOptions, setFin:(tk, k) => { pendingFin = k ? {tk, k} : null; }, fedApply, plantTranche, plantTick, heatTested, commitPlan, stimulate:pl => stimStage(pl), stimStage, stimBleed, circTest, tempAt, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, secMaxY()); }, select:s => { sel = s; renderCard(); },
+window.JF = {act:(a, v) => act(a, v), startRaid, raidTick, her, maybeEvent, roadFree, quakeHit, crisisSay, villageYes, doTask, fcBand, LESSONS, lessonHtml, f35, roadS, scr:(x, y, z) => { const c = $('#game'), r = c.getBoundingClientRect(), p = P(x, y, z || 0); return [r.left + p[0]/CW*r.width, r.top + p[1]/CH*r.height]; }, _draw:(g, o, t) => obj(g, o, t), _veh:(g, k) => vehicle(g, k, 0, 0, 'x', null, 1), OX, OY, borrowShady, repayOne, bankRate, startSecret, addMood, unlockAll:() => { for (const k of Object.keys(DEF).filter(k => DEF[k].bld)) S.obj.push({id:S.nextId++, type:k, x:-400, y:-400, on:true, arrived:true, t0:0, ready:0, w:1, hh:1, test:true}); }, buildRoad, roadPlan, pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, finOptions, setFin:(tk, k) => { pendingFin = k ? {tk, k} : null; }, fedApply, plantTranche, plantTick, heatTested, commitPlan, stimulate:pl => stimStage(pl), stimStage, stimBleed, circTest, tempAt, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, secMaxY()); }, select:s => { sel = s; renderCard(); },
   newGame:seed => { newGame(seed); S.started = true; S.paused = false; view = 'map'; cutLine = null; baseMap = null; fit(); $('#overlay').hidden = true; }, setCut:li => { cutLine = li; }, get cutLine(){ return cutLine; }};
 const ready = document.fonts && document.fonts.load ? document.fonts.load('12px "Pixelify Sans"').catch(() => {}) : Promise.resolve();
 ready.then(() => boot(false));
