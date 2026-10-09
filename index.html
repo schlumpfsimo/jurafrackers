@@ -854,7 +854,7 @@ function maybeEvent(){ if (S.month < 3) return; const fresh = (S.hap || []).filt
 function fxText(o, k){ k = k || LK; const bits = []; if (o.c) bits.push('costs ' + fmt(o.c*k)); if (o.g && o.p === undefined) bits.push('brings ' + fmt(o.g*k)); if (o.bad && o.bad.c) bits.push('can cost ' + fmt(o.bad.c*k) + ' more'); if (o.note) bits.push(o.note);
   if (o.p === undefined) for (const [t, n] of o.m || []) bits.push((t === ALL ? 'everyone' : t.name) + ' ' + (n > 0 ? '+' : '−') + Math.abs(n));
   return bits.length ? bits.join(' · ') : (o.p === undefined ? 'nothing changes' : 'we will see how it goes'); }
-function showEvent(){ const e = S.event; $('#overlay').hidden = false;
+function showEvent(){ const e = S.event; lessonWas = null; $('#overlay').hidden = false;
   $('#overlay').innerHTML = '<div class="contract letter"><div class="sub" style="text-align:left">From: ' + e.from + ' · ' + MONTHS[S.month % 12] + ', year ' + (year() + 1) + '</div><h1>' + e.title + '</h1><p>' + e.text + '</p><div class="choices">' +
     e.opts.map((o, i) => '<button class="btn' + (i ? '' : ' main') + '" data-a="choose" data-v="' + i + '"><b>' + o.l + '</b><span>' + fxText(o, e.rig ? 1 : LK) + '</span></button>').join('') + '</div></div>'; }
 function choose(i){ const e = S.event, o = e && e.opts[i]; if (!o) return; const k = e.rig ? 1 : LK; if (o.c && !e.rig && !canPay(o.c*k)){ toast('That costs ' + fmt(o.c*k) + '.'); return; }
@@ -1169,7 +1169,7 @@ function monthTick(){
   if (S.month % 12 === 0 && S.month > 0) committee();
   wishTick(); campaignTick(); if (!S.over && !S.offer && !S.event) maybeEvent();
   for (let i = 0; i < 2; i++) if (rnd(300 + i) < 0.7) spawnTraffic(false);
-  if (S.red >= CFG.RED_LIMIT) end('debt'); else if (S.month >= CFG.END) end(!S.producing && S.sold < 1 ? 'lapsed' : forecast() >= 50.1 ? 'won' : 'lost');
+  if (S.red >= CFG.RED_LIMIT) end('debt'); else if (S.month >= CFG.END) end(!S.producing && S.sold < 1 ? 'lapsed' : Math.round(forecast()*10)/10 >= 50.1 ? 'won' : 'lost');
   if (!S.over) try { localStorage.setItem('jf3_save', JSON.stringify(Object.assign({}, S, {event:null, KN:[...KN.entries()].map(([k,v]) => [k, Array.from(v)])}))); } catch (e) {}
 }
 function committee(){ const recs = ['publish the micro-seismic data within 24 hours', 'hold a public information evening per village', 'reduce truck movements on school days', 'install three more seismometers', 'rename "stimulation" to something the public understands', 'invite the opposition to visit the site', 'limit night drilling to weekdays', 'translate the brochure into Patois'];
@@ -1864,7 +1864,7 @@ function lessonHtml(l, intro){ const x = l.x ? l.x() : '', c = LSRC[l.src];
 let lessonWas = null;
 function showLesson(k){ const l = LESSONS.find(z => z.k === k); if (!l) return; const L = S.lessons[l.src] || (S.lessons[l.src] = {av:1, read:[]}); if (!L.read.includes(k)) L.read.push(k);
   if (lessonWas === null) lessonWas = S.paused; S.paused = true; $('#overlay').hidden = false; $('#overlay').innerHTML = lessonHtml(l, pick(INTRO[l.src])) + '<div class="acts"><button class="btn main" data-a="closelesson">Got it</button><button class="btn" data-a="notes">All notes</button></div></div>'; sfx('click'); }
-function closeLesson(){ $('#overlay').hidden = true; if (lessonWas !== null && !S.event && !S.offer){ S.paused = lessonWas; } lessonWas = null; }
+function closeLesson(){ if (S.event) showEvent(); else if (S.offer) showOffer(S.offer); else { $('#overlay').hidden = true; if (lessonWas !== null) S.paused = lessonWas; } lessonWas = null; }
 function notesHtml(){ const L = S.lessons || {}; let h = '<p class="sub">What the university, the association’s experts and the information stand have explained so far. Click a title to open it. New lessons come from clicking those buildings on the map while they run.</p><div class="cols">';
   for (const src of ['chair', 'experts', 'stand']){ const rd = ((L[src] || {}).read || []).map(k => LESSONS.find(l => l.k === k)).filter(Boolean), all = LESSONS.filter(l => l.src === src).length;
     h += '<section class="ocard"><h5>' + LSRC[src].who + ' · ' + rd.length + ' of ' + all + '</h5>' + (rd.length ? rd.map(l => '<details><summary>' + l.t + '</summary>' + lessonHtml(l) + '</div></details>').join('') : '<p class="sub">' + (S.obj.some(o => lsKey(o) === src && !o.burnt) ? 'Nothing heard yet. Click it on the map.' : src === 'chair' ? 'Needs the Antenne universitaire.' : src === 'experts' ? 'Needs the Centre de compétences.' : 'Needs an information stand near a village.') + '</p>') + '</section>'; }
@@ -2058,7 +2058,7 @@ function showContract(hasSave){
     '<div class="stamp">SIGNED AND SEALED</div><p>You are the managing director. Open a grid line on the map to see what the 1970s left you.</p>' +
     '<div class="acts"><button class="btn main" data-a="start">Countersign</button>' + (hasSave ? '<button class="btn" data-a="continue">Continue saved game</button>' : '') + '</div></div>';
 }
-function showOffer(k){
+function showOffer(k){ lessonWas = null;
   const txt = k === 'warm' ? {h:'Amendment I: a utility from a neighbouring canton', p:'A cantonal energy company from Aargau offers <b>CHF 8 million</b> for a stake, "to accelerate the energy transition". Their logo goes on the rig. The valley will notice where the money comes from.', c:8000, m:-3}
     : {h:'Amendment II: Zurich capital', p:'A fund from Zurich offers <b>CHF 25 million</b> against future electricity. The Jura flag on the brochure is replaced by a stylised flame. People will notice.', c:25000, m:-5};
   S.offerData = txt; $('#overlay').hidden = false;
@@ -2187,14 +2187,14 @@ function bind(){
   c.addEventListener('pointerup', e => { if (lift(e)) return; if (drag && !moved) clickWorld(toWorld(e)); drag = null; });
   c.addEventListener('pointerleave', () => { hover = null; }); c.addEventListener('pointercancel', e => { lift(e); drag = null; });
   c.addEventListener('wheel', e => { e.preventDefault(); if (view === 'section'){ if (e.ctrlKey || e.metaKey){ const r = c.getBoundingClientRect(); secZoom(cam.z*(e.deltaY < 0 ? 1.15 : 1/1.15), (e.clientX - r.left)/r.width, (e.clientY - r.top)/r.height); } else if (e.shiftKey) cam.x = clamp(cam.x + e.deltaY*0.5/cam.z, 0, secMaxX()); else cam.y = clamp(cam.y + e.deltaY*0.5/cam.z, 0, secMaxY()); } else setZoom(zoom*(e.deltaY < 0 ? 1.15 : 1/1.15), e.clientX, e.clientY); }, {passive:false});
-  $('#pal').addEventListener('click', e => { const b = e.target.closest('.it'); if (!b || !S.started || S.over) return; if (b.dataset.t){ const d = DEF[b.dataset.t]; if (missing(b.dataset.t).length){ toast(d.n + ' ' + needTxt(b.dataset.t) + '. See the Office panel, Network.'); openOffice('net'); return; } pickTool(b.dataset.t); } });
+  $('#pal').addEventListener('click', e => { const b = e.target.closest('.it'); if (!b || !S.started || S.over) return; if (b.dataset.t){ const d = DEF[b.dataset.t]; if (missing(b.dataset.t).length){ toast(d.n + ' ' + needTxt(b.dataset.t) + '. See the Office panel, Buildings.'); openOffice('net'); return; } pickTool(b.dataset.t); } });
   $('#stage').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) act(b.dataset.a, b.dataset.v); });
-  $('#sp0').onclick = () => { S.paused = true; }; $('#sp1').onclick = () => { if (S.offer || S.event) return; S.paused = false; S.speed = 1; audio(); }; $('#sp4').onclick = () => { if (S.offer || S.event) return; S.paused = false; S.speed = 4; audio(); }; $('#sp05').onclick = () => { if (S.offer || S.event) return; S.paused = false; S.speed = 0.5; audio(); };
+  $('#sp0').onclick = () => { S.paused = true; }; $('#sp1').onclick = () => { if (S.offer || S.event || lessonWas !== null) return; S.paused = false; S.speed = 1; audio(); }; $('#sp4').onclick = () => { if (S.offer || S.event || lessonWas !== null) return; S.paused = false; S.speed = 4; audio(); }; $('#sp05').onclick = () => { if (S.offer || S.event || lessonWas !== null) return; S.paused = false; S.speed = 0.5; audio(); };
   $('#mute').onclick = () => { S.muted = !S.muted; }; const pane = (id, fn) => { const open = $(id).hidden; for (const p of ['#polls', '#wire', '#camp', '#ledger']) $(p).hidden = true; $(id).hidden = !open; if (open) fn(); };
   $('#debtchip').onclick = () => openOffice('fin'); $('#debtchip').onkeydown = e => { if (e.key === 'Enter') openOffice('fin'); }; $('#votebtn').onclick = () => pane('#polls', renderPolls); $('#news').onclick = () => pane('#wire', renderWire); $('#campbtn').onclick = () => pane('#camp', renderCampaign); $('#ledgerbtn').onclick = () => { if ($('#ledger').hidden) openOffice(); else $('#ledger').hidden = true; };
   $('#votebtn').onkeydown = e => { if (e.key === 'Enter') pane('#polls', renderPolls); };
   window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; const k = e.key;
-    if (k === ' ' && S.started && !S.offer && !S.event && $('#ledger').hidden && lessonWas === null){ S.paused = !S.paused; e.preventDefault(); } if (k === 'Escape'){ if (lessonWas !== null) closeLesson(); tool = null; anchor = null; plan = null; linking = null; sel = null; $('#card').hidden = true; for (const p of ['#polls', '#wire', '#camp', '#ledger']) $(p).hidden = true; if (view === 'section') closeSection(); else cutLine = null; }
+    if (k === ' ' && S.started && !S.offer && !S.event && $('#ledger').hidden && lessonWas === null){ S.paused = !S.paused; e.preventDefault(); } if (k === 'Escape'){ const hadOffice = !$('#ledger').hidden; if (lessonWas !== null){ if (hadOffice && officeHold){ officeWas = lessonWas; } closeLesson(); } tool = null; anchor = null; plan = null; linking = null; sel = null; $('#card').hidden = true; for (const p of ['#polls', '#wire', '#camp', '#ledger']) $(p).hidden = true; if (view === 'section') closeSection(); else cutLine = null; }
     if ((k === '[' || k === ']') && S.started){ if (view === 'section'){ const y0 = cam.y; openSection(clamp(line + (k === '[' ? -1 : 1), 0, S.lines.length - 1)); cam.y = y0; } else stepCut(k === '[' ? -1 : 1); }
     if (view === 'section'){ if (k === 'ArrowUp'){ cam.y = clamp(cam.y - 24, 0, secMaxY()); e.preventDefault(); } if (k === 'ArrowDown'){ cam.y = clamp(cam.y + 24, 0, secMaxY()); e.preventDefault(); } } });
   window.addEventListener('resize', fit);
