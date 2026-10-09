@@ -257,7 +257,7 @@ const CFG = {
   MONTH_SEC:40, END:120, START_CASH:30000, START_MOOD:40,
   LOAN_STEP:5000, LOAN_RATE:0.05, LOAN_TERM:96, CREDIT_BASE:15000, CREDIT_ASSET:0.6, CREDIT_INCOME:24, RED_LIMIT:8,
   SURVEY_K:4, PASS2_K:12, PASS3_K:20, SURVEY_SPEED:100,                           // k per 100 m; map px per month
-  PIPE_K:150, LINE_K:30, PIPE_MAX:200, WINTER:1.5, HEAT_PRICE:0.09, POWER_PRICE:0.475,   // k CHF per MWh: heat net of heat-pump power, power at the federal feed-in tariff for petrothermal plants up to 5 MW (47.5 Rp./kWh)
+  PIPE_K:150, LINE_K:30, PIPE_MAX:200, WINTER:1.5, HEAT_PRICE:0.09, POWER_PRICE:0.475,   // k CHF per MWh: heat net of heat-pump power, power at the old federal feed-in tariff for petrothermal plants up to 5 MW, before 2019 (47.5 Rp./kWh; the tariff closed to new plants in 2023, which now get investment contributions instead, but a game needs a price)
   QUAKE_NEAR:-14, QUAKE_FAR:-5, QUAKE_MUTE:3, DRIFT:0.08
 };
 const DEF = {
@@ -283,7 +283,7 @@ const DEF = {
   pipe:{g:'Connect',n:'Réseau de chaleur',en:'Heat pipe',c:'CHF 1.5 M per km',h:'Click a heat station or plant, then a village. Follows the road unless the fields are shorter.'},
   pline:{g:'Connect',n:'Ligne électrique',en:'Power line',c:'CHF 300k per km',h:'Click a power plant. Runs to the grid at the east end of the valley.'},
   fence:{g:'Connect',n:'Clôture de chantier',en:'Fence',cost:50,build:1,h:'Click a site. Protesters take twice as long to get in.'},
-  suit:{g:'Persuade',n:'Monsieur en complet',en:'Man in a suit',up:15,c:'CHF 15k a month',h:'Lent by the association. Click near a village: a black car, a handshake with the syndic, an apéro, fewer rumours. After half a year everyone knows him and it works half as well; somewhere new it works again.'},
+  suit:{g:'Persuade',n:'Monsieur en complet',en:'Man in a suit',up:15,c:'CHF 15k a month',h:'Lent by the association. Click near a village: a black car, a handshake with the maire, an apéro, fewer rumours. After half a year everyone knows him and it works half as well; somewhere new it works again.'},
   stand:{g:'Persuade',n:'Stand d’information',en:'Information stand',cost:20,up:3,h:'Click near a village. Brochures and a parasol.'},
   fest:{g:'Persuade',n:'Fête de la géothermie',en:'Geothermal fest',cost:80,h:'Click a village. A heated carousel, sausages warmed on the wellhead, a heated dance floor; twice the effect at the autumn feast in November. Twice a year looks like a bribe.'},
   congress:{g:'Persuade',n:'Congrès de la géothermie',en:'Congress',cost:200,now:1,h:'The association’s yearly congress, in town, right away. Lanyards included.'},
@@ -1337,7 +1337,7 @@ function person0(g, x, y, f, shirt, sign, hat, o){ o = o || {}; const p = P(x, y
   if (o.shield){ const sx0 = face > 0 ? X + 1.3 : X - 2.9; R(g, ink, sx0, Y - 6, 1.6, 4.4); R(g, '#a9bccd', sx0 + 0.3, Y - 5.7, 1, 3.8); }
   if (sign){ const wv = Math.round(Math.sin(o.wave || 0)*2)/2; R(g, skin, X + 1.5, Y - 6.5 + wv, 0.6, 2); R(g, '#5a4632', X + 1.8, Y - 12 + wv, 0.5, 7);
     g.font = '4px "Pixelify Sans"'; const w = g.measureText(sign).width + 2; R(g, ink, X + 0.3, Y - 15.8 + wv, w + 1, 4.6); R(g, '#f6f6f2', X + 0.8, Y - 15.3 + wv, w, 3.6); T(g, sign, X + 1.8, Y - 12.4 + wv, '#b3261e', 4); } }
-/* the association's man: dark suit, red tie, sunglasses, a briefcase, and a handshake for the syndic, who wears the sash */
+/* the association's man: dark suit, red tie, sunglasses, a briefcase, and a handshake for the maire, who wears the sash */
 function suitMan(g, x, y, t, o){ const map = o && o.id !== undefined, mx = x + 2.2, my = y - 2.2, shake = map ? Math.round(Math.sin(t*7))*0.3 : 0;
   if (map){ person(g, mx, my, 0, '#6f5d4a', null, '#9a9a9a', {face:-1}); const q = P(mx, my, 0); g.save(); g.translate(q[0], q[1]); g.scale(0.78, 0.78); g.translate(-q[0], -q[1]); for (let i = 0; i < 4; i++) R(g, i % 2 ? '#fff' : '#c8102e', q[0] - 1 + i*0.55, q[1] - 5 + i*0.7, 0.6, 0.8); g.restore(); }
   const p = P(x, y, 0); g.save(); g.translate(p[0], p[1]); g.scale(0.82, 0.82); g.translate(-p[0], -p[1]); const X = p[0], Y = p[1], ink = '#1c2225', jk = '#20242c', skin = '#f2d2b6';
@@ -1347,7 +1347,7 @@ function suitMan(g, x, y, t, o){ const map = o && o.id !== undefined, mx = x + 2
   R(g, jk, X - 2.2, Y - 5, 1, 2.2); R(g, '#5a3d2a', X - 3, Y - 3, 1.8, 1.4); R(g, '#c8a24a', X - 2.3, Y - 3.2, 0.4, 0.3);
   if (map){ R(g, jk, X + 1.5, Y - 4.6 + shake, 1.6, 0.8); R(g, skin, X + 3.1, Y - 4.6 + shake, 0.8, 0.8); }
   g.restore();
-  if (map && ((t + o.id*1.7) % 7) < 1.6){ const k = ((t/7 + o.id)|0); if (k % 2) say(x, y, 10, ['Synergies.', 'Win-win.', 'Mon cher syndic…', 'Entre nous…', 'Transition énergétique.'][k % 5]); else say(mx, my, 10, ['Et la route?', 'Hmm.', 'Un petit verre?', 'On verra.'][k % 4]); } }
+  if (map && ((t + o.id*1.7) % 7) < 1.6){ const k = ((t/7 + o.id)|0); if (k % 2) say(x, y, 10, ['Synergies.', 'Win-win.', 'Monsieur le maire…', 'Entre nous…', 'Transition énergétique.'][k % 5]); else say(mx, my, 10, ['Et la route?', 'Hmm.', 'Un petit verre?', 'On verra.'][k % 4]); } }
 function policeman(g, x, y, riot, face){ person(g, x, y, 0, riot ? '#2a2d33' : '#2a4fa0', null, riot ? '#1c2225' : '#152a5e', {face, shield:riot}); }
 /* speech bubbles are queued while the scene draws and painted on top */
 const BUB = [];
@@ -2011,7 +2011,7 @@ function renderCard(){
         if (o.on) acts += '<button class="btn" data-a="onoff">' + (o.off ? 'Switch on' : 'Switch off' ) + '</button>'; }
       if (view === 'map' && o.line !== undefined) acts += '<button class="btn" data-a="open">Open section</button>';
       if (!o.drilling) acts += '<button class="btn" data-a="rm">Dismantle (' + (DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0) < 1 ? Math.round((DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0))*4.3) + ' weeks' : (DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0)) + ' months') + ')</button>';
-    } else if (!opp && !SITE[o.type] && DEF[o.type] && !o.burnt){ if (!s) s = DEF[o.type].h; if (o.type === 'suit' && o.on) s = S.t - (o.t0 || 0) > 6 ? 'Everybody in ' + v.name + ' knows him by now. They call him “le Monsieur”, and the handshake has lost its surprise. In another village it would still work.' : 'Shaking hands with the syndic of ' + v.name + '. Rumours nearby fade faster, banners come down.'; if (o.type === 'stand' && o.on !== false){ const lc = lessonCard(o); s += lc[0]; acts += lc[1]; } if (o.type !== 'congress') acts += '<button class="btn" data-a="rm">' + (o.type === 'police' || o.type === 'riot' ? 'Withdraw' : 'Remove') + '</button>'; }
+    } else if (!opp && !SITE[o.type] && DEF[o.type] && !o.burnt){ if (!s) s = DEF[o.type].h; if (o.type === 'suit' && o.on) s = S.t - (o.t0 || 0) > 6 ? 'Everybody in ' + v.name + ' knows him by now. They call him “le Monsieur”, and the handshake has lost its surprise. In another village it would still work.' : 'Shaking hands with the maire of ' + v.name + '. Rumours nearby fade faster, banners come down.'; if (o.type === 'stand' && o.on !== false){ const lc = lessonCard(o); s += lc[0]; acts += lc[1]; } if (o.type !== 'congress') acts += '<button class="btn" data-a="rm">' + (o.type === 'police' || o.type === 'riot' ? 'Withdraw' : 'Remove') + '</button>'; }
     if (o.burnt) acts = '<button class="btn" data-a="rm">Clear the ruin</button>';
     if (o.dismantling){ const left = o.dismantling - S.t; s = '<span class="neg">Being dismantled: gone in about ' + (left < 1 ? Math.max(1, Math.round(left*4.3)) + ' week' + (Math.round(left*4.3) > 1 ? 's' : '') : left.toFixed(1) + ' months') + '.</span> ' + s; acts = ''; }
     h += '<div>' + s + '</div>' + (acts ? '<div class="acts">' + acts + '</div>' : '');
@@ -2223,7 +2223,7 @@ function boot(fresh){
   if (!bound){ buildPalette(); bind(); bound = true; requestAnimationFrame(tt => { lastT = tt; frame(tt); }); }
   zoom = $('#stage').clientWidth < 700 ? 2 : 1; fit(); showContract(hasSave);
 }
-window.JF = {LESSONS, lessonHtml, f35, roadS, _draw:(g, o, t) => obj(g, o, t), _veh:(g, k) => vehicle(g, k, 0, 0, 'x', null, 1), OX, OY, borrowShady, repayOne, bankRate, startSecret, addMood, unlockAll:() => { for (const k of Object.keys(DEF).filter(k => DEF[k].bld)) S.obj.push({id:S.nextId++, type:k, x:-400, y:-400, on:true, arrived:true, t0:0, ready:0, w:1, hh:1, test:true}); }, buildRoad, roadPlan, pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, borrow, commitPlan, stimulate, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, secMaxY()); }, select:s => { sel = s; renderCard(); },
+window.JF = {LESSONS, lessonHtml, f35, roadS, scr:(x, y, z) => { const c = $('#game'), r = c.getBoundingClientRect(), p = P(x, y, z || 0); return [r.left + p[0]/CW*r.width, r.top + p[1]/CH*r.height]; }, _draw:(g, o, t) => obj(g, o, t), _veh:(g, k) => vehicle(g, k, 0, 0, 'x', null, 1), OX, OY, borrowShady, repayOne, bankRate, startSecret, addMood, unlockAll:() => { for (const k of Object.keys(DEF).filter(k => DEF[k].bld)) S.obj.push({id:S.nextId++, type:k, x:-400, y:-400, on:true, arrived:true, t0:0, ready:0, w:1, hh:1, test:true}); }, buildRoad, roadPlan, pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, borrow, commitPlan, stimulate, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, secMaxY()); }, select:s => { sel = s; renderCard(); },
   newGame:seed => { newGame(seed); S.started = true; S.paused = false; view = 'map'; cutLine = null; baseMap = null; fit(); $('#overlay').hidden = true; }, setCut:li => { cutLine = li; }, get cutLine(){ return cutLine; }};
 const ready = document.fonts && document.fonts.load ? document.fonts.load('12px "Pixelify Sans"').catch(() => {}) : Promise.resolve();
 ready.then(() => boot(false));
