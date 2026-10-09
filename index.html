@@ -397,9 +397,13 @@ function newGame(seed){
   const lines = []; for (let i = 0; i < CFG.NLINES; i++){ const legacy = r() < CFG.LEGACY_P; const gaps = []; if (legacy){ const n = (r()*3)|0; for (let g = 0; g < n; g++){ const a = r()*SW; gaps.push([a, a + 40 + r()*120]); } }
     lines.push({id:i, name:'JU-' + (71 + ((r()*9)|0)) + '-' + String(i + 1).padStart(2, '0'), y:CFG.LINE_Y0 + i*CFG.LINE_DY, legacy, gaps, segs:[]}); }
   const vil = []; const used = new Set(); const nm = () => { let n; do n = makeName(r); while (used.has(n)); used.add(n); return n; };
-  vil.push({id:0, name:TOWN_N[(r()*TOWN_N.length)|0], town:true, x:135 + r()*50, y:100 + r()*30, w:46, h:30, pop:3000});
-  vil.push({id:1, name:nm(), x:40 + r()*30, y:46 + r()*40, w:28, h:20, pop:400 + ((r()*4)|0)*100});
-  vil.push({id:2, name:nm(), x:245 + r()*40, y:46 + r()*50, w:28, h:20, pop:400 + ((r()*4)|0)*100});
+  /* layout per seed: the town takes the left, middle or right slot; every settlement hangs on the main road, whose straight stretches run halfway between two grid lines */
+  const mid = k => CFG.LINE_Y0 + CFG.LINE_DY*(k + 0.5), slots = [[34, 60], [128, 70], [236, 56]], tSlot = (r()*3)|0;
+  vil.push({id:0, name:TOWN_N[(r()*TOWN_N.length)|0], town:true, w:46, h:30, pop:3000});
+  vil.push({id:1, name:nm(), w:28, h:20, pop:400 + ((r()*4)|0)*100});
+  vil.push({id:2, name:nm(), w:28, h:20, pop:400 + ((r()*4)|0)*100});
+  { const order = [1, 2]; if (r() < 0.5) order.reverse(); order.splice(tSlot, 0, 0);
+    order.forEach((id, i) => { const v = vil[id], [x0, xw] = slots[i], k = v.town ? 1 + ((r()*4)|0) : 1 + ((r()*5)|0); v.x = x0 + v.w/2 + r()*(xw - v.w/2); v.ry = mid(k); v.y = v.ry - v.h/2 - 8; v.slot = i; }); }
   for (const v of vil){
     const hs = [], n = v.town ? 22 : 9, cols = v.town ? 6 : 3, rows = Math.ceil(n/cols), cw = (v.w - 4)/cols, rh = (v.h - 2)/rows;
     for (let i = 0; i < n; i++){ const c = i % cols, rr = Math.floor(i/cols); hs.push({x:v.x - v.w/2 + 2 + c*cw + (r() - .5)*2, y:v.y - v.h/2 + 6 + rr*rh + (r() - .5)*1.5, k:(r()*4)|0, big:r() < 0.3}); }
@@ -409,15 +413,16 @@ function newGame(seed){
     { const hi = v.town ? 0.32 : 0.12 + hash(v.id, 3, 3, seed)*0.1, fa = v.town ? 0.06 : 0.18 + hash(v.id, 4, 4, seed)*0.14; v.sh = {hi, lo:1 - hi - fa, fa}; v.gm = {hi:0, lo:0, fa:0}; }
   }
   /* road: axis-aligned so vehicles have two orientations; villages hang on it */
-  const yT = vil[0].y + vil[0].h/2 + 9, yV1 = vil[1].y + vil[1].h/2 + 8, yV2 = vil[2].y + vil[2].h/2 + 8;
-  const road = [[0, yV1], [vil[1].x, yV1], [vil[1].x, yT], [vil[2].x, yT], [vil[2].x, yV2], [MW, yV2]];
+  const L = vil.slice().sort((a, b) => a.slot - b.slot), xAB = (L[0].x + L[0].w/2 + L[1].x - L[1].w/2)/2, xBC = (L[1].x + L[1].w/2 + L[2].x - L[2].w/2)/2;
+  const road = [[0, L[0].ry], [xAB, L[0].ry], [xAB, L[1].ry], [xBC, L[1].ry], [xBC, L[2].ry], [MW, L[2].ry]];
   const river = []; { let x = 95 + r()*70; for (let y = 0; y <= MH; y += 8){ river.push([x, y]); x += (r() - .5)*9 + (y > 120 ? 1.5 : -1.5); } }
   const trees = []; for (let i = 0; i < 150; i++){ const x = 4 + r()*(MW - 8), y = 4 + r()*(MH - 8); const n = vn(x/60, y/40, 50, seed); if (n > 0.5 && !vil.some(v => Math.abs(x - v.x) < v.w/2 + 12 && Math.abs(y - v.y) < v.h/2 + 12)) trees.push({x, y, s:1 + ((r()*2)|0)}); }
   const fields = []; for (let i = 0; i < 16; i++){ const x = 20 + r()*(MW - 40), y = 14 + r()*(MH - 30), w = 18 + r()*22, h = 10 + r()*12; if (!vil.some(v => Math.abs(x - v.x) < v.w/2 + w && Math.abs(y - v.y) < v.h/2 + h)) fields.push({x, y, w, h, k:(r()*3)|0}); }
   const cliffs = []; for (let i = 0; i < 5; i++) cliffs.push({x:r()*MW, w:30 + r()*50});
-  const rail = {y:12 + r()*5, station:vil[0].x + 22}; const pond = {x:60 + r()*200, y:24 + r()*20, w:14 + r()*10, h:9 + r()*5};
+  const rail = {y:12 + r()*5, station:vil[0].x + 22}, clear = (x, y, w, h) => !vil.some(v => Math.abs(v.x - x) < v.w/2 + w/2 + 8 && Math.abs(v.y - y) < v.h/2 + h/2 + 8) && !road.some((q, i) => i && segD(x, y, road[i-1], q) < Math.max(w, h)/2 + 5);
+  let pond; for (let i = 0; i < 30; i++){ pond = {x:60 + r()*200, y:24 + r()*(i < 15 ? 20 : 150), w:14 + r()*10, h:9 + r()*5}; if (clear(pond.x, pond.y, pond.w*2, pond.h*2)) break; }
   const hedges = []; for (let i = 0; i < 12; i++){ const x = 20 + r()*(MW - 40), y = 16 + r()*(MH - 32), w = 16 + r()*26; if (!vil.some(v => Math.abs(x - v.x) < v.w/2 + 20 && Math.abs(y - v.y) < v.h/2 + 14)) hedges.push({x, y, w}); }
-  const paddock = {x:vil[1].x + 30 + r()*16, y:Math.max(8, vil[1].y - 30), w:26, h:14};
+  let paddock; for (let i = 0; i < 30; i++){ paddock = {x:vil[1].x + (i % 2 ? -56 : 30) + r()*16, y:Math.max(22, vil[1].y - 30 + (i > 10 ? r()*80 : 0)), w:26, h:14}; if (paddock.x > 6 && paddock.x + paddock.w < MW - 6 && clear(paddock.x + 13, paddock.y + 7, 30, 18)) break; }
   S = {v:5, seed, t:0, month:0, cash:CFG.START_CASH, loans:[], red:0, speed:1, paused:true, started:false, over:null, muted:false,
        vil, lines, obj:[], pipes:[], plines:[], aroads:[], ents:[], news:[], sold:0, nextId:1, assets:0, quakeBoost:0, forceM:0, sinceForce:99, congressYear:-1,
        last:{income:0, costs:0, interest:0}, producing:false, road, river, trees, fields, cliffs, paddock, rail, pond, hedges, invest:{warm:false, plant:false}, offer:null, res:{}, gridX:MW - 12, faultsHit:{}, season:0, quakes:[], logs:[], done:{}, crises:[], natQ:{m:8 + ((Math.random()*100)|0), mag:1.8 + Math.pow(Math.random(), 2)*3.2}};
