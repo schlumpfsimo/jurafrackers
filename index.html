@@ -480,7 +480,7 @@ function runPoll(src){ const cost = src === 'uni' ? 60 : 20; if (!canPay(cost)) 
 
 const year = () => (S.month/12)|0;
 const bf = () => (S.obj.some(o => o.type === 'lobby' && BLD_ON(o)) ? 0.9 : 1)*(S.minister === 'friendly' ? 0.8 : S.minister === 'cold' ? 1.35 : 1)*(S.cmte && S.cmte.s >= 4 && byId(S.cmte.id) ? 1.25 : 1);
-const BLD_ON = o => o.on && !o.off && !o.burnt && !o.dismantling;
+const BLD_ON = o => o.on && !o.off && !o.burnt && !o.dismantling && ((DEF[o.type] || {}).req || []).every(r => S.obj.some(b => b.type === r && b.on && !b.off && !b.burnt && !b.dismantling));
 const has = t => S.obj.some(o => o.type === t && BLD_ON(o));
 const drilledWell = () => S.obj.some(o => RIG[o.type] && o.well && o.well.length && !o.burnt);
 const missing = tk => ((DEF[tk] || {}).req || []).filter(t => !has(t)).concat(tk === 'fest' && !drilledWell() ? ['well'] : []);
@@ -622,7 +622,7 @@ function place(type, x, y){
     case 'survey': {
       if (!ln) return 'Click on a grid line.'; anchor = null; const l = ln, [x0, x1] = surveySpan(l, x), len = m(x1 - x0), cost = Math.ceil(len/100)*CFG.SURVEY_K;
       if (len < 300) return 'Too short. Draw at least 300 m along the line.'; if (!canPay(cost)) return 'That stretch costs ' + fmt(cost) + '.';
-      S.cash -= cost; acct('Seismic surveys', -cost); S.seisSpent = (S.seisSpent || 0) + cost; happen('survey', {v:nearestVillage((x0 + x1)/2, l.y).id}); const sg = {id:S.nextId++, x0, x1, pass:1, prog:0, active:true, arrived:false, line:l.id}; l.segs.push(sg); spawnConvoy(l, sg);
+      S.cash -= cost; acct('Seismic surveys', -cost); S.seisSpent = (S.seisSpent || 0) + cost; S.lastSurvey = S.month; happen('survey', {v:nearestVillage((x0 + x1)/2, l.y).id}); const sg = {id:S.nextId++, x0, x1, pass:1, prog:0, active:true, arrived:false, line:l.id}; l.segs.push(sg); spawnConvoy(l, sg);
       news('Vibroseis trucks set off for line ' + l.name + ' with a cable of geophones.'); return 'ok';
     }
     case 'pass2': {
@@ -961,7 +961,7 @@ function maybeEvent(){ if (S.month < 3 || S.event || S.offer || S.over || S.mont
   if (fresh.length && Math.random() < 0.8){ for (const h of fresh.slice().reverse()){ h.used = true; const e = pick(REACT[h.k])(h); S.seen = S.seen || {}; if (e && S.month - (S.seen[e.title] ?? -99) >= 24){ S.seen[e.title] = S.month; S.lastEvent = S.month; S.event = e; S.paused = true; showEvent(); return; } } }
   if (Math.random() > (busy ? 0.25 : 0.45)) return; const owed = S.vil.filter(v => S.obj.some(o => o.type === 'task' && o.v === v.id));
   const rigs = S.obj.some(o => (RIG[o.type] || o.type === 'testrig') && o.on && !o.released && !o.burnt && !o.dismantling); S.seen = S.seen || {};
-  for (let i = 0; i < 8; i++){ const e = pick(LETTERS)(); if (!e || SILLY[e.title] || S.month - (S.seen[e.title] ?? -99) < 48 || owed.some(v => (e.from + ' ' + e.text).includes(v.name))) continue; if (!rigs && /\b(rig|rigs|drill\w*|crew|noise|vibration\w*)\b/i.test(e.title + ' ' + e.text)) continue; S.seen[e.title] = S.month; S.lastEvent = S.month; S.event = e; S.paused = true; showEvent(); return; } }
+  for (let i = 0; i < 8; i++){ const e = pick(LETTERS)(); if (!e || SILLY[e.title] || S.month - (S.seen[e.title] ?? -99) < 48 || owed.some(v => (e.from + ' ' + e.text).includes(v.name)) || (/vibroseis|survey trucks/i.test(e.text) && S.month - (S.lastSurvey ?? -99) > 6)) continue; if (!rigs && /\b(rig|rigs|drill\w*|crew|noise|vibration\w*)\b/i.test(e.title + ' ' + e.text)) continue; S.seen[e.title] = S.month; S.lastEvent = S.month; S.event = e; S.paused = true; showEvent(); return; } }
 function fxText(o, k, rig){ k = k || LK; const bits = []; if (o.c && !rig) return 'A promise. Do it on the map within four months: ' + fmt(o.c*k) + '.'; if (o.c) bits.push('costs ' + fmt(o.c*k)); if (o.g && o.p === undefined) bits.push('brings ' + fmt(o.g*k)); if (o.bad && o.bad.c) bits.push('can cost ' + fmt(o.bad.c*k) + ' more'); if (o.note) bits.push(o.note);
   if (o.p === undefined) for (const [t, n] of o.m || []) if (Math.round(Math.abs(n)) >= 1) bits.push((t === ALL ? 'everyone' : t.name) + ' ' + (n > 0 ? '+' : '−') + Math.round(Math.abs(n)));
   return bits.length ? bits.join(' · ') : (o.p === undefined ? 'nothing changes' : 'we will see how it goes'); }
@@ -1132,6 +1132,7 @@ function midTick(){ const m = S.month;
   if (m % 12 === 9 && m < CFG.END && drilledWell()) news('The autumn feast is next month. A Fête de la géothermie in November counts twice.');
   if (m === 60 && !S.review){ S.review = {k:'basement', due:84, t:'show what lies under the Muschelkalk: a well into the crystalline basement by January of year 8'};
     news('The canton’s five-year review of the concession: it was granted for electricity. The Company must ' + S.review.t + '. Otherwise it pays a deposit of ' + fmt(2000) + ' and loses credibility.'); }
+  if (S.review && !S.review.done && (S.review.due - m === 12 || S.review.due - m === 3)) news('The canton reminds the Company: ' + S.review.t + '. Otherwise a deposit of ' + fmt(2000) + ' is due in ' + (S.review.due - m) + ' months.');
   if (S.review && !S.review.done && m >= S.review.due){ S.review.done = true; const ok = S.obj.some(w => RIG[w.type] && w.well && w.well.length && openIn(w, ROCK.GRANITE));
     S.review.ok = ok; if (ok){ for (const v of S.vil) bump(v, 'Met the canton’s target', 2); news('The canton confirms the target is met.'); } else { S.cash -= 2000; acct('Deposit to the canton', -2000); for (const v of S.vil) bumpG(v, 'Missed the canton’s target', 'hi', -5); news('The target is missed. The canton takes a deposit of ' + fmt(2000) + ' and says so publicly.'); } }
   if (m >= 12 && !S.cmte && deepStarted()){ const t = S.vil[0], f = freeSpot(t.x - t.w/2 - 10, t.y + 6, 10, () => Math.random()) || {x:t.x - t.w/2 - 10, y:t.y + 6}; S.cmte = {s:1, id:add('committee', f.x, f.y, {v:0, opp:1, w:6, hh:7}).id}; news('A referendum committee forms in ' + t.name + ': “Jura sans fracking”. It collects signatures for the vote and files objections against every new site.'); }
@@ -1277,7 +1278,7 @@ function onReady(o){
   if (o.type === 'plant') news('The site of the power plant near ' + nearestVillage(o.x, o.y).name + ' is ready. Link two wells in the granite, stimulate it stage by stage, then run a circulation test. The turbine is ordered when the test succeeds.');
   if (RIG[o.type]) news(DEF[o.type].n + ' stands on ' + S.lines[o.line].name + '. Open the line to draw the well.');
 }
-function upkeepOf(o){ const d = DEF[o.type] || {}; let up = (d.up || 0) + (o.hp && o.on && !o.off ? 40 : 0); if (SITE[o.type] && !o.on && !o.restart) return 0; if (o.burnt || o.dismantling || (RIG[o.type] && o.drilling)) return 0; if (RIG[o.type] && o.released) up = 5; if (o.type === 'plant' && o.ph && o.ph !== 'run') up = 40; if (o.off) up *= d.bld ? 0 : 0.5; return up; }
+function upkeepOf(o){ const d = DEF[o.type] || {}; let up = (d.up || 0) + (o.hp && o.on && !o.off ? 40 : 0); if (SITE[o.type] && !o.on && !o.restart) return 0; if (o.burnt || o.dismantling || (RIG[o.type] && o.drilling)) return 0; if (RIG[o.type] && o.released) up = 5; if (o.type === 'plant' && o.ph && o.ph !== 'run') up = 40; if (o.off) up *= d.bld ? 0 : 0.5; if (d.bld && o.on && !o.off && !BLD_ON(o)) up = 0; return up; }
 function saveGame(){ if (!S.over) try { localStorage.setItem('jf3_save', JSON.stringify(Object.assign({}, S, {event:null, crisisQ:(S.event && S.event.crisis ? [S.event] : []).concat(S.crisisQ || []), KN:[...KN.entries()].map(([k,v]) => [k, Array.from(v)])}))); } catch (e) {} }
 function monthTick(){ S.inMT = true; try { monthTick0(); } finally { S.inMT = false; } }
 function monthTick0(){
@@ -1312,7 +1313,7 @@ function monthTick0(){
     const pipes = S.pipes.filter(p => p.from === o.id), pipe = pipes[0], lnk = S.plines.find(l => l.from === o.id), blocked = isBlocked(o);
     for (const pp of pipes) if (S.t < pp.ready && S.vil[pp.to].heat !== 'on') S.vil[pp.to].heat = 'build';
     let inc = 0; o.mw = null;
-    if ((o.type === 'station' || o.type === 'plant') && o.on && !o.burnt){ const r = o.off ? {why:'Switched off.'} : blocked ? {why:'Blocked by protesters.'} : doublet(o); o.status = r;
+    if ((o.type === 'station' || o.type === 'plant') && o.on && !o.burnt){ const r = o.off ? {why:'Switched off.'} : blocked ? {why:'No production while the blockade lasts.'} : doublet(o); o.status = r;
       if (r.flow){ o.age = (o.age || 0) + 1; if (r.cool >= 3 && !o.coolTold){ o.coolTold = 1; news('The ' + DEF[o.type].n.toLowerCase() + ' near ' + nearestVillage(o.x, o.y).name + ' gets water ' + Math.round(r.cool) + ' °C colder than at the start. The cooled water from the injection well has arrived.'); } o.scale = Math.min(0.4, (o.scale || 0) + 0.006); o.mw = r;
         const live = pipes.filter(pp => S.t >= pp.ready), demand = live.reduce((t, pp) => t + S.vil[pp.to].pop/1000*2.5, 0), loss = live.length ? live.reduce((t, pp) => t + 0.015*pp.len/1000, 0)/live.length : 0, heatMW = live.length ? Math.min(r.mwTh*(o.type === 'plant' ? 0.8 : 1), demand)*(1 - loss) : 0;
         const heatMWh = heatMW*730*(winter > 1 ? 0.6 : 0.25), elecMWh = lnk && S.t >= lnk.ready ? r.mwE*730*0.9 : 0;
@@ -2380,7 +2381,7 @@ function showEnd(){ S.event = null; S.offer = null;
   const o = S.over, head = {annexed:'Le Jura est rattaché au canton de Berne', won:'The valley votes yes', lost:'The valley votes no', lapsed:'Concession lapses: nothing to vote on', debt:'Bankrupt: the concession ends'}[o.kind];
   const sub = {annexed:'The Jura is reattached to the canton of Bern. No plebiscite was deemed necessary. The federal government regrets the inconvenience. The Company’s rigs are craters, its staff are safe in another canton, and nobody will vote on anything for a while.', won:'The concession is extended. The opposition calls the result close and appeals to the cantonal court.', lost:'Dismantling at the Company’s cost begins on Monday. The wells are filled with cement.', lapsed:'Ten years of surveys and brochures produced no heat. The Canton thanks all participants.', debt:'The Company cannot pay its debts. The creditors take what is left; the canton has the wells filled with cement.'}[o.kind];
   $('#overlay').hidden = false;
-  $('#overlay').innerHTML = '<div class="contract"><h1>' + head + '</h1><div class="sub">' + MONTHS[S.month % 12] + ', year ' + (year() + 1) + '</div><p>' + sub + '</p><div class="fig"><div><b>' + o.fc.toFixed(1) + '%</b><span>Yes vote</span></div><div><b>' + o.sold.toFixed(1) + ' GWh</b><span>Energy sold</span></div><div><b>' + o.best.toFixed(1) + ' GWh</b><span>Your best so far</span></div><div><b>' + fmt(S.cash - debt()) + '</b><span>Net cash</span></div><div><b>CHF ' + stockInit().p.toFixed(2) + '</b><span>Share price</span></div></div><p class="sub">Ref. ' + S.seed + '</p><div class="acts"><button class="btn main" data-a="again">New concession</button></div></div>';
+  $('#overlay').innerHTML = '<div class="contract"><h1>' + head + '</h1><div class="sub">' + MONTHS[S.month % 12] + ', year ' + (year() + 1) + '</div><p>' + sub + '</p><div class="fig"><div><b>' + o.fc.toFixed(1) + '%</b><span>' + (o.kind === 'won' || o.kind === 'lost' ? 'Yes vote' : 'Last forecast') + '</span></div><div><b>' + o.sold.toFixed(1) + ' GWh</b><span>Energy sold</span></div><div><b>' + o.best.toFixed(1) + ' GWh</b><span>Your best so far</span></div><div><b>' + fmt(S.cash - debt()) + '</b><span>Net cash</span></div><div><b>CHF ' + stockInit().p.toFixed(2) + '</b><span>Share price</span></div></div><p class="sub">Ref. ' + S.seed + '</p><div class="acts"><button class="btn main" data-a="again">New concession</button></div></div>';
 }
 
 /* ================================================================== sound (Web Audio, synthesised) */
