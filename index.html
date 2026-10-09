@@ -566,7 +566,7 @@ function plantTranche(o, i){ const c = DEF.plant.cost*PLANT_TR[i].f, F = o.fin |
   if (i === 2){ o.ph = 'run'; news('The power plant near ' + nearestVillage(o.x, o.y).name + ' is commissioned.'); }
   return true; }
 function plantTick(o){ if (o.type !== 'plant' || !o.ph || o.ph === 'run' || !o.on || o.burnt) return; if (o.waitPay != null){ plantTranche(o, o.waitPay); return; }
-  if (o.ph === 'site' && o.stim >= 0 && S.t >= (o.stimUntil || 0)){ const r = doublet(o, true); if (r.flow && !r.cold) plantTranche(o, 1); }
+  if (o.ph === 'site' && o.pr > 0){ const I = byId(o.inj); if (I && o.reach && o.pr >= 2 && S.t >= (o.stageUntil || 0) + 0.5 && Math.random() < 0.12*o.pr){ const pos = tip(I), mag = 2.4 + Math.random()*0.4 + o.pr*0.15; S.quakes.push({line:I.line, x:pos.x, d:pos.d, m:S.month}); quakeHit({x:o.x, y:o.y}, mag, true, 'Weeks after the last stage near ' + nearestVillage(o.x, o.y).name + ', the granite moves on its own. Magnitude ' + mag.toFixed(1) + '. The pumps were already off.'); o.pr = Math.max(0, o.pr - 1.5); } o.pr = Math.max(0, o.pr - 0.6); }
   else if (o.ph === 'build' && S.t >= o.turbineAt) plantTranche(o, 2); }
 function fedPay(amt, what){ const F = S.fed; if (!F || F.st !== 'granted' || amt <= 0) return 0; if (!fedOk()){ F.st = 'stopped'; news('The Federal Office of Energy stops its contribution: ' + FED_CONDS.filter(q => !q.ok()).map(q => lc(q.n)).join('; ') + '.'); return 0; }
   const back = Math.round(amt*0.6); S.cash += back; acct('Federal exploration contribution', back); F.got = (F.got || 0) + back; news('The Federal Office of Energy pays its contribution for ' + what + ': ' + fmt(back) + '.'); return back; }
@@ -631,7 +631,7 @@ function place(type, x, y){
     case 'pipe': {
       if (!anchor){ if (!o || (o.type !== 'station' && o.type !== 'plant')) return 'Click a heat station or power plant first.'; anchor = {id:o.id}; return ''; }
       const src = byId(anchor.id); if (!src){ anchor = null; return 'That site is gone. Click a heat station or power plant again.'; } if (!v) return 'Now click a village.'; anchor = null;
-      if (S.pipes.some(p => p.from === src.id)) return 'This site already has a pipe.';
+      if (S.pipes.some(p => p.from === src.id && (src.type !== 'plant' || p.to === v.id))) return src.type === 'plant' ? 'This village is already connected to the plant.' : 'A heat station supplies one village. The power plant can heat several.';
       const a = roadS(src.x, src.y), b = roadS(v.x, v.y), ex = clamp(src.x, v.x - v.w/2, v.x + v.w/2), ey = clamp(src.y, v.y - v.h/2, v.y + v.h/2), dl = m(Math.hypot(src.x - ex, src.y - ey)*1.2), rl = m(Math.abs(a.s - b.s) + a.d + b.d);
       const direct = dl < rl*0.7, len = direct ? dl : rl, cost = Math.ceil(len/100)*CFG.PIPE_K;                   // across the fields when the road goes the long way round
       if (len > CFG.PIPE_MAX*CFG.MPX) return 'Too far: ' + len + ' m along the road. Beyond ' + CFG.PIPE_MAX*CFG.MPX + ' m nothing arrives warm.';
@@ -1062,7 +1062,7 @@ function drillEvent(o, t, dr){ if (S.event || S.offer) return false;
   return false; }
 const faultNear = (o, d) => faultsFor(o.line).some(f => Math.abs(sx(o.x) - (f.x + d*f.s)) < 40);
 function onHit(o, t, d){ const v = nearestVillage(o.x, o.y), T = tempAt(o.line, sx(o.x), d);
-  if (t === ROCK.WARM){ news('The mud logger near ' + v.name + ' reports porous Muschelkalk limestone at ' + M(d) + ', water at about ' + aqT(o.line, sx(o.x), d) + ' °C. Only a flow test will tell how much water it gives.'); offerInvest('warm'); }
+  if (t === ROCK.WARM){ news('The mud logger near ' + v.name + ' reports porous Muschelkalk limestone at ' + M(d) + ', water at about ' + aqT(o.line, sx(o.x), d) + ' °C. Only a flow test will tell how much water it gives.'); }
   if (t === ROCK.GRANITE){ news('Crystalline basement under ' + v.name + ' at ' + M(d) + ', about ' + T + ' °C.'); if (T >= 100) offerInvest('plant'); }
   if (t === ROCK.COAL) news('Coal fragments in the cuttings near ' + v.name + ' at ' + M(d) + '. The mud logger watches the gas readings.');
   if (t === ROCK.WATER) news('Karst water near ' + v.name + ' at ' + M(d) + '. Above the casing shoe this is the drinking water.'); }
@@ -1082,10 +1082,9 @@ function quakeHit(epi, mag, induced, text){ const n = nearestVillage(epi.x, epi.
 function heatedCount(){ return S.vil.filter(v => v.heat === 'on').length; }
 function midTick(){ const m = S.month;
   if (m % 12 === 9 && m < CFG.END && drilledWell()) news('The autumn feast is next month. A Fête de la géothermie in November counts twice.');
-  if (m === 60 && !S.review){ const h = heatedCount(), k = h === 0 ? 'heat' : h === 1 ? 'second' : 'third'; S.review = {k, due:k === 'heat' ? 84 : 96, t:{heat:'deliver heat to at least one village by January of year 8', second:'deliver heat to a second village by January of year 9', third:'run a power plant or heat all three villages by January of year 9'}[k]};
-    news('The canton’s five-year review of the concession: the Company must ' + S.review.t + '. Otherwise it pays a deposit of ' + fmt(2000) + ' and loses credibility.'); }
-  if ((m === 60 || m === CFG.END - 24 || m === CFG.END - 15) && !S.obj.some(o => o.type === 'lobby')) news('The vote is in ' + (CFG.END - m) + ' months. The campaign in the last six months runs through the Maison de la géothermie, which needs the Centre de compétences, an access road and a few months of building.');
-  if (S.review && !S.review.done && m >= S.review.due){ S.review.done = true; const ok = S.review.k === 'heat' ? heatedCount() >= 1 : S.review.k === 'second' ? heatedCount() >= 2 : heatedCount() >= 3 || S.obj.some(o => o.type === 'plant' && o.mw && o.mw.mwE > 0);
+  if (m === 60 && !S.review){ S.review = {k:'basement', due:84, t:'show what lies under the Muschelkalk: a well into the crystalline basement by January of year 8'};
+    news('The canton’s five-year review of the concession: it was granted for electricity. The Company must ' + S.review.t + '. Otherwise it pays a deposit of ' + fmt(2000) + ' and loses credibility.'); }
+  if (S.review && !S.review.done && m >= S.review.due){ S.review.done = true; const ok = S.obj.some(w => RIG[w.type] && w.well && w.well.length && openIn(w, ROCK.GRANITE));
     S.review.ok = ok; if (ok){ for (const v of S.vil) bump(v, 'Met the canton’s target', 2); news('The canton confirms the target is met.'); } else { S.cash -= 2000; acct('Deposit to the canton', -2000); for (const v of S.vil) bumpG(v, 'Missed the canton’s target', 'hi', -5); news('The target is missed. The canton takes a deposit of ' + fmt(2000) + ' and says so publicly.'); } }
   if (m >= 48 && !S.cmte && fcBand()[2] < 68){ const t = S.vil[0], f = freeSpot(t.x - t.w/2 - 10, t.y + 6, 10, () => Math.random()) || {x:t.x - t.w/2 - 10, y:t.y + 6}; S.cmte = {s:1, id:add('committee', f.x, f.y, {v:0, opp:1, w:6, hh:7}).id}; news('A referendum committee forms in ' + t.name + ': “Jura sans fracking”. It collects signatures for the vote and files objections against every new site.'); }
   if (S.cmte && byId(S.cmte.id)){ if (m - (S.cmte.hit || -9) > 2) S.cmte.s = Math.min(10, S.cmte.s + 0.35); }
@@ -1134,10 +1133,27 @@ function crisisTick(){ S.crises = S.crises || []; if (!S.event && !S.offer && !S
 /* stimulation of a power-plant doublet: pumping water into hot granite to open its fractures */
 const STIM = [{n:'Single large injection', c:1500, mo:0.5, out:1, d:'Two weeks. About 11,500 cubic metres in one go. Elsewhere this has shaken a whole city, brought thousands of damage claims and ended the project.'},
               {n:'Staged, with a traffic light', c:4000, mo:2, out:0.85, d:'Two months. Thirty small stages per well under a four-step traffic light: yellow at magnitude 2.3 slows the pumps, orange stops them, red at 2.9 opens the well to release the pressure. Even after a stop the rock can still move.'}];
-function stimulate(pl, i){ if (!pl.on || pl.stim >= 0) return 'Not now.'; const P0 = byId(pl.prod), I0 = byId(pl.inj); if (!P0 || !I0 || !openIn(P0, ROCK.GRANITE) || !openIn(I0, ROCK.GRANITE)) return 'Link two wells with open hole in the granite first.'; const st = STIM[i]; if (!canPay(st.c)) return st.n + ' costs ' + fmt(st.c) + '.';
-  S.cash -= st.c; acct('Stimulation', -st.c); fedPay(st.c, 'the stimulation'); pl.stim = i; pl.age = 0; pl.stimUntil = S.t + st.mo; const w = byId(pl.prod) || byId(pl.inj), pos = w ? tip(w) : {x:sx(pl.x), d:380};
-  if (hash(pl.id, S.month, i, S.seed) < (i === 0 ? 0.5 : 0.06) + (w && faultNear(w, pos.d) ? 0.3 : 0)) doQuake(w || pl, (i === 0 ? 'The large injection' : 'One stage of the stimulation') + ' near ' + nearestVillage(pl.x, pl.y).name + ' sets off a felt earthquake. "Within the expected envelope," says the operator.', pos);
-  else news('Stimulation ' + (i === 0 ? 'done' : 'under way') + ' near ' + nearestVillage(pl.x, pl.y).name + '. The seismometers record tiny tremors; nobody feels them.'); return 'ok'; }
+/* staged stimulation: water is pressed into the granite one stage at a time; the micro-quakes show where the rock opens, and where it is heading */
+const STAGE_C = 300, STAGE_MO = 0.25, CIRC_C = 200, BLEED_C = 100;
+const stimOut = o => 1 - Math.exp(-(o.stages || 0)/5);
+function stimReady(pl){ const P0 = byId(pl.prod), I0 = byId(pl.inj); if (pl.type !== 'plant' || pl.ph !== 'site' || !pl.on) return 'Not now.'; if (!P0 || !I0 || !openIn(P0, ROCK.GRANITE) || !openIn(I0, ROCK.GRANITE)) return 'Link two wells with open hole in the granite first.'; if (S.t < (pl.stageUntil || 0)) return 'A stage is still being pumped.'; return ''; }
+function stimStage(pl){ const no = stimReady(pl); if (no) return no; if (!canPay(STAGE_C)) return 'A stage costs ' + fmt(STAGE_C) + '.';
+  S.cash -= STAGE_C; acct('Stimulation', -STAGE_C); fedPay(STAGE_C, 'a stimulation stage'); pl.stages = (pl.stages || 0) + 1; pl.stim = 0; pl.pr = (pl.pr || 0) + 1; pl.stageUntil = S.t + STAGE_MO;
+  const I = byId(pl.inj), pos = tip(I), fs = faultsFor(I.line).map(f => ({f, x:f.x + pos.d*f.s})).sort((a, b) => Math.abs(a.x - pos.x) - Math.abs(b.x - pos.x))[0], R = 8 + pl.stages*2.5 + pl.pr*1.5, reach = fs && Math.abs(fs.x - pos.x) < R, rnd = () => Math.random();
+  S.micro = S.micro || []; let maxM = 0; const n = 8 + ((rnd()*8)|0);
+  for (let i = 0; i < n; i++){ let x, d; if (reach && rnd() < 0.45){ d = pos.d + (rnd() - 0.5)*R*1.4; x = fs.f.x + d*fs.f.s + (rnd() - 0.5)*4; } else { const a = rnd()*6.28, rr = Math.sqrt(rnd())*R; x = pos.x + Math.cos(a)*rr*1.3; d = pos.d + Math.sin(a)*rr*0.7; }
+    const mag = 0.1 + rnd()*0.9 + 0.12*pl.pr + (reach ? Math.pow(rnd(), 2)*1.9 : 0); maxM = Math.max(maxM, mag); S.micro.push({line:I.line, x, d, mag, m:S.month, st:pl.stages}); }
+  if (S.micro.length > 600) S.micro.splice(0, S.micro.length - 600); pl.lastM = maxM; pl.reach = reach; const here = nearestVillage(pl.x, pl.y).name;
+  if (S.tlPlan && maxM >= 2.9){ pl.pr = 0; pl.stageUntil = S.t + 0.5; news('Stage ' + pl.stages + ' near ' + here + ': magnitude ' + maxM.toFixed(1) + ' in the granite. Red on the traffic light: the pumps stop and the well is opened to release the pressure.'); }
+  else if (S.tlPlan && maxM >= 2.3){ pl.pr *= 0.5; news('Stage ' + pl.stages + ' near ' + here + ': magnitude ' + maxM.toFixed(1) + '. Yellow on the traffic light: the pumps slow down and the canton is informed.'); }
+  if (maxM >= 2.5){ S.quakes.push({line:I.line, x:pos.x, d:pos.d, m:S.month}); quakeHit({x:pl.x, y:pl.y}, maxM, true, 'Stage ' + pl.stages + ' of the stimulation near ' + here + ' sets off a felt earthquake. Magnitude ' + maxM.toFixed(1) + ', at ' + M(pos.d) + '.'); }
+  else if (!S.tlPlan || maxM < 2.3) news('Stage ' + pl.stages + ' of the stimulation near ' + here + ': the seismometers record ' + n + ' micro-quakes, the largest magnitude ' + maxM.toFixed(1) + '. Nobody feels them.');
+  return 'ok'; }
+function stimBleed(pl){ if (pl.type !== 'plant' || !(pl.pr > 0)) return 'There is no pressure to release.'; if (!canPay(BLEED_C)) return 'Opening the well costs ' + fmt(BLEED_C) + '.'; S.cash -= BLEED_C; acct('Stimulation', -BLEED_C); pl.pr = 0; pl.stages = Math.max(0, (pl.stages || 0)*0.85); news('The injection well near ' + nearestVillage(pl.x, pl.y).name + ' is opened and the water flows back. The pressure falls; some of the new cracks close again.'); return 'ok'; }
+function circTest(pl){ if (pl.type !== 'plant' || pl.ph !== 'site') return 'Not now.'; if (!(pl.stages > 0)) return 'Stimulate the granite first.'; if (!canPay(CIRC_C)) return 'A circulation test costs ' + fmt(CIRC_C) + '.'; S.cash -= CIRC_C; acct('Circulation tests', -CIRC_C);
+  const r = doublet(pl, true), here = nearestVillage(pl.x, pl.y).name; if (!r.flow){ news('Circulation test near ' + here + ': ' + r.why); return 'ok'; }
+  if (r.cold || r.mwE < 0.5){ news('Circulation test near ' + here + ': ' + Math.round(r.flow) + ' L/s at ' + r.T + ' °C come round. ' + (r.cold ? 'Below 100 °C there is no electricity.' : 'Not enough for a turbine: the rock needs more stages, or the wells are badly placed.')); return 'ok'; }
+  news('Circulation test near ' + here + ': ' + Math.round(r.flow) + ' L/s at ' + r.T + ' °C come round, about ' + r.mwE.toFixed(1) + ' MW of electricity.'); pl.circOk = true; plantTranche(pl, 1); return 'ok'; }
 function offerInvest(k){ if (S.invest[k] || S.offer || S.event || S.over) return; S.offer = k; S.paused = true; showOffer(k); }
 const aqT = (li, x, d) => tempAt(li, x, d) + 14;
 const wellT = o => { const tb = tip(o), wp = openIn(o, ROCK.WARM) && wellPts(o).find(p => rockL(o.line, p.x, p.d) === ROCK.WARM); return wp ? aqT(o.line, tb.x, wp.d) : tempAt(o.line, tb.x, tb.d); };   // aquifer water comes up warmer than the rock around it, as measured in deep wells
@@ -1149,7 +1165,7 @@ function coreLog(o){ // the exploration well's log: cuttings and wireline
 
 /* ================================================================== doublets: a heat station or power plant pumps from one well and puts the water back down another */
 function doublet(o, raw){
-  if (o.type === 'plant' && o.ph && o.ph !== 'run' && !raw) return {why:o.ph === 'site' ? (o.stim >= 0 && S.t >= (o.stimUntil || 0) ? 'Circulation test: not enough hot water comes round yet.' : 'Site ready. The turbine is ordered after a successful circulation test through stimulated granite.') : o.waitPay ? 'The ' + PLANT_TR[o.waitPay].n + ' tranche is not paid.' : 'The turbine is being built.'};
+  if (o.type === 'plant' && o.ph && o.ph !== 'run' && !raw) return {why:o.ph === 'site' ? (o.circOk === false ? '' : 'Site ready. Stimulate the granite stage by stage, then run a circulation test; the turbine is ordered when it succeeds.') : o.waitPay ? 'The ' + PLANT_TR[o.waitPay].n + ' tranche is not paid.' : 'The turbine is being built.'};
   const P = byId(o.prod), I = byId(o.inj), plant = o.type === 'plant';
   if (!P || !I) return {why:'Link a production well and an injection well.'};
   if (P.drilling || I.drilling || !P.well.length || !I.well.length) return {why:'Waiting for both wells to be drilled.'};
@@ -1158,10 +1174,10 @@ function doublet(o, raw){
   const rock = plant ? ROCK.GRANITE : ROCK.WARM, nP = openIn(P, rock), nI = openIn(I, rock);
   if (!nP) return {why:'The production well has no open hole in ' + (plant ? 'the granite' : 'the Muschelkalk aquifer') + '.', dry:true};
   if (!nI) return {why:'The injection well has no open hole in ' + (plant ? 'the granite' : 'the Muschelkalk aquifer') + ' to take the water back.', dry:true};
-  if (plant && (o.stim < 0 || S.t < (o.stimUntil || 0))) return {why:o.stim < 0 ? 'The granite has to be stimulated first.' : 'Stimulation under way.'};
+  if (plant && !(o.stages > 0)) return {why:'The granite has to be stimulated first.'};
   const bp = tip(P), bi = tip(I), T0 = plant ? tempAt(P.line, bp.x, bp.d) : aqT(P.line, bp.x, wellPts(P).find(p => rockL(P.line, p.x, p.d) === ROCK.WARM).d);
   const perm = Math.min(1, permAt(P.line, bp.x, bp.d) + (o.acid ? 0.3 : 0)), injOk = Math.min(1, 0.3 + permAt(I.line, bi.x, bi.d)), open = Math.min(1, nP/(plant ? 40 : 12));
-  const flow = plant ? (10 + 80*perm*STIM[o.stim].out)*injOk*open : (4 + 40*perm)*injOk*open;
+  const flow = plant ? (10 + 80*perm*stimOut(o))*injOk*open : (4 + 40*perm)*injOk*open;
   const gap = Math.hypot((bp.x - bi.x)*15.6, (P.line - I.line)*CFG.LINE_DY*CFG.MPX), onset = gap < 400 ? 30 : gap < 800 ? 50 : 76, cool = Math.max(0, (o.age || 0) - onset)*(gap < 400 ? 0.35 : 0.22);   // the cooled water reaches the production well after some years
   const T = T0 - cool, Tuse = T + (o.hp ? 10 : 0);
   const mwTh = flow*4.18*(Tuse - (plant ? 30 : 15))/1000*(1 - (o.scale || 0)), mwE = plant && T >= 100 ? flow*4.18*(T - 80)/1000*0.11*(1 - (o.scale || 0)) : 0;
@@ -1211,7 +1227,7 @@ function onReady(o){
   if (o.type === 'testrig'){ o.depth = resDone('deep') ? UGH - 2 : 220; reveal(o.line, sx(o.x) - 6, sx(o.x) + 6, 0, o.depth, 4); o.log = coreLog(o); S.logs.push(o.log); news('The exploration well on ' + S.lines[o.line].name + ' reaches ' + M(o.depth) + '. Cuttings and logs name every layer.'); }
   if (o.type === 'congress'){ for (const v of S.vil) bump(v, 'Congress', v.town ? 6 : 2); news('Geothermal congress in ' + S.vil[0].name + ': 300 participants from the industry, polite press coverage.'); o.until = S.t + 1; }
   if (o.type === 'station') news('Heat station near ' + nearestVillage(o.x, o.y).name + ' is built. Link a production well and an injection well, and pipe the heat to a village.');
-  if (o.type === 'plant') news('The power plant near ' + nearestVillage(o.x, o.y).name + ' is built. Link two deep wells, stimulate the granite, connect a power line.');
+  if (o.type === 'plant') news('The site of the power plant near ' + nearestVillage(o.x, o.y).name + ' is ready. Link two wells in the granite, stimulate it stage by stage, then run a circulation test. The turbine is ordered when the test succeeds.');
   if (RIG[o.type]) news(DEF[o.type].n + ' stands on ' + S.lines[o.line].name + '. Open the line to draw the well.');
 }
 function upkeepOf(o){ const d = DEF[o.type] || {}; let up = (d.up || 0) + (o.hp && o.on && !o.off ? 40 : 0); if (SITE[o.type] && !o.on && !o.restart) return 0; if (o.burnt || o.dismantling || (RIG[o.type] && o.drilling)) return 0; if (RIG[o.type] && o.released) up = 5; if (o.type === 'plant' && o.ph && o.ph !== 'run') up = 40; if (o.off) up *= d.bld ? 0 : 0.5; return up; }
@@ -1236,14 +1252,14 @@ function monthTick0(){
   for (const o of S.obj){
     plantTick(o); const d = DEF[o.type] || {}, up = upkeepOf(o);
     if (up){ costs += up; if (o.type === 'office' && !o.off){ acct('Membership fee, Géothermie-Helvetica', -5); acct(d.acc, 5 - up); } else acct(RIG[o.type] && o.released ? 'Capped wellheads (inspection)' : d.acc || 'Running costs: ' + d.n, -up); }
-    const pipe = S.pipes.find(p => p.from === o.id), lnk = S.plines.find(l => l.from === o.id), blocked = isBlocked(o);
-    if (pipe && S.t < pipe.ready) S.vil[pipe.to].heat = 'build';
+    const pipes = S.pipes.filter(p => p.from === o.id), pipe = pipes[0], lnk = S.plines.find(l => l.from === o.id), blocked = isBlocked(o);
+    for (const pp of pipes) if (S.t < pp.ready && S.vil[pp.to].heat !== 'on') S.vil[pp.to].heat = 'build';
     let inc = 0; o.mw = null;
     if ((o.type === 'station' || o.type === 'plant') && o.on && !o.burnt){ const r = o.off ? {why:'Switched off.'} : blocked ? {why:'Blocked by protesters.'} : doublet(o); o.status = r;
       if (r.flow){ o.age = (o.age || 0) + 1; if (r.cool >= 3 && !o.coolTold){ o.coolTold = 1; news('The ' + DEF[o.type].n.toLowerCase() + ' near ' + nearestVillage(o.x, o.y).name + ' gets water ' + Math.round(r.cool) + ' °C colder than at the start. The cooled water from the injection well has arrived.'); } o.scale = Math.min(0.4, (o.scale || 0) + 0.006); o.mw = r;
-        const pipeOn = pipe && S.t >= pipe.ready, demand = pipeOn ? S.vil[pipe.to].pop/1000*2.5 : 0, heatMW = pipeOn ? Math.min(r.mwTh, demand)*(1 - 0.015*pipe.len/1000) : 0;
+        const live = pipes.filter(pp => S.t >= pp.ready), demand = live.reduce((t, pp) => t + S.vil[pp.to].pop/1000*2.5, 0), loss = live.length ? live.reduce((t, pp) => t + 0.015*pp.len/1000, 0)/live.length : 0, heatMW = live.length ? Math.min(r.mwTh*(o.type === 'plant' ? 0.8 : 1), demand)*(1 - loss) : 0;
         const heatMWh = heatMW*730*(winter > 1 ? 0.6 : 0.25), elecMWh = lnk && S.t >= lnk.ready ? r.mwE*730*0.9 : 0;
-        inc = heatMWh*CFG.HEAT_PRICE*({low:0.8, standard:1, high:1.25}[S.tariff || 'standard']) + elecMWh*CFG.POWER_PRICE; if (heatMW > 0){ S.vil[pipe.to].heat = 'on'; if (!pipe.told){ pipe.told = true; happen('heat', {v:pipe.to}); } } S.sold += (heatMWh + elecMWh)/1000; o.mwh = heatMWh + elecMWh;
+        inc = heatMWh*CFG.HEAT_PRICE*({low:0.8, standard:1, high:1.25}[S.tariff || 'standard']) + elecMWh*CFG.POWER_PRICE; if (heatMW > 0) for (const pp of live){ S.vil[pp.to].heat = 'on'; if (!pp.told){ pp.told = true; happen('heat', {v:pp.to}); } } S.sold += (heatMWh + elecMWh)/1000; o.mwh = heatMWh + elecMWh;
         const I = byId(o.inj); if (I && openIn(I, ROCK.FAULT) && rnd(400 + o.id) < (o.type === 'plant' ? 0.04 : 0.02)) doQuake(I, 'Reinjection at the ' + d.n.toLowerCase() + ' near ' + nearestVillage(o.x, o.y).name + ' presses water into a fault zone. A felt tremor.', tip(I), true);
         for (const W of [byId(o.prod), I]) if (W){ if (!W.cementOk && rnd(410 + W.id) < 0.04) contaminate(W, 2, 'salty water rising behind a bad cement job');
           if (openIn(W, ROCK.WATER) && rnd(420 + W.id) < 0.05) contaminate(W, 2, 'geothermal water leaking into the karst through open hole'); } } }
@@ -1449,6 +1465,7 @@ const KX = 1, KY = 0.5, OX = MH*KX + 12, OY = 14, D = CFG.DEPTH;
 const CW = (MW + MH)*KX + 24, CH = (MW + MH)*KY + D + 30;
 const P = (x, y, z) => [OX + (x - y)*KX, OY + (x + y)*KY - (z || 0)];
 const unP = (sx, sy) => { const a = (sx - OX)/KX, b = (sy - OY)/KY; return {x:(a + b)/2, y:(b - a)/2}; };
+const microDot = (g, x, y, mag, k) => { g.fillStyle = mag >= 2.5 ? '#d0201a' : mag >= 2 ? '#f08a1c' : mag >= 1 ? '#f2c94c' : 'rgba(90,120,160,.75)'; g.beginPath(); g.arc(x, y, (0.8 + mag*0.9)*k, 0, 7); g.fill(); };
 const R = (g,c,x,y,w,h) => { g.fillStyle = c; g.fillRect(Math.round(x*2)/2, Math.round(y*2)/2, w, h); };
 function poly(g, pts, fill, stroke, lw){ g.beginPath(); pts.forEach((p,i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); if (fill){ g.fillStyle = fill; g.fill(); } if (stroke){ g.strokeStyle = stroke; g.lineWidth = lw || 0.5; g.stroke(); } }
 function wpoly(g, w, fill, stroke, lw){ poly(g, w.map(p => P(p[0], p[1], p[2] || 0)), fill, stroke, lw); }
@@ -1735,6 +1752,7 @@ function drawMap(g, t){
   g.drawImage(baseMap, 0, 0, CW, CH);
   faceTransform(g, yc); g.drawImage(showPaper ? paperCanvas(li) : knownCanvas(li), 0, 0);
   if (!showPaper){ for (const o of S.obj) if (o.line === li && o.well){ let p = {x:sx(o.x), d:0}; const pts = o.well.slice(); if (o.drilling) pts.push(o.drilling.pos); for (let i = 0; i < pts.length; i++){ const q = pts[i]; g.strokeStyle = (i < o.well.length ? o.well[i].c : o.drilling.cased) ? '#9aa0aa' : '#b8794b'; g.lineWidth = 5; g.beginPath(); g.moveTo(p.x, p.d); g.lineTo(q.x, q.d); g.stroke(); g.strokeStyle = '#0c1020'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(p.x, p.d); g.lineTo(q.x, q.d); g.stroke(); p = q; } }
+    for (const q of S.micro || []) if (q.line === li) microDot(g, q.x, q.d, q.mag, 1.6);
     for (const q of S.quakes) if (q.line === li){ g.strokeStyle = '#111'; g.lineWidth = 1.5; g.beginPath(); g.arc(q.x, q.d, 6, 0, 7); g.stroke(); } }
   g.setTransform(2, 0, 0, 2, 0, 0); if (S.season >= 11 || S.season <= 1) wpoly(g, [[0, yc, 0], [MW, yc, 0], [MW, yc, -2.2], [0, yc, -2.2]], '#f4f7f9'); wpoly(g, [[0, yc, 0], [MW, yc, 0], [MW, yc, -D], [0, yc, -D]], null, 'rgba(0,0,0,.6)', 0.7);
   for (let d = 100; d < UGH; d += 100){ const p = P(0, yc, -d*D/UGH); T(g, (d*10).toLocaleString('en-US') + ' m', p[0] - 2, p[1] + 2, '#15181c', 5.5, 'right'); }
@@ -1871,6 +1889,7 @@ function drawSection(g, t){
       for (let i = 0; i < pts.length; i++){ const q = pts[i]; bore(g, p, q, i < o.well.length ? o.well[i].c : o.drilling.cased, SURF); p = q; }
       if (o.drilling){ const ph = ((t*12)|0)%2; R(g, '#ffcc55', p.x - 2 - ph, SURF + p.d - 1, 5, 3); R(g, '#e6e6e6', p.x - 1, SURF + p.d + 2, 3, 2); }
     }
+    for (const q of S.micro || []) if (q.line === li) microDot(g, q.x, SURF + q.d, q.mag, 1);
     for (const q of S.quakes) if (q.line === li){ g.strokeStyle = '#111'; g.lineWidth = 1; g.beginPath(); g.arc(q.x, SURF + q.d, 5, 0, 7); g.stroke(); g.beginPath(); g.arc(q.x + 8, SURF + q.d + 6, 2.5, 0, 7); g.stroke(); }
     if (plan){ const o = byId(plan.rig); if (o && o.line === li){ let p = tip(o); g.setLineDash([3,3]); g.strokeStyle = '#64c86b'; g.lineWidth = 2; g.beginPath(); g.moveTo(p.x, SURF + p.d); for (const q of plan.pts){ g.lineTo(q.x, SURF + q.d); p = q; } g.stroke();
       if (hover && hover.ug){ const hq = {x:maxBend(o) ? hover.ug.x : p.x, d:hover.ug.d}; const e = validPoint(o, p, hq); g.strokeStyle = e ? PAL.warn : '#ffe06a'; g.beginPath(); g.moveTo(p.x, SURF + p.d); g.lineTo(hq.x, SURF + hq.d); g.stroke(); } g.setLineDash([]);
@@ -2195,6 +2214,7 @@ function renderCard(){
         if (role) s += '<div class="sub">' + (role.prod === o.id ? 'P: production' : 'I: injection') + ' well of the ' + DEF[role.type].n.toLowerCase() + ' near ' + nearestVillage(role.x, role.y).name + '.</div>';
         for (const st of S.obj.filter(b => (b.type === 'station' || b.type === 'plant') && !b.burnt && !b.dismantling)) for (const rl of ['prod', 'inj']) if (st[rl] !== o.id && !st[rl]) acts += '<button class="btn" data-a="linkto" data-v="' + st.id + ':' + rl + '">Use as ' + (rl === 'prod' ? 'P' : 'I') + ' well of the ' + DEF[st.type].n.toLowerCase() + ' near ' + nearestVillage(st.x, st.y).name + '</button>';
         if (o.released) acts += '<button class="btn" data-a="rerig">Bring a rig back (' + fmt(DEF[o.type].cost) + ')</button>';
+        if (o.type === 'light' && o.well.length && !o.drilling && !missing('deep').length) acts += '<button class="btn" data-a="rerigdeep">Bring the deep rig onto this well (' + fmt(DEF.deep.cost) + ')</button>';
         else if (!o.drilling){ acts += '<button class="btn main" data-a="plan">' + (o.well.length ? 'Extend well' : 'Draw well') + '</button>'; if (o.well.length) acts += '<button class="btn" data-a="release">Release the rig, keep the well</button>'; }
         if (o.well.length && !o.drilling && !o.test) acts += '<button class="btn" data-a="flowtest">Flow test (' + fmt(DRILL.flowTest) + ')</button>';
         if (!o.pad && !o.released) acts += '<button class="btn" data-a="pad">Seal the drill pad (' + fmt(DRILL.pad) + ')</button>';
@@ -2221,7 +2241,8 @@ function renderCard(){
         if (o.type === 'station' && o.on && !o.acid && r.flow && r.flow < 25) acts += '<button class="btn" data-a="acid">Acid treatment of the wells (' + fmt(600) + ')</button>';
         if (o.type === 'station' && o.on && !o.hp && r.flow) acts += '<button class="btn" data-a="heatpump">Extra heat pumps (' + fmt(1500) + ', +' + fmt(40) + '/mo)</button>';
         if (o.type === 'station' && o.on) acts += '<span class="sub" style="margin:0 4px">Heat tariff:</span>' + ['low', 'standard', 'high'].map(k => '<button class="btn" data-a="tariff" data-v="' + k + '" aria-pressed="' + ((S.tariff || 'standard') === k) + '">' + k + '</button>').join('');
-        if (o.type === 'plant' && o.stim < 0 && o.on) acts += STIM.map((p, i) => '<button class="btn" data-a="stim" data-v="' + i + '" title="' + p.d + '">' + p.n + ' (' + fmt(p.c) + ')</button>').join('');
+        if (o.type === 'plant' && o.ph === 'site' && o.on){ s += '<div class="sub">Stimulation: ' + (o.stages ? Math.round(o.stages) + ' stage' + (Math.round(o.stages) === 1 ? '' : 's') + ' · pressure ' + ['none', 'low', 'rising', 'high', 'very high'][Math.min(4, Math.ceil(o.pr || 0))] + ' · largest micro-quake last stage M' + (o.lastM || 0).toFixed(1) : 'not started') + (S.tlPlan ? ' · traffic light filed' : ' · no traffic-light plan') + '. The micro-quakes are drawn in the section.</div>';
+          const busy = S.t < (o.stageUntil || 0); acts += '<button class="btn" data-a="stage"' + (busy ? ' disabled' : '') + '>' + (busy ? 'Pumping…' : 'Pump a stage (' + fmt(STAGE_C) + ')') + '</button>' + (o.pr > 0 ? '<button class="btn" data-a="bleed">Open the well, release pressure (' + fmt(BLEED_C) + ')</button>' : '') + (o.stages ? '<button class="btn" data-a="circ">Circulation test (' + fmt(CIRC_C) + ')</button>' : ''); }
         if (o.on) acts += '<button class="btn" data-a="onoff">' + (o.off ? 'Switch on' : 'Switch off' ) + '</button>'; }
       if (view === 'map' && o.line !== undefined) acts += '<button class="btn" data-a="open">Open section</button>';
       if (!o.drilling) acts += '<button class="btn" data-a="rm">Dismantle (' + (DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0) < 1 ? Math.round((DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0))*4.3) + ' weeks' : (DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0)) + ' months') + ')</button>';
@@ -2275,7 +2296,7 @@ function showContract(hasSave){
 }
 function showOffer(k){ lessonWas = null;
   const txt = k === 'warm' ? {h:'Amendment I: a utility from a neighbouring canton', p:'A cantonal energy company from Aargau offers <b>CHF 8 million</b> for a stake, "to accelerate the energy transition". Their logo goes on the rig. The valley will notice where the money comes from.', c:8000, m:-3}
-    : {h:'Amendment II: Zurich capital', p:'A fund from Zurich offers <b>CHF 25 million</b> against future electricity. The Jura flag on the brochure is replaced by a stylised flame. People will notice.', c:25000, m:-5};
+    : {h:'Amendment: a utility from a neighbouring canton', p:'A cantonal energy company from another canton offers <b>CHF 10 million</b> for a stake in the power project, "to accelerate the energy transition". Their logo goes on the rig. The valley will notice where the money comes from.', c:10000, m:-4};
   S.offerData = txt; $('#overlay').hidden = false;
   $('#overlay').innerHTML = '<div class="contract"><h1>' + txt.h + '</h1><div class="sub">' + MONTHS[S.month % 12] + ', year ' + (year() + 1) + '</div><p>' + txt.p + '</p><div class="acts"><button class="btn main" data-a="accept">Sign the amendment</button><button class="btn" data-a="decline">Stay Jurassien</button></div></div>';
 }
@@ -2371,7 +2392,7 @@ function act(a, v){
   const o = sel && byId(sel.id); if (!o) return;
   if (a === 'plan'){ if (view !== 'section') openSection(o.line); plan = newPlan(o); tool = null; sel = null; $('#card').hidden = true; cam.y = clamp(SURF + tip(o).d - 80, 0, secMaxY()); return; }
   if (a === 'talk'){ if (o.talking === undefined && !o.talked){ if (!canPay(20)){ toast('Talking costs ' + fmt(20) + '.'); return; } S.cash -= 20; acct('Liaison officers', -20); o.talking = S.t; sfx('click'); } return; }
-  if (a === 'stim'){ const r = stimulate(o, Number(v)); if (r !== 'ok') toast(r); return; }
+  if (a === 'stage' || a === 'bleed' || a === 'circ'){ const r = (a === 'stage' ? stimStage : a === 'bleed' ? stimBleed : circTest)(o); if (r !== 'ok') toast(r); renderCard(); return; }
   if (a === 'link'){ linking = {st:o.id, role:v}; tool = null; sel = null; $('#card').hidden = true; return; }
   if (a === 'autolink'){ const r = autoLink(o); if (r !== 'ok') toast(r); renderCard(); return; }
   if (a === 'linkto'){ const [sid, role] = String(v).split(':'), st = byId(Number(sid)); if (st){ linkWell(st, role, o); renderCard(); } return; }
@@ -2386,6 +2407,8 @@ function act(a, v){
   if (a === 'tracer'){ if (!canPay(DRILL.tracer)) return toast('A tracer test costs ' + fmt(DRILL.tracer) + '.'); S.cash -= DRILL.tracer; acct('Casing, cement and extras', -DRILL.tracer); o.traced = true; const hit = S.vil.filter(vv => linked(o, vv)); news('Dye poured in at the site near ' + nearestVillage(o.x, o.y).name + (hit.length ? ' comes out at the spring' + (hit.length > 1 ? 's' : '') + ' of ' + hit.map(vv => vv.name).join(' and ') + '. Whatever leaks here goes there.' : ' turns up at no spring in the valley. Leaks here reach no drinking water.')); renderCard(); return; }
   if (a === 'pad'){ if (!canPay(DRILL.pad)) return toast('Sealing the pad costs ' + fmt(DRILL.pad) + '.'); S.cash -= DRILL.pad; acct('Casing, cement and extras', -DRILL.pad); o.pad = true; return; }
   if (a === 'release'){ o.released = true; o.off = false; spawnLeave(o); news('The rig near ' + nearestVillage(o.x, o.y).name + ' is driven away. A capped wellhead stays.'); return; }
+  if (a === 'rerigdeep'){ const c = DEF.deep.cost; if (!canPay(c)) return toast('The deep rig costs ' + fmt(c) + ' to bring in.'); S.cash -= c; acct(DEF.deep.n, -c); S.assets += c; if (!o.released) spawnLeave(o); o.type = 'deep'; o.released = false; o.off = false; o.on = false; o.arrived = true; o.t0 = S.t; o.ready = S.t + DEF.deep.build*bf(); o.hh = 18; spawnArrival(o);
+    news('The light rig near ' + nearestVillage(o.x, o.y).name + ' makes way for the deep rig. The old well becomes the top of a deeper one: draw it on from the bottom.'); renderCard(); return; }
   if (a === 'rerig'){ const c = DEF[o.type].cost; if (!canPay(c)) return toast('Mobilisation costs ' + fmt(c) + '.'); S.cash -= c; acct(DEF[o.type].n, -c); o.released = false; o.arrived = true; spawnArrival(o); return; }
   if (a === 'flowtest'){ if (!canPay(DRILL.flowTest)) return toast('A flow test costs ' + fmt(DRILL.flowTest) + '.'); S.cash -= DRILL.flowTest; acct('Flow tests', -DRILL.flowTest); o.test = flowTest(o); news('Flow test near ' + nearestVillage(o.x, o.y).name + ': ' + o.test); return; }
   if (a === 'aroad'){ const r = buildRoad(o); if (r !== 'ok') toast(r); else sfx('coin'); renderCard(); return; }
@@ -2455,7 +2478,7 @@ function boot(fresh){
   if (!bound){ buildPalette(); bind(); bound = true; requestAnimationFrame(tt => { lastT = tt; frame(tt); }); }
   zoom = $('#stage').clientWidth < 700 ? 2 : 1; fit(); showContract(hasSave);
 }
-window.JF = {act:(a, v) => act(a, v), her, maybeEvent, roadFree, quakeHit, crisisSay, villageYes, doTask, fcBand, LESSONS, lessonHtml, f35, roadS, scr:(x, y, z) => { const c = $('#game'), r = c.getBoundingClientRect(), p = P(x, y, z || 0); return [r.left + p[0]/CW*r.width, r.top + p[1]/CH*r.height]; }, _draw:(g, o, t) => obj(g, o, t), _veh:(g, k) => vehicle(g, k, 0, 0, 'x', null, 1), OX, OY, borrowShady, repayOne, bankRate, startSecret, addMood, unlockAll:() => { for (const k of Object.keys(DEF).filter(k => DEF[k].bld)) S.obj.push({id:S.nextId++, type:k, x:-400, y:-400, on:true, arrived:true, t0:0, ready:0, w:1, hh:1, test:true}); }, buildRoad, roadPlan, pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, finOptions, setFin:(tk, k) => { pendingFin = k ? {tk, k} : null; }, fedApply, plantTranche, plantTick, heatTested, commitPlan, stimulate, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, secMaxY()); }, select:s => { sel = s; renderCard(); },
+window.JF = {act:(a, v) => act(a, v), her, maybeEvent, roadFree, quakeHit, crisisSay, villageYes, doTask, fcBand, LESSONS, lessonHtml, f35, roadS, scr:(x, y, z) => { const c = $('#game'), r = c.getBoundingClientRect(), p = P(x, y, z || 0); return [r.left + p[0]/CW*r.width, r.top + p[1]/CH*r.height]; }, _draw:(g, o, t) => obj(g, o, t), _veh:(g, k) => vehicle(g, k, 0, 0, 'x', null, 1), OX, OY, borrowShady, repayOne, bankRate, startSecret, addMood, unlockAll:() => { for (const k of Object.keys(DEF).filter(k => DEF[k].bld)) S.obj.push({id:S.nextId++, type:k, x:-400, y:-400, on:true, arrived:true, t0:0, ready:0, w:1, hh:1, test:true}); }, buildRoad, roadPlan, pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, finOptions, setFin:(tk, k) => { pendingFin = k ? {tk, k} : null; }, fedApply, plantTranche, plantTick, heatTested, commitPlan, stimulate:pl => stimStage(pl), stimStage, stimBleed, circTest, tempAt, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, secMaxY()); }, select:s => { sel = s; renderCard(); },
   newGame:seed => { newGame(seed); S.started = true; S.paused = false; view = 'map'; cutLine = null; baseMap = null; fit(); $('#overlay').hidden = true; }, setCut:li => { cutLine = li; }, get cutLine(){ return cutLine; }};
 const ready = document.fonts && document.fonts.load ? document.fonts.load('12px "Pixelify Sans"').catch(() => {}) : Promise.resolve();
 ready.then(() => boot(false));
