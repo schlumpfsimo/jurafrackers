@@ -127,6 +127,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #ledger tr:nth-child(even) td{background:#f6f7f8}
 #ledger td:last-child{text-align:right;font-variant-numeric:tabular-nums}
 #ledger .sub{font-size:12.5px}
+.why td:last-child{white-space:nowrap;text-align:right;padding-left:8px}
 #ledger tr.tot td{font-weight:700;border-top:2px solid var(--ink);background:#fff}
 #ledger th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em;text-align:left;border-bottom:1px solid #d5d9de}
 #ledger .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
@@ -2390,6 +2391,8 @@ function renderCard(){
       if (o.type === 'station' || o.type === 'plant'){ const r = o.off ? {why:'Switched off.'} : isBlocked(o) ? {why:'Blocked by protesters.'} : doublet(o), P = byId(o.prod), I = byId(o.inj), nm = w => w ? 'rig on ' + S.lines[w.line].name + ' near ' + nearestVillage(w.x, w.y).name : 'none';
         s += r.flow ? 'Producing <b>' + r.flow.toFixed(0) + ' L/s</b> at <b>' + r.T + ' °C</b>: ' + r.mwTh.toFixed(1) + ' MW heat' + (o.type === 'plant' ? ', ' + r.mwE.toFixed(1) + ' MW electricity' : '') + '. Sold ' + ((o.mwh || 0)/1000).toFixed(2) + ' GWh last month for ' + fmt(o.inc || 0) + '.' : '<span class="neg">' + (r.why || 'Not producing.') + '</span>';
         if (r.cold) s += ' <span class="neg">The water is below 100 °C: too cold for the turbine.</span>';
+        if (o.on && !o.burnt){ const ids = [o.id, o.prod, o.inj].filter(Boolean), run = upkeepOf(o) + [P, I].filter(Boolean).reduce((t, w) => t + upkeepOf(w), 0), ln = S.loans.filter(l => ids.includes(l.obj)).reduce((t, l) => t + l.pay, 0), net = (o.inc || 0) - run - ln;
+          s += '<table class="why" style="margin-top:6px"><tr><td>Sales last month</td><td class="pos">' + fmt(o.inc || 0) + '</td></tr><tr><td>Running costs, ' + (o.type === 'plant' ? 'plant' : 'station') + ' and both wells</td><td class="neg">−' + fmt(run) + '</td></tr>' + (ln ? '<tr><td>Loan instalments on them</td><td class="neg">−' + fmt(ln) + '</td></tr>' : '') + '<tr><td><b>What it leaves</b></td><td class="' + (net < 0 ? 'neg' : 'pos') + '"><b>' + (net < 0 ? '−' : '+') + fmt(Math.abs(net)) + '</b></td></tr></table>'; }
         s += '<div style="margin-top:4px">' + wellLine(o, 'prod') + '</div><div>' + wellLine(o, 'inj') + '</div><div class="sub">A doublet: one well brings the hot water up, the other takes it back down. Pick a rig for each on the map, or from the rig’s card.</div>';
         acts += '<button class="btn" data-a="link" data-v="prod">' + (P ? 'Change' : 'Pick') + ' P well on the map</button><button class="btn" data-a="link" data-v="inj">' + (I ? 'Change' : 'Pick') + ' I well on the map</button>' + (!P && !I ? '<button class="btn" data-a="autolink">Link the two nearest rigs</button>' : '');
         if ((o.scale || 0) > 0.05) s += '<div class="sub">Scale in the heat exchanger costs ' + Math.round(o.scale*100) + '% of the output. A month switched off lets the crew clean it.</div>';
