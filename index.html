@@ -258,7 +258,7 @@ const CFG = {
   MONTH_SEC:40, END:120, START_CASH:30000, START_MOOD:40,
   LOAN_STEP:5000, LOAN_RATE:0.05, LOAN_TERM:96, CREDIT_BASE:15000, CREDIT_ASSET:0.6, CREDIT_INCOME:24, RED_LIMIT:8,
   SURVEY_K:4, PASS2_K:12, PASS3_K:20, SURVEY_SPEED:100,                           // k per 100 m; map px per month
-  PIPE_K:150, LINE_K:30, PIPE_MAX:200, WINTER:1.5, HEAT_PRICE:0.09, POWER_PRICE:0.475,   // k CHF per MWh: heat net of heat-pump power, power at the old federal feed-in tariff for petrothermal plants up to 5 MW, before 2019 (47.5 Rp./kWh; the tariff closed to new plants in 2023, which now get investment contributions instead, but a game needs a price)
+  PIPE_K:150, LINE_K:30, PIPE_MAX:200, WINTER:1.5, HEAT_PRICE:0.11, POWER_PRICE:0.475,   // k CHF per MWh: heat net of heat-pump power, power at the old federal feed-in tariff for petrothermal plants up to 5 MW, before 2019 (47.5 Rp./kWh; the tariff closed to new plants in 2023, which now get investment contributions instead, but a game needs a price)
   QUAKE_NEAR:-14, QUAKE_FAR:-5, QUAKE_MUTE:3, DRIFT:0.08
 };
 const DEF = {
@@ -493,6 +493,8 @@ const ROAD_K = 60, ROAD_NEAR = 8;                                       // CHF k
 function roadPlan(o){ const rs = roadS(o.x, o.y), q = roadPos(rs.s); let best = {d:rs.d, b:[q.x, q.y]};
   for (const r of S.aroads || []){ const d = segD(o.x, o.y, r.a, r.b); if (d < best.d){ const L2 = (r.b[0]-r.a[0])**2 + (r.b[1]-r.a[1])**2 || 1, t = clamp(((o.x-r.a[0])*(r.b[0]-r.a[0]) + (o.y-r.a[1])*(r.b[1]-r.a[1]))/L2, 0, 1); best = {d, b:[r.a[0] + t*(r.b[0]-r.a[0]), r.a[1] + t*(r.b[1]-r.a[1])], via:r}; } }
   const len = m(best.d), cost = Math.ceil(len/100)*ROAD_K, mo = 0.5 + len/2000; return Object.assign(best, {len, cost, mo, ready:best.via ? Math.max(S.t, best.via.ready) : S.t}); }
+/* a building in or next to a village uses its streets; one next to another building shares that building's yard and road */
+const roadFree = o => roadPlan(o).d <= ROAD_NEAR || (DEF[o.type] && DEF[o.type].bld && (S.vil.some(v => Math.abs(v.x - o.x) <= v.w/2 + 14 && Math.abs(v.y - o.y) <= v.h/2 + 12) || S.obj.some(b => b !== o && DEF[b.type] && DEF[b.type].bld && !b.waitRoad && Math.hypot(b.x - o.x, b.y - o.y) < 30)));
 function buildRoad(o){ if (!o.waitRoad) return 'This site already has a road.'; const rp = roadPlan(o); if (!canPay(rp.cost)) return 'The access road costs ' + fmt(rp.cost) + '.';
   S.cash -= rp.cost; acct('Access roads', -rp.cost); S.assets += rp.cost; S.aroads = S.aroads || []; const r = {id:S.nextId++, from:o.id, a:[o.x, o.y], b:rp.b, len:rp.len, ready:Math.max(rp.ready, S.t) + rp.mo*bf()}; S.aroads.push(r);
   o.waitRoad = false; o.t0 = r.ready; o.ready = r.ready + ((DEF[o.type] || {}).build || 0)*bf();
@@ -555,7 +557,7 @@ function place(type, x, y){
       S.cash -= def.cost || 0; if (def.cost) acct(def.n, -def.cost);
       const extra = RIG[type] ? {line:ln2.id, well:[], hit:{}, fenced:false, quiet:false, w:8, hh:16} : type === 'testrig' ? {line:ln2.id, w:6, hh:12} : (type === 'station' || type === 'plant') ? {stim:-1, age:0, scale:0, fenced:false, w:type === 'plant' ? 10 : 8, hh:type === 'plant' ? 14 : 10} : {w:7, hh:10};
       const no = add(type, x, py, extra); spawnArrival(no);
-      if (SITE[type] && roadPlan(no).d > ROAD_NEAR && !(def.bld && S.obj.some(b => b !== no && DEF[b.type] && DEF[b.type].bld && !b.waitRoad && Math.hypot(b.x - no.x, b.y - no.y) < 16))){ no.waitRoad = true; news('No road reaches the new ' + DEF[type].n.toLowerCase() + ' site near ' + nearestVillage(x, py).name + '. Build an access road from its card before work can start.'); }
+      if (SITE[type] && !roadFree(no)){ no.waitRoad = true; news('No road reaches the new ' + DEF[type].n.toLowerCase() + ' site near ' + nearestVillage(x, py).name + '. Build an access road from its card before work can start.'); }
       if (SITE[type] && !def.bld){ const nv = nearestVillage(x, py); if (vdist(nv, x, py) < 50) happen('build', {v:nv.id, o:no.id}); }
       if (SITE[type]){ const vv = vilAt(x, py), z = inZone(no), sv = S.vil.slice().sort((a, b) => Math.hypot(a.spring.x - x, a.spring.y - py) - Math.hypot(b.spring.x - x, b.spring.y - py))[0];
         if (vv){ no.inVillage = vv.id; bump(vv, 'Industry in the village', -6); news(DEF[type].n + ' in the middle of ' + vv.name + '. Mood −6 there, and the noise is right under the windows.'); }
@@ -654,6 +656,7 @@ const pick = a => a[(Math.random()*a.length)|0];
 const FIRST = ['Marcel','Josiane','Gérard','Lucienne','Raymond','Odile','Bernard','Mireille','Jean-Pierre','Colette','Fernand','Ginette','Hubert','Simone','Laurent','Nadine','René','Yvette','Patrice','Agnès','Denis','Monique','Alain','Huguette','Claude','Sylvie','Roger','Paulette'];
 const LAST = ['Froidevache','Grosjean','Tièche','Boillat','Chapatte','Vuilleumier','Montavon','Rérat','Stadelmann','Cerf','Sautebin','Fleury','Gigandet','Beuchat','Juillerat','Maître','Hêche','Nussbaumer','Rossé','Comment'];
 const who = () => pick(FIRST) + ' ' + pick(LAST);
+const her = p => FIRST.indexOf(p.split(' ')[0]) % 2 === 1;      // FIRST alternates men's and women's names
 const PAPER = ['La Gazette des Combes','Le Petit Sapin','Radio Fréquence Tiède','L’Écho des Trois-Vallées','TV Vallée','Le Courrier du Plateau','Radio Prunelle'];
 const evVil = () => { const r = Math.random()*S.vil.reduce((a, v) => a + Math.sqrt(v.pop), 0); let acc = 0; for (const v of S.vil){ acc += Math.sqrt(v.pop); if (r <= acc) return v; } return S.vil[0]; };
 const ALL = 'all', LK = 5;
@@ -665,22 +668,22 @@ const LETTERS = [
       {l:'Pay for it', c, m:[[v, m]], why:'Sponsorship', news:'The Company pays for ' + item + ' in ' + v.name + '. A small plaque is unveiled.'},
       {l:'Pay half', c:Math.round(c/2), m:[[v, Math.round(m/2)]], why:'Sponsorship', p:0.6, bad:{m:[[v, -1]], news:'Half of ' + item + '. ' + v.name + ' calls it “typical”.'}, news:'Half of ' + item + ' is paid for. ' + v.name + ' raises the rest at a bake sale.'},
       {l:'Decline', m:[[v, -1]], why:'Turned down the mayor', news:'The Company declines. The mayor of ' + v.name + ' mentions it at every meeting.'}]}; },
-  () => { const v = evVil(), p = who(), g = pick(['the cows give less milk since the trucks came','the hay is grey with dust','a heifer jumped the fence when the vibroseis truck passed','the drill crew parked on his meadow','a lorry drove through his manure heap and spread it down the road','he can no longer spread manure on the field next to the site','the noise keeps the cattle restless at night']), c = 10 + ((Math.random()*6)|0)*5;
+  () => { const v = evVil(), p = who(), f = her(p), his = f ? 'her' : 'his', g = pick(['the cows give less milk since the trucks came','the hay is grey with dust','a heifer jumped the fence when the vibroseis truck passed','the drill crew parked on ' + his + ' meadow','a lorry drove through ' + his + ' manure heap and spread it down the road',(f ? 'she' : 'he') + ' can no longer spread manure on the field next to the site','the noise keeps the cattle restless at night']), c = 10 + ((Math.random()*6)|0)*5;
     return {from:p + ', farmer near ' + v.name, title:'A complaint from the fields', text:p + ' writes that ' + g + ', and asks for ' + fmtL(c) + ' in compensation.', opts:[
       {l:'Pay', c, m:[[v, 2]], why:'Compensated a farmer', news:p + ' is compensated. Word gets round the village.'},
-      {l:'Invite him for a fondue at the site', c:3, m:[[v, 3]], why:'Fondue at the site', p:0.55, bad:{m:[[v, -1]], news:p + ' eats the fondue and still sends the bill.'}, news:p + ' comes to the fondue at the site and stays until the crew changes shift.'},
-      {l:'Send a lawyer', m:[[v, -3]], why:'Lawyer sent to a farmer', fn:() => { const f = freeSpot(v.x + v.w/2 + 16, v.y, 16, i => Math.random()); if (f) add('banner', f.x, f.y, {v:v.id, opp:1, w:12, hh:6}); }, news:'A lawyer visits ' + p + '. A new banner appears on his barn.'}]}; },
+      {l:'Invite ' + (f ? 'her' : 'him') + ' for a fondue at the site', c:3, m:[[v, 3]], why:'Fondue at the site', p:0.55, bad:{m:[[v, -1]], news:p + ' eats the fondue and still sends the bill.'}, news:p + ' comes to the fondue at the site and stays until the crew changes shift.'},
+      {l:'Send a lawyer', m:[[v, -3]], why:'Lawyer sent to a farmer', fn:() => { const f = freeSpot(v.x + v.w/2 + 16, v.y, 16, i => Math.random()); if (f) add('banner', f.x, f.y, {v:v.id, opp:1, w:12, hh:6}); }, news:'A lawyer visits ' + p + '. A new banner appears on ' + his + ' barn.'}]}; },
   () => { const v = S.vil[0], paper = pick(PAPER), q = S.quakes.length && S.quakes[S.quakes.length - 1].m >= S.month - 3, poll = S.vil.some(u => polluted(u)), topic = q ? 'the earthquake' : poll ? 'the brown fountain' : pick(['the trucks','the money from Zurich','the noise','the jobs','the night shifts','the price of heat']);
     return {from:paper, title:'Interview request', text:paper + ' wants an interview about ' + topic + '. The journalist has already written the headline.', opts:[
       {l:'Apologise and promise better', c:5, m:[[ALL, 2]], why:'Apologised on air', news:'Your director apologises on ' + paper + '. Even the opposition calls it “a start”.'},
       {l:'Deny everything', m:[[ALL, 2]], why:'Denied on air', p:0.45, bad:{m:[[ALL, -3]], news:'Your director denies everything on ' + paper + '. A listener plays back the quake recording.'}, news:'Your director denies everything on ' + paper + '. Some listeners believe it.'},
       {l:'Blame “natural minerals”', m:[[ALL, -2]], why:'Blamed natural minerals', news:'“Natural minerals” is quoted back at the Company for months.'},
       {l:'Decline', m:[[ALL, -1]], why:'No comment', news:paper + ' runs the story with “The Company did not respond”.'}]}; },
-  () => { const v = evVil(), club = pick(['hiking club','snowshoe club','mushroom society','birdwatchers','Nordic walking group','Sunday cyclists']);
+  () => { const v = evVil(), club = pick(['hiking club','snowshoe club','mushroom society','birdwatching society','Nordic walking group','Sunday cycling club']);
     return {from:'The ' + club + ' of ' + v.name, title:'A path by the rig', text:'The ' + club + ' of ' + v.name + ' would like its route to pass by your site, “to see progress up close”.', opts:[
-      {l:'Allow it', m:[[v, 1]], why:'Opened the path', news:'The ' + club + ' walks past the rig and waves. The crew waves back.'},
+      {l:'Allow it', m:[[v, 1]], why:'Opened the path', news:'The ' + club + ' comes past the rig and waves. The crew waves back.'},
       {l:'Build a viewing platform', c:15, m:[[v, 3], [ALL, 1]], why:'Viewing platform', news:'A viewing platform opens near ' + v.name + '. On Sundays there is a queue.'},
-      {l:'Refuse, for safety', m:[[v, -1]], why:'Closed the path', news:'The ' + club + ' of ' + v.name + ' walks the long way round.'}]}; },
+      {l:'Refuse, for safety', m:[[v, -1]], why:'Closed the path', news:'The ' + club + ' of ' + v.name + ' takes the long way round.'}]}; },
   () => { const v = evVil(), g = pick(['third-graders','the secondary school’s science class','the scout troop','the retirement home','the women’s gymnastics club','the apprentice electricians']);
     return {from:'A teacher in ' + v.name, title:'A visit to the site', text:'Could ' + g + ' from ' + v.name + ' visit a drill site? They promise to wear helmets.', opts:[
       {l:'Host them', c:3, m:[[v, 2]], why:'Site visit', p:0.8, bad:{m:[[v, -1]], news:'During the visit from ' + v.name + ' a child slips in the mud pit. The parents complain to the school.'}, news:'The visit from ' + v.name + ' is a success. The drawings arrive a week later.'},
@@ -700,7 +703,7 @@ const LETTERS = [
     return {from:'Your site crew near ' + v.name, title:'A cow on the site', text:p + '’s cow ' + cow + ' has walked onto the site near ' + v.name + ' and lies down next to the mud pump.', opts:[
       {l:'Walk her home with a cheese basket', c:1, m:[[v, 2]], why:'Returned a cow', news:cow + ' is walked home with a cheese basket. ' + p + ' thanks the crew.'},
       {l:'Make her the mascot', m:[[ALL, 1]], why:'Cow mascot', news:cow + ' appears on the next brochure.'},
-      {l:'Bill the farmer for the delay', g:3, m:[[v, -2]], why:'Billed a farmer for his cow', news:p + ' receives a bill for ' + cow + '. The valley hears about it.'}]}; },
+      {l:'Bill the farmer for the delay', g:3, m:[[v, -2]], why:'Billed a farmer for a cow', news:p + ' receives a bill for ' + cow + '. The valley hears about it.'}]}; },
   () => { const v = evVil(), p = who(), cake = pick(['a cream tart','a plum tart','an apple cake','a sugar tart','a plate of croissants','a basket of meringues with double cream']);
     return {from:p + ', ' + v.name, title:'Something for the crew', text:'An elderly neighbour from ' + v.name + ' brings ' + cake + ' for the drill crew “because they look cold”.', opts:[
       {l:'Accept with thanks', m:[[v, 1]], why:'Accepted a cake', news:'The crew eats ' + cake + ' and sends a thank-you card signed by everyone.'},
@@ -711,7 +714,7 @@ const LETTERS = [
       {l:'Accept', g, m:[[ALL, -2]], why:'Tanks on the access roads', news:'The army rolls through the valley on your roads for a week.'},
       {l:'Accept, but only at night', g:Math.round(g/2), m:[[ALL, -1]], why:'Night manoeuvres', news:'Night manoeuvres on your roads. Fewer witnesses, more complaints about headlights.'},
       {l:'Refuse', news:'The army trains elsewhere.'}]}; },
-  () => { const inst = pick(['the national seismological service','a university geophysics team','a young researcher with a grant','the cantonal geology office']);
+  () => { if (S.seismo || has('seisnet')) return null; const inst = pick(['the national seismological service','a university geophysics team','a young researcher with a grant','the cantonal geology office']);
     return {from:inst, title:'Seismometers', text:inst[0].toUpperCase() + inst.slice(1) + ' would like to install seismometers around your sites and publish the data.', opts:[
       {l:'Yes, and publish everything', c:10, m:[[ALL, 2]], why:'Published the seismic data', fn:() => { S.seismo = true; }, news:'Seismometers go in. From now on quakes hurt less: people trust the numbers.'},
       {l:'Yes, but keep the data private', c:5, m:[[ALL, -1]], why:'Kept the data private', news:'Seismometers go in. The data is “under review”.'},
@@ -852,12 +855,12 @@ const REACT = {
         {l:'Sell a share of the future heat', g:200, m:[[ALL, -2]], why:'Sold future heat to a fund', news:'A fund buys part of the future heat revenue. The valley reads about it in the business pages.'}]})]
 };
 const SILLY = {'A cow on the site':1, 'Nervous animals':1, 'Wedding photos':1, 'A blessing':1, 'A merchandise idea':1, 'A rehearsal room':1, 'Something for the crew':1};
-function maybeEvent(){ if (S.month < 3 || S.event || S.offer) return; const fresh = (S.hap || []).filter(h => !h.used && h.m >= S.month - 4 && REACT[h.k]);
+function maybeEvent(){ if (S.month < 3 || S.event || S.offer || S.over) return; const fresh = (S.hap || []).filter(h => !h.used && h.m >= S.month - 4 && REACT[h.k]);
   if (S.month - (S.lastEvent || 0) < (fresh.length ? 2 : 3)) return;
-  if (fresh.length && Math.random() < 0.8){ for (const h of fresh.slice().reverse()){ h.used = true; const e = pick(REACT[h.k])(h); if (e){ S.lastEvent = S.month; S.event = e; S.paused = true; showEvent(); return; } } }
+  if (fresh.length && Math.random() < 0.8){ for (const h of fresh.slice().reverse()){ h.used = true; const e = pick(REACT[h.k])(h); S.seen = S.seen || {}; if (e && S.month - (S.seen[e.title] ?? -99) >= 24){ S.seen[e.title] = S.month; S.lastEvent = S.month; S.event = e; S.paused = true; showEvent(); return; } } }
   if (Math.random() > 0.45) return;
-  const rigs = S.obj.some(o => RIG[o.type] || o.type === 'testrig');
-  for (let i = 0; i < 8; i++){ const e = pick(LETTERS)(); if (!e || SILLY[e.title]) continue; if (!rigs && /\b(rig|rigs|drill\w*|site|crew)\b/i.test(e.title + ' ' + e.text)) continue; S.lastEvent = S.month; S.event = e; S.paused = true; showEvent(); return; } }
+  const rigs = S.obj.some(o => (RIG[o.type] || o.type === 'testrig') && o.on && !o.released && !o.burnt && !o.dismantling); S.seen = S.seen || {};
+  for (let i = 0; i < 8; i++){ const e = pick(LETTERS)(); if (!e || SILLY[e.title] || S.month - (S.seen[e.title] ?? -99) < 48) continue; if (!rigs && /\b(rig|rigs|drill\w*|crew|noise)\b/i.test(e.title + ' ' + e.text)) continue; S.seen[e.title] = S.month; S.lastEvent = S.month; S.event = e; S.paused = true; showEvent(); return; } }
 function fxText(o, k, rig){ k = k || LK; const bits = []; if (o.c && !rig) return 'A promise. Do it on the map within four months: ' + fmt(o.c*k) + '.'; if (o.c) bits.push('costs ' + fmt(o.c*k)); if (o.g && o.p === undefined) bits.push('brings ' + fmt(o.g*k)); if (o.bad && o.bad.c) bits.push('can cost ' + fmt(o.bad.c*k) + ' more'); if (o.note) bits.push(o.note);
   if (o.p === undefined) for (const [t, n] of o.m || []) bits.push((t === ALL ? 'everyone' : t.name) + ' ' + (n > 0 ? '+' : '−') + Math.abs(n));
   return bits.length ? bits.join(' · ') : (o.p === undefined ? 'nothing changes' : 'we will see how it goes'); }
@@ -979,7 +982,7 @@ const HZ = {
 const faultIdx = (o, x, d) => { let best = 0, bd = 1e9; faultsFor(o.line).forEach((f, i) => { const dd = Math.abs(x - (f.x + d*f.s)); if (dd < bd){ bd = dd; best = i; } }); return best; };
 function drillEvent(o, t, dr){ if (S.event || S.offer) return false;
   const d = dr.pos.d, v = nearestVillage(o.x, o.y), here = 'the rig near ' + v.name, roll = k => hash(o.id, (d*7)|0, k, S.seed);
-  const ask = (title, text, opts) => { if (S.event || S.offer) return false; S.event = {from:'Drilling supervisor, ' + here + ', ' + M(d), title, text, opts, rig:o.id}; S.paused = true; showEvent(); return true; };
+  const ask = (title, text, opts) => { if (S.event || S.offer || S.over) return false; S.event = {from:'Drilling supervisor, ' + here + ', ' + M(d), title, text, opts, rig:o.id}; S.paused = true; showEvent(); return true; };
   if (t === ROCK.SALT && !dr.saltMud && !dr.zones.salt){ dr.zones.salt = 1;
     return ask('Salt and anhydrite', 'The cuttings show salt and anhydrite at ' + M(d) + '. Water-based mud dissolves salt and lets anhydrite take on water. Anhydrite that swells turns into gypsum and lifts the ground; whole towns have cracked that way.', [
       {l:'Switch to salt-saturated mud', c:DRILL.saltMud, fn:() => { dr.saltMud = true; }, news:'Salt-saturated mud near ' + v.name + '. The layer is crossed cleanly.'},
@@ -1015,13 +1018,15 @@ function quakeHit(epi, mag, induced, text){ const n = nearestVillage(epi.x, epi.
   else for (const v of S.vil){ const d = v === n ? near : near*0.4; drop[v.id] = d; bump(v, 'Felt quake', -d); }
   for (const v of S.vil) v.mute = mag >= 2.5 ? CFG.QUAKE_MUTE : 1; S.quakeBoost = 6; shake = 1; sfx('quake');
   let claims = 0; if (induced && mag >= 2.3){ claims = Math.round(800*Math.pow(2, mag - 2.5)*(church ? 3 : 1)); S.cash -= claims; acct('Earthquake damage claims', -claims); }
-  news(text + (church ? ' The church of ' + n.name + ' collapses; nobody is inside.' : mag >= 2.5 ? ' Cracked plaster and fallen tiles in ' + n.name + '.' : ' Felt in ' + n.name + '.') + (claims ? ' Damage claims paid: ' + fmt(claims) + '.' : '') + ' Support falls ' + (church ? 'by 10 points everywhere.' : 'by about ' + Math.round(near) + ' points in ' + n.name + ', less elsewhere.'));
+  news(text + (church ? ' The church of ' + n.name + ' collapses; nobody is inside.' : mag >= 2.5 ? ' Cracked plaster and fallen tiles in ' + n.name + '.' : ' Felt in ' + n.name + '.') + (claims ? ' Damage claims paid: ' + fmt(claims) + '.' : '') + ' Support falls ' + (church ? 'by 10 points everywhere.' : 'by about ' + Math.round(near) + (Math.round(near) === 1 ? ' point' : ' points') + ' in ' + n.name + ', less elsewhere.'));
   crisis({kind:'quake', induced, mag, v:n.id, church, drop}); }
 /* the middle years: the canton's review, the committee, oil prices, elections, a quake somewhere else */
 function heatedCount(){ return S.vil.filter(v => v.heat === 'on').length; }
 function midTick(){ const m = S.month;
+  if (m % 12 === 9 && m < CFG.END && drilledWell()) news('The autumn feast is next month. A Fête de la géothermie in November counts twice.');
   if (m === 60 && !S.review){ const h = heatedCount(), k = h === 0 ? 'heat' : h === 1 ? 'second' : 'third'; S.review = {k, due:k === 'heat' ? 84 : 96, t:{heat:'deliver heat to at least one village by January of year 8', second:'deliver heat to a second village by January of year 9', third:'run a power plant or heat all three villages by January of year 9'}[k]};
     news('The canton’s five-year review of the concession: the Company must ' + S.review.t + '. Otherwise it pays a deposit of ' + fmt(2000) + ' and loses credibility.'); }
+  if ((m === 60 || m === CFG.END - 24 || m === CFG.END - 15) && !S.obj.some(o => o.type === 'lobby')) news('The vote is in ' + (CFG.END - m) + ' months. The campaign in the last six months runs through the Maison de la géothermie, which needs the Centre de compétences, an access road and a few months of building.');
   if (S.review && !S.review.done && m >= S.review.due){ S.review.done = true; const ok = S.review.k === 'heat' ? heatedCount() >= 1 : S.review.k === 'second' ? heatedCount() >= 2 : heatedCount() >= 3 || S.obj.some(o => o.type === 'plant' && o.mw && o.mw.mwE > 0);
     if (ok){ for (const v of S.vil) bump(v, 'Met the canton’s target', 2); news('The canton confirms the target is met.'); } else { S.cash -= 2000; acct('Deposit to the canton', -2000); for (const v of S.vil) bumpG(v, 'Missed the canton’s target', 'hi', -5); news('The target is missed. The canton takes a deposit of ' + fmt(2000) + ' and says so publicly.'); } }
   if (m >= 48 && !S.cmte && fcBand()[2] < 68){ const t = S.vil[0], f = freeSpot(t.x - t.w/2 - 10, t.y + 6, 10, () => Math.random()) || {x:t.x - t.w/2 - 10, y:t.y + 6}; S.cmte = {s:1, id:add('committee', f.x, f.y, {v:0, opp:1, w:6, hh:7}).id}; news('A referendum committee forms in ' + t.name + ': “Jura sans fracking”. It collects signatures for the vote and files objections against every new site.'); }
@@ -1062,7 +1067,7 @@ function crisisDone(o){ const c = S.crises.find(x => x.id === o.crisis); if (!c)
   if (o.ck === 'church'){ v.churchRuined = false; v.churchBuild = S.month + 6; }
   if (o.ck === 'clean'){ if (v.spring.lvl === 2) v.spring.lvl = 0; else if (v.spring.lvl === 3) v.spring.treated = true; } }
 function crisisBroken(o){ const c = S.crises.find(x => x.id === o.crisis); if (!c) return; for (const v of S.vil){ const d = (c.drop[v.id] || 0)*o.share*0.8; if (d > 0.05) bump(v, 'Broken promise', -d); } }
-function crisisTick(){ S.crises = S.crises || []; if (!S.event && !S.offer && S.crisisQ && S.crisisQ.length){ S.event = S.crisisQ.shift(); S.paused = true; showEvent(); } for (const c of S.crises) if (c.exposeAt && !c.exposed && S.month >= c.exposeAt){ c.exposed = true; const v = S.vil[c.v];
+function crisisTick(){ S.crises = S.crises || []; if (!S.event && !S.offer && !S.over && S.crisisQ && S.crisisQ.length){ S.event = S.crisisQ.shift(); S.paused = true; showEvent(); } for (const c of S.crises) if (c.exposeAt && !c.exposed && S.month >= c.exposeAt){ c.exposed = true; const v = S.vil[c.v];
     for (const u of S.vil){ const d = (c.drop[u.id] || 0)*0.8; if (d > 0.05) bump(u, 'Caught blaming others', -d); } if (c.kind === 'water') for (const u of S.vil) bumpG(u, 'Caught blaming others', 'fa', -6);
     news(c.kind === 'quake' ? 'The seismological service places the earthquake under ' + v.name + ' at the depth of the Company’s well. The statement that it was natural is quoted back everywhere.' : 'The water office traces the pollution in the spring of ' + v.name + ' to the Company’s drilling fluid. The farmers ask for an apology.'); }
   if (S.natQ && S.month === S.natQ.m && !S.natQ.done){ S.natQ.done = true; const ex = 20 + Math.random()*(MW - 40), ey = 15 + Math.random()*(MH - 30);
@@ -1075,7 +1080,7 @@ function stimulate(pl, i){ if (!pl.on || pl.stim >= 0) return 'Not now.'; const 
   S.cash -= st.c; acct('Stimulation', -st.c); pl.stim = i; pl.age = 0; pl.stimUntil = S.t + st.mo; const w = byId(pl.prod) || byId(pl.inj), pos = w ? tip(w) : {x:sx(pl.x), d:380};
   if (hash(pl.id, S.month, i, S.seed) < (i === 0 ? 0.5 : 0.06) + (w && faultNear(w, pos.d) ? 0.3 : 0)) doQuake(w || pl, (i === 0 ? 'The large injection' : 'One stage of the stimulation') + ' near ' + nearestVillage(pl.x, pl.y).name + ' sets off a felt earthquake. "Within the expected envelope," says the operator.', pos);
   else news('Stimulation ' + (i === 0 ? 'done' : 'under way') + ' near ' + nearestVillage(pl.x, pl.y).name + '. The seismometers record tiny tremors; nobody feels them.'); return 'ok'; }
-function offerInvest(k){ if (S.invest[k] || S.offer || S.event) return; S.offer = k; S.paused = true; showOffer(k); }
+function offerInvest(k){ if (S.invest[k] || S.offer || S.event || S.over) return; S.offer = k; S.paused = true; showOffer(k); }
 const aqT = (li, x, d) => tempAt(li, x, d) + 14;
 const wellT = o => { const tb = tip(o), wp = openIn(o, ROCK.WARM) && wellPts(o).find(p => rockL(o.line, p.x, p.d) === ROCK.WARM); return wp ? aqT(o.line, tb.x, wp.d) : tempAt(o.line, tb.x, tb.d); };   // aquifer water comes up warmer than the rock around it, as measured in deep wells
 const tempAt = (li, x, d) => Math.round(11 + d*0.315 + 6*(vn(x/140, d/60 + li, 12, S.seed) - 0.5));   // about 31.5 °C per km
@@ -1096,7 +1101,7 @@ function doublet(o){
   if (!nI) return {why:'The injection well has no open hole in ' + (plant ? 'the granite' : 'the Muschelkalk aquifer') + ' to take the water back.', dry:true};
   if (plant && (o.stim < 0 || S.t < (o.stimUntil || 0))) return {why:o.stim < 0 ? 'The granite has to be stimulated first.' : 'Stimulation under way.'};
   const bp = tip(P), bi = tip(I), T0 = plant ? tempAt(P.line, bp.x, bp.d) : aqT(P.line, bp.x, wellPts(P).find(p => rockL(P.line, p.x, p.d) === ROCK.WARM).d);
-  const perm = permAt(P.line, bp.x, bp.d), injOk = Math.min(1, 0.3 + permAt(I.line, bi.x, bi.d)), open = Math.min(1, nP/(plant ? 40 : 12));
+  const perm = Math.min(1, permAt(P.line, bp.x, bp.d) + (o.acid ? 0.3 : 0)), injOk = Math.min(1, 0.3 + permAt(I.line, bi.x, bi.d)), open = Math.min(1, nP/(plant ? 40 : 12));
   const flow = plant ? (10 + 80*perm*STIM[o.stim].out)*injOk*open : (4 + 40*perm)*injOk*open;
   const gap = Math.hypot((bp.x - bi.x)*15.6, (P.line - I.line)*CFG.LINE_DY*CFG.MPX), onset = gap < 400 ? 30 : gap < 800 ? 50 : 76, cool = Math.max(0, (o.age || 0) - onset)*(gap < 400 ? 0.35 : 0.22);   // the cooled water reaches the production well after some years
   const T = T0 - cool, Tuse = T + (o.hp ? 10 : 0);
@@ -1124,6 +1129,7 @@ function advance(dm){ while (dm > 1e-9 && !S.over){ const step = Math.min(dm, S.
 function continuous(dm){
   for (const l of S.lines) for (const sg of l.segs) if (sg.active && sg.arrived){ sg.prog += dm*CFG.SURVEY_SPEED; const n = sg.x1 - sg.x0; reveal(l.id, sx(sg.x0), sx(sg.x0 + Math.min(n, sg.prog)), 0, UGH, Math.min(3, sg.pass + 1)); if (sg.prog >= n){ sg.active = false; for (const e of S.ents) if (e.seg === sg.id){ e.leaving = true; e.vs = e.vs > 0 ? 40 : -40; e.seg = null; } } }
   for (const o of S.obj.slice()){
+    if (o.waitRoad && roadFree(o)){ o.waitRoad = false; o.t0 = S.t; o.ready = S.t + ((DEF[o.type] || {}).build || 0)*bf(); news('A road now reaches the ' + DEF[o.type].n.toLowerCase() + ' site near ' + nearestVillage(o.x, o.y).name + '. Building starts.'); }
     if (!o.on && !o.burnt && !o.waitRoad && S.t >= o.ready && o.arrived){ o.on = true; onReady(o); }
     if (o.dismantling && S.t >= o.dismantling){ withdraw(o); continue; }
     if (o.drilling){ if (!isBlocked(o)) stepDrill(o, dm); else if (!S.event){ const c = (DRILL.dayRate[o.type] || 20)*DPM*dm; S.cash -= c; acct('Rig day rates', -c); o.spent += c; } }
@@ -1589,7 +1595,8 @@ function obj(g, o, t){
     case 'banner': { const a = P(x - 6, y, 0), b = P(x + 6, y, 0); R(g, '#5a4632', a[0], a[1] - 8, 0.7, 8); R(g, '#5a4632', b[0], b[1] - 8, 0.7, 8); billboard(g, x, y, 4, ['JURA SANS', 'FRACKING'], 4, '#b3261e', 24); break; }
     case 'rumour': billboard(g, x, y, 6 + bob, ['?'], 6, '#1c2225'); break;
     case 'committee': { shadowAt(g, x - 3, y - 1.5, 6, 3); box(g, x - 2.5, y - 1, 5, 2, 1.8, '#a07850', {top:'#f4f4f0', line:'rgba(0,0,0,.4)'}); for (let i = 0; i < 3; i++){ const q = P(x - 1.6 + i*1.4, y, 1.85); R(g, '#fff', q[0] - 0.5, q[1] - 0.4, 1, 0.6); }
-      person(g, x - 1, y + 2.5, 0, '#2f6b3a', null, '#c8a24a', {face:-1}); person(g, x + 2, y - 2.5, 0, '#8a3a2e', null, '#4a3220', {face:1}); billboard(g, x, y, 9, ['RÉFÉRENDUM'], 3, '#b3261e'); break; }
+      person(g, x - 1, y + 2.5, 0, '#2f6b3a', null, '#c8a24a', {face:-1}); person(g, x + 2, y - 2.5, 0, '#8a3a2e', null, '#4a3220', {face:1}); billboard(g, x, y, 9, ['RÉFÉRENDUM'], 3, '#b3261e');
+      { const c = S.cmte || {s:0}, q = P(x, y + 4, 0), n = Math.round(clamp(c.s, 0, 10)); R(g, '#3a3a3a', q[0] - 8.5, q[1] - 0.5, 17, 3); for (let i = 0; i < 10; i++) R(g, i < n ? '#d23a2a' : '#e8e2d0', q[0] - 8 + i*1.6 + 0.1, q[1], 1.4, 2); } break; }
     case 'task': { const k = o.kind; if (k === 'farmer'){ person(g, x, y, 0, '#5d6b3a', null, '#c8a24a', {face:1}); cow(g, x + 4, y + 2, -1, t, false, true); }
       else if (k === 'priest'){ person(g, x, y, 0, '#1c2225', null, '#1c2225'); const p = P(x, y, 0); R(g, '#fff', p[0] - 0.2, p[1] - 4.4, 0.6, 0.4); }
       else if (k === 'teacher'){ person(g, x, y, 0, '#8a4a6a', null, '#4a3220'); for (const dx of [2.2, 3.6]){ const q = P(x + dx, y + 1, 0); g.save(); g.translate(q[0], q[1]); g.scale(0.7, 0.7); g.translate(-q[0], -q[1]); person(g, x + dx, y + 1, 0, ['#d64545', '#2f6fb0'][dx > 3 ? 1 : 0], null, '#f2c230'); g.restore(); } }
@@ -1857,7 +1864,7 @@ function hud(){
   $('#uncutbtn').hidden = !(view === 'map' && cutLine !== null && S.started && !S.over);
   const hint = $('#hint'); let hs = '';
   if (linking){ const st = byId(linking.st); hs = st ? 'Linking the ' + ROLE[linking.role] + ' of the ' + DEF[st.type].n.toLowerCase() + ' near ' + nearestVillage(st.x, st.y).name + ': click a rig on the map. Esc cancels.' : ''; }
-  else if (plan) hs = ''; else if (tool) hs = anchor ? 'Now click the village to heat.' : DEF[tool].n + ': ' + DEF[tool].h;
+  else if (plan) hs = ''; else if (tool) hs = anchor ? 'Now click the village to heat.' : (RIG[tool] || tool === 'testrig') && hover && view === 'map' && onRoad(hover.x, lineNear(hover.y).y) ? 'Here the grid line runs along the main road: a rig on this spot closes the road, and the village is cut off a little every month. Move along the line to a spot off the road.' : DEF[tool].n + ': ' + DEF[tool].h;
   else if (view === 'section') hs = 'Line ' + S.lines[line].name + '. Drag to move, + and − to zoom. Click a rig at the surface, then Draw well. Where the bands break there is probably a fault; only drilling shows the rock.';
   else if (view === 'map') hs = cutLine !== null ? 'The block is cut along line ' + S.lines[cutLine].name + '. Click the face to open it flat.' : 'Click a dotted grid line to cut the block. Click a village to hear it.';
   if (hs){ if (hint.textContent !== hs){ hint.textContent = hs; hint.dataset.plan = ''; } hint.hidden = false; } else if (!plan) hint.hidden = true;
@@ -1883,7 +1890,7 @@ function advice(v, cs){ const t = [], has = k => (v.causes[k] || 0);
   if (has('Public-order unit') < -1 || has('Police presence') < -1) t.push('Uniforms cost mood every month, and the anger comes back after they leave.');
   if (polluted(v)) t.push('The fountain stays brown. Case your wells through groundwater.');
   return t.slice(0, 3); }
-const WARMJOKE = ['{v}: snow no longer settles on the main street.', '{v}: a market gardener puts up a greenhouse on the heat pipe and sells tomatoes in April.', '{v}: the church is heated through the winter for the first time.', '{v}: a farmer heats his cowshed from the network. The vet says the calves do better.', '{v}: the pond no longer freezes. The fire brigade’s ice-hockey match moves to town.', '{v}: two oil tanks are sold for scrap.', '{v}: an absinthe distiller runs his still on the Company’s heat and writes it on the label.', '{v}: the farmers ask whether the heat could dry the hay. The Company says it will look into it.', '{v}: a pig farm connects. The neighbours notice the manure pit smells less in winter.', '{v}: the swimming pond stays open into November.', '{v}: the cheese dairy asks for a lower tariff for its cellar.', '{v}: the heat bills arrive. Most are lower than last year’s oil.', '{v}: steam rises from the vents on cold mornings. The weather station reports fog twice.', '{v}: the ski club runs its winter course in the next valley.', '{v}: the absinthe distillery doubles its output and hires two people.'];
+const WARMJOKE = ['{v}: snow no longer settles on the main street.', '{v}: a market gardener puts up a greenhouse on the heat pipe and sells tomatoes in April.', '{v}: the church is heated through the winter for the first time.', '{v}: a farmer heats his cowshed from the network. The vet says the calves do better.', '{v}: the pond no longer freezes. The ducks stay for the winter.', '{v}: two oil tanks are sold for scrap.', '{v}: an absinthe distiller runs his still on the Company’s heat and writes it on the label.', '{v}: the farmers ask whether the heat could dry the hay. The Company says it will look into it.', '{v}: a pig farm connects. The neighbours notice the manure pit smells less in winter.', '{v}: the swimming pond stays open into November.', '{v}: the cheese dairy asks for a lower tariff for its cellar.', '{v}: the heat bills arrive. Most are lower than last year’s oil.', '{v}: steam rises from the vents on cold mornings. The weather station reports fog twice.', '{v}: the ski club runs its winter course in the next valley.', '{v}: the absinthe distillery doubles its output and hires two people.'];
 const WISH = {
   football:{t:'new jerseys for the football club', cost:60}, fountain:{t:'the old fountain on the square restored', cost:250, ok:v => !polluted(v)}, bus:{t:'an evening post bus to town for a year', cost:300},
   bench:{t:'heated benches at the bus stop', cost:40}, petanque:{t:'a heated pétanque court, for the winter league', cost:50}, pavement:{t:'heated pavement in front of the church, so nobody salts it again', cost:120}, steam:{t:'warm water in the village fountain, for the steam at Christmas', cost:70, ok:v => !polluted(v)}, choir:{t:'the choir’s trip to the cantonal festival paid for', cost:60}, pool:{t:'the swimming pond reopened for summer', cost:200},
@@ -1895,13 +1902,13 @@ const WISH = {
   school:{t:'a new sports hall for the school', months:12, done:v => S.obj.some(o => o.type === 'school' && o.on && o.v === v.id)} };
 function wishTick(){
   for (const v of S.vil){ const w = v.wish;
-    if (!w){ if (S.month >= 3 && S.month < CFG.END - 8 && (v.wishNext || 0) <= S.month && hash(S.month, v.id, 31, S.seed) < 0.3){ const ks = Object.keys(WISH).filter(k => (!WISH[k].ok || WISH[k].ok(v)) && k !== v.lastWish), k = ks[(hash(S.month, v.id, 32, S.seed)*ks.length)|0], d = WISH[k];
+    if (!w){ if (S.month >= 3 && S.month < CFG.END - 8 && (v.wishNext || 0) <= S.month && hash(S.month, v.id, 31, S.seed) < 0.3){ const ks = Object.keys(WISH).filter(k => (!WISH[k].ok || WISH[k].ok(v)) && k !== v.lastWish && !(v.granted || []).includes(k)), k = ks[(hash(S.month, v.id, 32, S.seed)*ks.length)|0], d = WISH[k]; if (!d) continue;
         v.wish = {k, until:S.month + (d.months || 6)}; news(v.name + ' would like ' + d.t + (d.cost ? ' (' + fmt(d.cost) + ')' : '') + ' by ' + MONTHS[v.wish.until % 12] + ', year ' + ((v.wish.until/12|0) + 1) + '. A granted wish is remembered for two years.'); } continue; }
     const d = WISH[w.k];
     if (d.keep && !d.keep(v)){ wishEnd(v, false); continue; }
     if (d.done && d.done(v)){ wishEnd(v, true); continue; }
     if (S.month >= w.until) wishEnd(v, !!d.keep); } }
-function wishEnd(v, ok){ const d = WISH[v.wish.k]; if (ok){ bump(v, 'Wish granted', 6); v.kept = S.month + 24; v.trust = (v.trust || 0) + 1; news(v.name + ' got its wish: ' + d.t + '. Mood +6, and +0.4 a month for two years.'); }
+function wishEnd(v, ok){ const d = WISH[v.wish.k]; if (ok){ if (!['fest', 'choir'].includes(v.wish.k)) (v.granted = v.granted || []).push(v.wish.k); bump(v, 'Wish granted', 6); v.kept = S.month + 24; v.trust = (v.trust || 0) + 1; news(v.name + ' got its wish: ' + d.t + '. Mood +6, and +0.4 a month for two years.'); }
   else { bump(v, 'Wish ignored', -4); news(v.name + ' wanted ' + d.t + '. It did not happen. Mood −4.'); }
   v.lastWish = v.wish.k; v.wish = null; v.wishNext = S.month + 4; }
 function wishHtml(v){ const w = v.wish; if (!w) return ''; const d = WISH[w.k], left = w.until - S.month;
@@ -2025,6 +2032,7 @@ function renderLedger(){ const el = $('#ledger'), A = (S.acct && S.acct.last) ||
     { const tasks = S.obj.filter(o => o.type === 'task'), rows2 = [];
       if (S.review) rows2.push('<li><b>The canton:</b> ' + S.review.t + (S.review.done ? ' (settled)' : '') + '.</li>');
       for (const t of tasks) rows2.push('<li><b>Promised in ' + S.vil[t.v].name + ':</b> ' + t.act.toLowerCase() + ' · ' + fmt(t.cost) + ' · due ' + MONTHS[t.due % 12] + ', year ' + ((t.due/12|0) + 1) + '</li>');
+      rows2.push('<li><b>The vote:</b> ' + MONTHS[CFG.END % 12] + ', year ' + ((CFG.END/12|0) + 1) + '. The campaign opens six months before' + (S.obj.some(o => o.type === 'lobby') ? '.' : ' and needs the Maison de la géothermie, not built yet.') + '</li>');
       if (S.cmte && byId(S.cmte.id)) rows2.push('<li><b>Referendum committee:</b> strength ' + Math.round(S.cmte.s) + ' of 10.</li>');
       if ((S.noNear || 0) > S.month) rows2.push('<li><b>Committee demand:</b> no new site within a kilometre of a village until ' + MONTHS[S.noNear % 12] + ', year ' + ((S.noNear/12|0) + 1) + '.</li>');
       h += card('Obligations', rows2.length ? '<ul class="dec">' + rows2.join('') + '</ul><p class="sub">Promises are done by clicking their marker (!) on the map.</p>' : '<p class="sub">No open promises.</p>'); }
@@ -2137,13 +2145,14 @@ function renderCard(){
         if ((o.scale || 0) > 0.05) s += '<div class="sub">Scale in the heat exchanger costs ' + Math.round(o.scale*100) + '% of the output. A month switched off lets the crew clean it.</div>';
         if (!S.pipes.some(p => p.from === o.id) && !(o.type === 'plant' && S.plines.some(l => l.from === o.id))) s += '<div class="sub">No heat pipe' + (o.type === 'plant' ? ' or power line' : '') + ' yet: nothing can be sold.</div>';
         if (r.cool >= 1) s += '<div class="sub">The water comes up ' + Math.round(r.cool) + ' °C colder than at the start: the cooled water from the injection well is arriving. A new production well further away resets it' + (o.type === 'station' ? '; extra heat pumps make up 10 °C.' : '.') + '</div>';
+        if (o.type === 'station' && o.on && !o.acid && r.flow && r.flow < 25) acts += '<button class="btn" data-a="acid">Acid treatment of the wells (' + fmt(600) + ')</button>';
         if (o.type === 'station' && o.on && !o.hp && r.flow) acts += '<button class="btn" data-a="heatpump">Extra heat pumps (' + fmt(1500) + ', +' + fmt(40) + '/mo)</button>';
         if (o.type === 'station' && o.on) acts += '<span class="sub" style="margin:0 4px">Heat tariff:</span>' + ['low', 'standard', 'high'].map(k => '<button class="btn" data-a="tariff" data-v="' + k + '" aria-pressed="' + ((S.tariff || 'standard') === k) + '">' + k + '</button>').join('');
         if (o.type === 'plant' && o.stim < 0 && o.on) acts += STIM.map((p, i) => '<button class="btn" data-a="stim" data-v="' + i + '" title="' + p.d + '">' + p.n + ' (' + fmt(p.c) + ')</button>').join('');
         if (o.on) acts += '<button class="btn" data-a="onoff">' + (o.off ? 'Switch on' : 'Switch off' ) + '</button>'; }
       if (view === 'map' && o.line !== undefined) acts += '<button class="btn" data-a="open">Open section</button>';
       if (!o.drilling) acts += '<button class="btn" data-a="rm">Dismantle (' + (DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0) < 1 ? Math.round((DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0))*4.3) + ' weeks' : (DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0)) + ' months') + ')</button>';
-    } else if (!opp && !SITE[o.type] && DEF[o.type] && !o.burnt){ if (!s) s = DEF[o.type].h; if (o.type === 'suit' && o.on) s = S.t - (o.t0 || 0) > 6 ? 'Everybody in ' + v.name + ' knows him by now. They call him “le Monsieur”, and the handshake has lost its surprise. In another village it would still work.' : 'Shaking hands with the maire of ' + v.name + '. Rumours nearby fade faster, banners come down.'; if (o.type === 'stand' && o.on !== false){ const lc = lessonCard(o); s += lc[0]; acts += lc[1]; } if (o.type !== 'congress') acts += '<button class="btn" data-a="rm">' + (o.type === 'police' || o.type === 'riot' ? 'Withdraw' : 'Remove') + '</button>'; }
+    } else if (!opp && !SITE[o.type] && DEF[o.type] && !o.burnt){ if (!s) s = DEF[o.type].h.replace(/Click [^.:]*[.:]\s*/g, '').replace(/(^|\. )([a-z])/g, (m, a, b) => a + b.toUpperCase()); if (o.type === 'suit' && o.on) s = S.t - (o.t0 || 0) > 6 ? 'Everybody in ' + v.name + ' knows him by now. They call him “le Monsieur”, and the handshake has lost its surprise. In another village it would still work.' : 'Shaking hands with the maire of ' + v.name + '. Rumours nearby fade faster, banners come down.'; if (o.type === 'stand' && o.on !== false){ const lc = lessonCard(o); s += lc[0]; acts += lc[1]; } if (o.type !== 'congress') acts += '<button class="btn" data-a="rm">' + (o.type === 'police' || o.type === 'riot' ? 'Withdraw' : 'Remove') + '</button>'; }
     if (o.burnt) acts = '<button class="btn" data-a="rm">Clear the ruin</button>';
     if (o.dismantling){ const left = o.dismantling - S.t; s = '<span class="neg">Being dismantled: gone in about ' + (left < 1 ? Math.max(1, Math.round(left*4.3)) + ' week' + (Math.round(left*4.3) > 1 ? 's' : '') : left.toFixed(1) + ' months') + '.</span> ' + s; acts = ''; }
     h += '<div>' + s + '</div>' + (acts ? '<div class="acts">' + acts + '</div>' : '');
@@ -2197,11 +2206,11 @@ function showOffer(k){ lessonWas = null;
   S.offerData = txt; $('#overlay').hidden = false;
   $('#overlay').innerHTML = '<div class="contract"><h1>' + txt.h + '</h1><div class="sub">' + MONTHS[S.month % 12] + ', year ' + (year() + 1) + '</div><p>' + txt.p + '</p><div class="acts"><button class="btn main" data-a="accept">Sign the amendment</button><button class="btn" data-a="decline">Stay Jurassien</button></div></div>';
 }
-function showEnd(){
+function showEnd(){ S.event = null; S.offer = null;
   const o = S.over, head = {annexed:'Le Jura est rattaché au canton de Berne', won:'The valley votes yes', lost:'The valley votes no', lapsed:'Concession lapses: nothing to vote on', debt:'The bank terminates the agreement'}[o.kind];
   const sub = {annexed:'The Jura is reattached to the canton of Bern. No plebiscite was deemed necessary. The federal government regrets the inconvenience. The Company’s rigs are craters, its staff are safe in another canton, and nobody will vote on anything for a while.', won:'The concession is extended. The opposition calls the result close and appeals to the cantonal court.', lost:'Dismantling at the Company’s cost begins on Monday. The wells are filled with cement.', lapsed:'Ten years of surveys and brochures produced no heat. The Canton thanks all participants.', debt:'Eight months of insolvency. The investors from out of canton have stopped answering.'}[o.kind];
   $('#overlay').hidden = false;
-  $('#overlay').innerHTML = '<div class="contract"><h1>' + head + '</h1><div class="sub">' + MONTHS[S.month % 12] + ', year ' + (year() + 1) + '</div><p>' + sub + '</p><div class="fig"><div><b>' + o.fc.toFixed(1) + '%</b><span>Yes vote</span></div><div><b>' + o.sold.toFixed(1) + ' GWh</b><span>Energy sold</span></div><div><b>' + o.best.toFixed(1) + '</b><span>Your best</span></div><div><b>' + fmt(S.cash - debt()) + '</b><span>Net cash</span></div></div><p class="sub">Ref. ' + S.seed + '</p><div class="acts"><button class="btn main" data-a="again">New concession</button></div></div>';
+  $('#overlay').innerHTML = '<div class="contract"><h1>' + head + '</h1><div class="sub">' + MONTHS[S.month % 12] + ', year ' + (year() + 1) + '</div><p>' + sub + '</p><div class="fig"><div><b>' + o.fc.toFixed(1) + '%</b><span>Yes vote</span></div><div><b>' + o.sold.toFixed(1) + ' GWh</b><span>Energy sold</span></div><div><b>' + o.best.toFixed(1) + ' GWh</b><span>Your best so far</span></div><div><b>' + fmt(S.cash - debt()) + '</b><span>Net cash</span></div></div><p class="sub">Ref. ' + S.seed + '</p><div class="acts"><button class="btn main" data-a="again">New concession</button></div></div>';
 }
 
 /* ================================================================== sound (Web Audio, synthesised) */
@@ -2304,6 +2313,9 @@ function act(a, v){
   if (a === 'flowtest'){ if (!canPay(DRILL.flowTest)) return toast('A flow test costs ' + fmt(DRILL.flowTest) + '.'); S.cash -= DRILL.flowTest; acct('Flow tests', -DRILL.flowTest); o.test = flowTest(o); news('Flow test near ' + nearestVillage(o.x, o.y).name + ': ' + o.test); return; }
   if (a === 'aroad'){ const r = buildRoad(o); if (r !== 'ok') toast(r); else sfx('coin'); renderCard(); return; }
   if (a === 'poll'){ const r = runPoll(v); if (r !== 'ok') toast(r); else { $('#polls').hidden = false; renderPolls(); } return; }
+  if (a === 'acid'){ if (!canPay(600)) return toast('An acid treatment costs ' + fmt(600) + '.'); S.cash -= 600; acct('Well treatment', -600); o.acid = true; const P = byId(o.prod);
+    news('Hydrochloric acid is pumped into the Muschelkalk at the heat station near ' + nearestVillage(o.x, o.y).name + '. It dissolves the limestone around the open hole and widens the cracks; the water flows more easily.');
+    if (P && hash(o.id, S.month, 71, S.seed) < 0.12) contaminate(P, 1, 'acid and dissolved limestone coming back up through the karst'); renderCard(); return; }
   if (a === 'heatpump'){ if (!canPay(1500)) return toast('Heat pumps cost ' + fmt(1500) + '.'); S.cash -= 1500; acct('Heat pumps', -1500); o.hp = true; news('Extra heat pumps at the heat station near ' + nearestVillage(o.x, o.y).name + ': the network gets 10 °C more, the electricity bill goes up.'); renderCard(); return; }
   if (a === 'tariff'){ S.tariff = v; news('Heat tariff set to ' + v + (v === 'low' ? ': the bills go down, so does the income.' : v === 'high' ? ': more income; the customers notice.' : '.')); renderCard(); return; }
   if (a === 'cmte'){ const c = S.cmte; if (!c) return; if (v === 'debate'){ if (!canPay(30)) return toast('That costs ' + fmt(30) + '.'); S.cash -= 30; acct('Public relations', -30); const p = clamp(0.3 + S.vil[0].sh.hi + (has('chair') ? 0.15 : 0) + (S.seismo || has('seisnet') ? 0.1 : 0), 0.2, 0.85);
@@ -2365,7 +2377,7 @@ function boot(fresh){
   if (!bound){ buildPalette(); bind(); bound = true; requestAnimationFrame(tt => { lastT = tt; frame(tt); }); }
   zoom = $('#stage').clientWidth < 700 ? 2 : 1; fit(); showContract(hasSave);
 }
-window.JF = {act:(a, v) => act(a, v), quakeHit, crisisSay, villageYes, doTask, fcBand, LESSONS, lessonHtml, f35, roadS, scr:(x, y, z) => { const c = $('#game'), r = c.getBoundingClientRect(), p = P(x, y, z || 0); return [r.left + p[0]/CW*r.width, r.top + p[1]/CH*r.height]; }, _draw:(g, o, t) => obj(g, o, t), _veh:(g, k) => vehicle(g, k, 0, 0, 'x', null, 1), OX, OY, borrowShady, repayOne, bankRate, startSecret, addMood, unlockAll:() => { for (const k of Object.keys(DEF).filter(k => DEF[k].bld)) S.obj.push({id:S.nextId++, type:k, x:-400, y:-400, on:true, arrived:true, t0:0, ready:0, w:1, hh:1, test:true}); }, buildRoad, roadPlan, pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, borrow, commitPlan, stimulate, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, secMaxY()); }, select:s => { sel = s; renderCard(); },
+window.JF = {act:(a, v) => act(a, v), her, maybeEvent, roadFree, quakeHit, crisisSay, villageYes, doTask, fcBand, LESSONS, lessonHtml, f35, roadS, scr:(x, y, z) => { const c = $('#game'), r = c.getBoundingClientRect(), p = P(x, y, z || 0); return [r.left + p[0]/CW*r.width, r.top + p[1]/CH*r.height]; }, _draw:(g, o, t) => obj(g, o, t), _veh:(g, k) => vehicle(g, k, 0, 0, 'x', null, 1), OX, OY, borrowShady, repayOne, bankRate, startSecret, addMood, unlockAll:() => { for (const k of Object.keys(DEF).filter(k => DEF[k].bld)) S.obj.push({id:S.nextId++, type:k, x:-400, y:-400, on:true, arrived:true, t0:0, ready:0, w:1, hh:1, test:true}); }, buildRoad, roadPlan, pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, borrow, commitPlan, stimulate, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, secMaxY()); }, select:s => { sel = s; renderCard(); },
   newGame:seed => { newGame(seed); S.started = true; S.paused = false; view = 'map'; cutLine = null; baseMap = null; fit(); $('#overlay').hidden = true; }, setCut:li => { cutLine = li; }, get cutLine(){ return cutLine; }};
 const ready = document.fonts && document.fonts.load ? document.fonts.load('12px "Pixelify Sans"').catch(() => {}) : Promise.resolve();
 ready.then(() => boot(false));
