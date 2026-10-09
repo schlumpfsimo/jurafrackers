@@ -192,7 +192,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #ledger .row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-top:1px dotted var(--line)}
 #steps{position:absolute;top:10px;left:10px;max-width:calc(100% - 20px);padding:4px 10px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #steps span{color:var(--muted)}
-#overlay{position:absolute;inset:0;background:rgba(40,45,52,.55);display:flex;align-items:flex-start;justify-content:center;padding:12px;overflow:auto;z-index:3;box-sizing:border-box}
+#overlay{position:absolute;inset:0;background:rgba(40,45,52,.55);display:flex;align-items:flex-start;justify-content:center;padding:12px;overflow:auto;z-index:6;box-sizing:border-box}
 .contract{margin:auto;background:var(--paper);color:#2b2318;border:1px solid #5a4a2a;max-width:560px;padding:16px 22px;font-size:13.5px;line-height:1.4;position:relative;box-shadow:4px 4px 0 rgba(0,0,0,.25)}
 .contract:before{content:"";position:absolute;inset:5px;border:1px solid #8a7a55;pointer-events:none}
 .contract h1{font-size:19px;margin:0 0 4px;letter-spacing:.04em;text-transform:uppercase;text-align:center}
@@ -537,7 +537,7 @@ function finOptions(tk){ const d = DEF[tk], c = d.cost || 0, r = bankRate(), o =
     o.push({k:'proj', n:'Project loan', loan, rate:rr, now:c*PLANT_TR[0].f, pay:loan*(rr/12)/(1 - Math.pow(1 + rr/12, -FIN_TERM)), t:'Up to ' + fmt(loan) + ' at ' + (rr*100).toFixed(1) + '% over 15 years, paid out with the turbine and commissioning tranches. The site and planning (' + fmt(c*PLANT_TR[0].f) + ') come from your own money. Conditions at every payout: ' + PLANT_CONDS.map(q => lc(q.n)).join('; ') + '. If one is broken, the bank holds back the tranche.'}); }
   return o; }
 const PLANT_TR = [{n:'site and planning', f:0.1}, {n:'turbine', f:0.6}, {n:'commissioning', f:0.3}];
-const PLANT_CONDS = [{n:'Seismic monitoring running', ok:() => has('seisnet')}, {n:'Every felt quake answered in public', ok:() => !(S.crises || []).some(c => c.kind === 'quake' && c.induced && !c.answered)}, {n:'No spoiled spring', ok:() => !S.vil.some(v => polluted(v))}];
+const PLANT_CONDS = [{n:'Seismic monitoring running', ok:() => has('seisnet')}, {n:'Every felt quake of the last six months answered in public', ok:() => !(S.crises || []).some(c => c.kind === 'quake' && c.induced && !c.answered && c.m >= S.month - 6)}, {n:'No spoiled spring', ok:() => !S.vil.some(v => polluted(v))}];
 /* the federal contribution: 60% of deep drilling, seismic surveys, stimulation and the power plant, only at a high standard */
 const FED_CONDS = [{n:'3D seismic of a target', ok:() => S.lines.some(l => l.segs.some(g => g.pass >= 3 && !g.active))}, {n:'Seismic monitoring running', ok:() => has('seisnet')}, {n:'All drilling and seismic data published', ok:() => !!S.seismo},
   {n:'A traffic-light plan for stimulation filed', ok:() => !!S.tlPlan}, {n:'The canton’s review not failed', ok:() => !(S.review && S.review.done && S.review.ok === false)}, {n:'No spoiled spring', ok:() => !S.vil.some(v => polluted(v))}];
@@ -1388,7 +1388,7 @@ function monthTick0(){
   wishTick(); campaignTick(); if (!S.over && !S.offer && !S.event) maybeEvent();
   for (let i = 0; i < 2; i++) if (rnd(300 + i) < 0.7) spawnTraffic(false);
   if (S.red >= CFG.RED_LIMIT) end('debt'); else if (S.month >= CFG.END) end(!S.producing && S.sold < 1 ? 'lapsed' : Math.round(forecast()*10)/10 >= 50.1 ? 'won' : 'lost');
-  if (!S.over) try { localStorage.setItem('jf3_save', JSON.stringify(Object.assign({}, S, {event:null, KN:[...KN.entries()].map(([k,v]) => [k, Array.from(v)])}))); } catch (e) {}
+  if (!S.over) try { localStorage.setItem('jf3_save', JSON.stringify(Object.assign({}, S, {event:null, crisisQ:(S.event && S.event.crisis ? [S.event] : []).concat(S.crisisQ || []), KN:[...KN.entries()].map(([k,v]) => [k, Array.from(v)])}))); } catch (e) {}
 }
 function committee(){ const recs = ['publish the micro-seismic data within 24 hours', 'hold a public information evening per village', 'reduce truck movements on school days', 'install three more seismometers', 'rename "stimulation" to something the public understands', 'invite the opposition to visit the site', 'limit night drilling to weekdays', 'translate the brochure into Patois'];
   const ai = (hash(S.month, 5, 5, S.seed)*recs.length)|0, b = recs[(ai + 1 + ((hash(S.month, 6, 6, S.seed)*(recs.length - 1))|0)) % recs.length];
