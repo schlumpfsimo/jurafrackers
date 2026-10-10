@@ -295,7 +295,7 @@ const CFG = {
 };
 const REVIEW_PEN = 9000;
 const writeOff = o => { S.assets = Math.max(0, (S.assets || 0) - ((o.paid ?? (DEF[o.type] || {}).cost ?? 0) + (o.cost || 0) + (o.spent || 0))); };
-const graniteDone = () => !!S.granite || S.obj.some(w => RIG[w.type] && w.well && w.well.length && openIn(w, ROCK.GRANITE));
+const graniteDone = () => !!S.granite || S.obj.some(w => RIG[w.type] && w.well && w.well.length && openIn(w, ROCK.GRANITE) && tip(w).d >= 300);
 const DEF = {
   office:{g:'Company',n:'Bureau',en:'Head office',cost:300,up:20,build:0,bld:1,acc:'Bureau: rent and phones',h:'The Company’s own house in the valley. Hiring, rigs, material, projects and courses are run from here.'},
   depot:{g:'Company',n:'Dépôt',en:'Depot',cost:0,up:10,build:0,bld:1,acc:'Depot: yard and forklift',h:'Casing, mud, bits, containers and idle rigs.'},
@@ -1557,7 +1557,7 @@ function stepDrill(o, dm){
   }
   if (dr.seg >= dr.pts.length){ o.drilling = null; const tb = tip(o), aq = openIn(o, ROCK.WARM), gr = openIn(o, ROCK.GRANITE), wT = aq && !gr ? aqT(o.line, tb.x, wellPts(o).find(p => rockL(o.line, p.x, p.d) === ROCK.WARM).d) : tempAt(o.line, tb.x, tb.d);
     o.cost = (o.cost || 0) + o.spent; news('Well finished near ' + nearestVillage(o.x, o.y).name + ' at ' + M(tb.d) + (aq && !gr ? ': it is open in the Muschelkalk, the water comes at about ' + wT + ' °C.' : gr ? ': granite at the bottom, about ' + wT + ' °C.' : ': dry, no water-bearing layer is open; rock at about ' + wT + ' °C.') + ' It cost ' + fmt(o.spent) + '.');
-    if (gr) S.granite = true;
+    if (gr && tb.d >= 300) S.granite = true;
     if (gr && wT >= 120 && !S.hotProven){ S.hotProven = true; stockShock(0.3); news('Hot granite is proven: ' + wT + ' °C at ' + M(tb.d) + '. The bank now lends towards the next deep well.'); offerInvest('plant'); }
     o.spent = 0; }
 }
@@ -1685,7 +1685,7 @@ const deepBusy = () => S.obj.some(o => (o.type === 'deep' && o.drilling) || (o.t
 function midTick(){ const m = S.month;
   if (m % 12 === 9 && m < CFG.END && drilledWell()) news('The autumn feast is next month. A Fête de la géothermie in November counts for more.');
   if (m >= 30 && !S.review){ S.review = {k:'basement', due:84, t:'show what lies under the Muschelkalk: a well into the crystalline basement by January of year 8', plan:null};
-    postLetter({from:'the canton’s energy office', title:'The five-year review', text:'The concession was granted for electricity. At the five-year review the canton wants a well into the crystalline basement, by January of year 8' + (graniteDone() ? ' (the Company already has one: the canton has it on file)' : '') + '. Otherwise it takes ' + fmt(REVIEW_PEN) + '. In January of year 6 there is a hearing: without a deep well under way by then, a deposit of ' + fmt(500) + ' is due, returned when the target is met. For now the office asks how the Company means to get there.', opts:[
+    postLetter({from:'the canton’s energy office', title:'The five-year review', text:'The concession was granted for electricity. At the five-year review the canton wants a well at least 3,000 m deep into the crystalline basement, by January of year 8' + (graniteDone() ? ' (the Company already has one: the canton has it on file)' : '') + '. Otherwise it takes ' + fmt(REVIEW_PEN) + '. In January of year 6 there is a hearing: without a deep well under way by then, a deposit of ' + fmt(500) + ' is due, returned when the target is met. For now the office asks how the Company means to get there.', opts:[
       {l:'File a drilling plan to the granite', note:'an engineering study, ' + fmt(80) + '. The hearing will look for a deep well', fx:'rvPlan', arg:'deep'},
       {l:'File the heat network as it is', note:'nothing now. The hearing in year 6 will still look for a deep well', fx:'rvPlan', arg:'heat'},
       {l:'Ask for more time', note:'the minutes are public', fx:'rvPlan', arg:'late'}]}); }
@@ -1696,7 +1696,7 @@ function midTick(){ const m = S.month;
   if (S.review && !S.review.done && (S.review.due - m === 12 || S.review.due - m === 3) && !graniteDone()) news('The canton reminds the Company of its target, ' + S.review.t.replace(/:$/, '') + '. Otherwise it takes ' + fmt(REVIEW_PEN) + ' in ' + (S.review.due - m) + ' months.');
   if (S.review && !S.review.done && m >= S.review.due){ S.review.done = true; const ok = graniteDone();
     S.review.ok = ok; if (ok){ for (const v of S.vil) bump(v, 'Met the canton’s target', 2); if (S.review.dep){ S.cash += S.review.dep; acct('Deposit to the canton', S.review.dep); } news('The canton confirms the target is met.' + (S.review.dep ? ' The deposit of ' + fmt(S.review.dep) + ' comes back.' : '')); } else { S.cash -= REVIEW_PEN; acct('Penalty to the canton', -REVIEW_PEN); for (const v of S.vil) bumpG(v, 'Missed the canton’s target', 'hi', -5); news('The target is missed. The canton takes ' + fmt(REVIEW_PEN) + (S.review.dep ? ' and keeps the deposit' : '') + ', and says so publicly.'); } }
-  if (m >= 12 && !S.cmte && deepStarted()){ const t = S.vil[0], f = freeSpot(t.x - t.w/2 - 10, t.y + 6, 10, () => Math.random()) || {x:t.x - t.w/2 - 10, y:t.y + 6}; S.cmte = {s:1, id:add('committee', f.x, f.y, {v:0, opp:1, w:6, hh:7}).id}; news('A referendum committee forms in ' + t.name + ': “Jura sans fracking”. It collects signatures for the vote and files objections against every new site.'); }
+  if (m >= 12 && !S.cmte && (deepStarted() || drilledWell())){ const t = S.vil[0], f = freeSpot(t.x - t.w/2 - 10, t.y + 6, 10, () => Math.random()) || {x:t.x - t.w/2 - 10, y:t.y + 6}; S.cmte = {s:1, id:add('committee', f.x, f.y, {v:0, opp:1, w:6, hh:7}).id}; news('A referendum committee forms in ' + t.name + ': “Jura sans fracking”. It collects signatures for the vote and files objections against every new site.'); }
   if (S.cmte && byId(S.cmte.id)){ const busy = deepBusy(); if (m - (S.cmte.hit || -9) > 2) S.cmte.s = clamp(S.cmte.s + (busy ? 0.45 : 0.15)*(S.tier === 'platine' ? 0.8 : 1) - (!busy && S.vil.some(v => v.heat === 'on') ? 0.12 : 0), 0, 10); }
   if (m % 12 === 4 && m >= 16 && m < CFG.END - 6) agmLetter();
   if (S.agm && !S.agm.done && (deepStarted() || m >= S.agm.due)){ S.agm.done = true; if (deepStarted()){ stockShock(0.05); news('The deep well announced at the shareholders’ meeting is under way. The analysts note that the Company did what it said.'); }
@@ -1934,7 +1934,7 @@ function monthTick0(){
     if (v.festUntil > S.t - 1e-6) put('Fête de la géothermie', 3*v.festMult*pm*sk/(1 + 0.25*(v.festN || 0)));
     if (S.obj.some(o => o.type === 'school' && o.on && o.v === v.id)) put('School funding', 0.6*pm*sk);
     if (chairs === 1) put('Antenne universitaire', 0.3*pm);
-    if (v.heat === 'on') put('Cheap heat', 0.8); if (v.heat === 'build') put('Dug-up road', -1);
+    if (v.heat === 'on') put('Cheap heat', 0.5); if (v.heat === 'build') put('Dug-up road', -1);
     if (v.spring.lvl === 2) put('Boil-water notice', -1.5); if (v.spring.lvl === 3) put('Polluted spring', v.spring.treated ? -0.6 : -1.5);
     for (const l of S.lines) for (const sg of l.segs) if (sg.active && sg.arrived){ const d = vdist(v, sg.x0 + sg.prog, l.y); if (d <= 36) put('Survey trucks', -1.5*(1 - d/40)); }
     for (const l of S.plines){ const rs = roadS(v.x, v.y); if (rs.s >= l.s0 - 10) put('Power line', -0.2); }
@@ -3090,7 +3090,7 @@ function showOffer(k){ lessonWas = null;
 }
 function showEnd(){ S.event = null; S.offer = null;
   const o = S.over, head = {annexed:'Le Jura est rattaché au canton de Berne', won:'The valley votes yes', lost:'The valley votes no', lapsed:'Concession lapses: nothing to vote on', debt:'Bankrupt: the concession ends', wound:'The Company is wound up'}[o.kind];
-  const sub = {wound:'The board closes the books before the valley can vote. The rigs are sold, the wells are cemented, the shareholders get what is left, and the association sends a letter of regret with an invoice for the current year.', annexed:'The Jura is reattached to the canton of Bern. No plebiscite was deemed necessary. The federal government regrets the inconvenience. The Company’s rigs are craters, its staff are safe in another canton, and nobody will vote on anything for a while.', won:'The concession is extended. The opposition calls the result close and appeals to the cantonal court.', lost:'Dismantling at the Company’s cost begins on Monday. The wells are filled with cement.', lapsed:'Ten years of surveys and brochures produced no heat. The Canton thanks all participants.', debt:'The Company cannot pay its bills. The creditors take what is left; the canton has the wells filled with cement.'}[o.kind];
+  const sub = {wound:'The board closes the books before the valley can vote. The rigs are sold, the wells are cemented, the shareholders get what is left, and the association sends a letter of regret with an invoice for the current year.', annexed:'The Jura is reattached to the canton of Bern. No plebiscite was deemed necessary. The federal government regrets the inconvenience. The Company’s rigs are craters, its staff are safe in another canton, and nobody will vote on anything for a while.', won:(o.fc < 58 ? 'The concession is extended. The opposition calls the result close and appeals to the cantonal court.' : 'The concession is extended. The opposition congratulates nobody and starts collecting signatures for the next one.'), lost:'Dismantling at the Company’s cost begins on Monday. The wells are filled with cement.', lapsed:'Ten years of surveys and brochures produced no heat. The Canton thanks all participants.', debt:'The Company cannot pay its bills. The creditors take what is left; the canton has the wells filled with cement.'}[o.kind];
   $('#overlay').hidden = false;
   $('#overlay').innerHTML = '<div class="contract"><h1>' + head + '</h1><div class="sub">' + MONTHS[S.month % 12] + ', year ' + (year() + 1) + '</div><p>' + sub + '</p><div class="fig"><div><b>' + o.fc.toFixed(1) + '%</b><span>' + (o.kind === 'won' || o.kind === 'lost' ? 'Yes vote' : 'Last forecast') + '</span></div><div><b>' + o.sold.toFixed(1) + ' GWh</b><span>Energy sold</span></div><div><b>' + o.best.toFixed(1) + ' GWh</b><span>Your best so far</span></div><div><b>' + fmt(S.cash - debt()) + '</b><span>Net cash</span></div><div><b>CHF ' + stockInit().p.toFixed(2) + '</b><span>Share price</span></div></div><p class="sub">Ref. ' + S.seed + '</p><div class="acts"><button class="btn main" data-a="again">New concession</button></div></div>';
 }
