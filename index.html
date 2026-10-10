@@ -290,7 +290,7 @@ const CFG = {
   MONTH_SEC:40, END:120, START_CASH:30000, START_MOOD:40,
   LOAN_RATE:0.05, RED_LIMIT:8,
   SURVEY_K:4, PASS2_K:12, PASS3_K:20, SURVEY_SPEED:100,                           // k per 100 m; map px per month
-  PIPE_K:150, LINE_K:30, PIPE_MAX:200, WINTER:1.5, HEAT_PRICE:0.11, POWER_PRICE:0.475,   // k CHF per MWh: heat net of heat-pump power, power at the old federal feed-in tariff for petrothermal plants up to 5 MW, before 2019 (47.5 Rp./kWh; the tariff closed to new plants in 2023, which now get investment contributions instead, but a game needs a price)
+  PIPE_K:150, LINE_K:30, PIPE_MAX:200, WINTER:1.5, HEAT_PRICE:0.14, POWER_PRICE:0.475,   // k CHF per MWh: heat net of heat-pump power, power at the old federal feed-in tariff for petrothermal plants up to 5 MW, before 2019 (47.5 Rp./kWh; the tariff closed to new plants in 2023, which now get investment contributions instead, but a game needs a price)
   QUAKE_NEAR:-14, QUAKE_FAR:-5, QUAKE_MUTE:3, DRIFT:0.08
 };
 const REVIEW_PEN = 9000;
@@ -1668,7 +1668,7 @@ function sellUtil(o){ const price = utilPrice(o), ws = utilWells(o), names = S.p
 function redLetter(){ const opts = sellable().slice(0, 2).map(o => ({l:'Sell the heat station near ' + nearestVillage(o.x, o.y).name + ' to the utility', note:'with its wells, for ' + fmt(utilPrice(o)) + (utilLoans(o).length ? '; its loans are repaid from that, ' + fmt(utilNet(o)) + ' stays' : '') + '. The heat sales go with it', fx:'sell', arg:o.id})), st = stockInit();
   if (!st.rescue) opts.push({l:'Issue shares at any price', note:'a quarter more shares, at CHF ' + Math.max(0.2, st.p*0.5).toFixed(2) + ': about ' + fmt(Math.round(st.n*0.25*Math.max(0.2, st.p*0.5)*950)) + '. Once only', fx:'rescue'});
   opts.push({l:'Hold on', note:'the bank waits'});
-  postLetter({from:'the Company’s bank', title:'The account', text:'The account has been in the red for ' + S.red + ' months. After ' + CFG.RED_LIMIT + ' months the bank closes it, and the Company is bankrupt. The relationship manager has made a list of what could still be sold.', opts}); }
+  postLetter({from:'the Company’s bank', title:'The account', text:'The account has been in the red for ' + S.red + ' months. After ' + CFG.RED_LIMIT + ' months the bank closes it, and the Company is bankrupt' + ((S.insolv || 0) >= 3 ? '; with the auditors in the house it may be sooner, after ' + Math.max(1, 6 - S.insolv) + (6 - S.insolv > 1 ? ' months' : ' month') : '') + '. The relationship manager has made a list of what could still be sold.', opts}); }
 const FX = {
   invest: yes => { if (yes){ const st = stockInit(), nn = 20000/(Math.max(1, st.p)*1000); st.n += nn; stockShock(-0.05); S.cash += 20000; acct('Investor money', 20000); for (const vv of S.vil) bump(vv, 'Out-of-canton money', -4); news('Investors from outside the canton take a stake. The logo on the rig changes overnight.'); sfx('coin'); } else news('The Company declines outside money. “We remain Jurassien,” says the press release, printed in another canton.'); },
   credit: () => { const r = borrowBank(); if (r !== 'ok') news('The bank: ' + r); },
@@ -1918,8 +1918,8 @@ function monthTick0(){
   S.cash += income - costs; S.last = {income, costs, interest}; S.red = S.cash < 0 ? S.red + 1 : 0;
   { const eq = S.cash + assetsNow() - debt(), hh = S.hist || [], res = hh.length ? hh.slice(-3).reduce((a, x) => a + x.net, 0) : 0;
     S.insolv = eq < 0 && res < 0 ? (S.insolv || 0) + 1 : 0;
-    if (S.insolv === 3) news('The bank’s auditors: the Company owes more than everything it owns, and loses money every month. Three more months like this and ' + (S.loans.length ? 'the bank calls in its loans' : 'the suppliers file for bankruptcy') + '.');
-    if (S.insolv >= 6 && !S.over){ news((S.loans.length ? 'The bank calls in its loans.' : 'The suppliers file for bankruptcy.') + ' The Company owes more than it owns.'); S.red = CFG.RED_LIMIT; } } if ((S.red === 2 || S.red === 5) && !S.over) redLetter();
+    if (S.insolv === 3) news('The bank’s auditors: the Company owes more than everything it owns, and loses money every month. Three more months like this and ' + (S.loans.some(l => !l.shady) ? 'the bank calls in its loans' : 'the suppliers file for bankruptcy') + '.');
+    if (S.insolv >= 6 && !S.over){ news((S.loans.some(l => !l.shady) ? 'The bank calls in its loans.' : 'The suppliers file for bankruptcy.') + ' The Company owes more than it owns.'); S.red = CFG.RED_LIMIT; } } if ((S.red === 2 || S.red === 5) && !S.over) redLetter();
   S.acct = S.acct || {cur:{}, last:{}}; S.acct.last = S.acct.cur; S.acct.cur = {};
   /* mood */
   const count = t => S.obj.filter(o => o.type === t && BLD_ON(o)).length, lob = 0, chairs = count('chair');
@@ -2999,7 +2999,7 @@ function renderCard(){
         if (o.drilling) acts += '<button class="btn" data-a="suspend">Stop here, keep the hole, send the rig away</button>';
         if (!o.drilling && !o.released){ acts += '<button class="btn main" data-a="plan">' + (o.well.length ? 'Extend well' : 'Draw well') + '</button>'; acts += '<button class="btn" data-a="release">Rig back to the depot' + (o.well.length ? ', keep the well' : '') + '</button>'; }
         if (o.well.length && !o.drilling && !o.test) acts += '<button class="btn" data-a="flowtest">Flow test (' + fmt(DRILL.flowTest*(o.site && crewHas(o.site, 'geologist', 'muschel') ? 0.5 : 1)) + ')</button>';
-        if (!o.pad && !o.released) acts += '<button class="btn" data-a="pad">Seal the drill pad (' + fmt(DRILL.pad) + ')</button>';
+        if (!o.pad && !o.released){ const need = inZone(o) === 3 && !o.well.length; acts += (need ? '<div class="sub neg" style="width:100%">Spring protection zone S3: no drilling here without a sealed pad.</div>' : '') + '<button class="btn' + (need ? ' main' : '') + '" data-a="pad">Seal the drill pad (' + fmt(DRILL.pad) + ')</button>'; }
         if (!o.fenced) acts += '<button class="btn" data-a="fenceit">Fence the pad (' + fmt(DEF.fence.cost) + ')</button>';
         if (!o.quiet && !o.released) acts += has('workshop') ? '<button class="btn" data-a="quietit">Soundproof the rig (' + fmt(DEF.quiet.cost) + ')</button>' : '';
         if (o.well.length && !o.cbl && !o.drilling) acts += '<button class="btn" data-a="logcem">Run a cement bond log (' + fmt(DRILL.cbl) + ')</button>';
@@ -3044,12 +3044,12 @@ function renderCard(){
 }
 /* Strate 0 · Surface: the first-project checklist, pinned until the first heat is sold */
 function strate0(){ const pads = S.obj.filter(o => RIG[o.type] && o.site !== undefined), wet = pads.filter(o => o.well && o.well.length && openIn(o, ROCK.WARM));
-  return [['Place the Bureau near a road; a small depot comes with it', !!bureau()], ['Plant a prospect flag on a grid line (left panel)', S.obj.some(o => o.type === 'flag' || o.type === 'site')],
-    ['Order a survey through the flag: the flag’s card', S.lines.some(l => l.segs.some(g => !g.active)) || S.obj.some(o => o.type === 'site')], ['Commit: a container, three drillers and a rig go out', S.obj.some(o => o.type === 'site')],
-    ['Open the line and draw the well into the Muschelkalk, the porous limestone about a kilometre down (the section shows where)', wet.length >= 1], ['A second well about a kilometre away: “Add a well pad” on the site', wet.length >= 2],
+  return [['Place the Bureau near a road; a small depot comes with it', !!bureau()], ['Plant a prospect flag on a grid line', S.obj.some(o => o.type === 'flag' || o.type === 'site')],
+    ['Order a survey at the flag', S.lines.some(l => l.segs.some(g => !g.active)) || S.obj.some(o => o.type === 'site')], ['Commit: a container, three drillers and a rig go out', S.obj.some(o => o.type === 'site')],
+    ['Open the line and draw the well into the Muschelkalk, the porous limestone about a kilometre down', wet.length >= 1], ['A second well about a kilometre away: “Add a well pad” on the site', wet.length >= 2],
     ['A heat station beside the site, both wells linked', S.obj.some(o => o.type === 'station' && o.prod && o.inj)], ['A heat pipe to a village: the station’s card; done when the first heat is sold', S.pipes.length > 0 && S.producing]]; }
 function renderSteps(){
-  const el = $('#steps'); if (!S.started || S.over || S.secret || S.raid || S.month > 60 || view !== 'map' || S.producing){ el.hidden = true; return; }
+  const el = $('#steps'); if (!S.started || S.over || S.secret || S.raid || S.month > 60 || view !== 'map' || S.producing || S.s0done){ if (S.producing) S.s0done = true; el.hidden = true; return; }
   const st = strate0(); if (st.every(x => x[1])){ el.hidden = true; return; }
   const i = st.findIndex(x => !x[1]); let h = '<span>Strate 0 · first project, step ' + (i + 1) + ' of ' + st.length + ':</span> <b>' + st[i][0] + '</b> <button class="btn sm" data-a="read" data-v="surface">Read Strate 0</button>';
   setHTML(el, h); el.hidden = false;
