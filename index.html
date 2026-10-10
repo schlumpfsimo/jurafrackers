@@ -548,7 +548,7 @@ const resDone = k => has({deep:'engineers', dir:'workshop', noise:'engineers'}[k
 const objAt = (x,y) => { let b = null, bd = 1e9; for (const o of S.obj) if (Math.abs(o.x - x) <= (o.w || 7) && Math.abs(o.y - y) <= (o.hh || 8)){ const d = Math.hypot(o.x - x, o.y - y); if (d < bd){ bd = d; b = o; } } return b; };
 /* what the player clicked: objects are hit by their drawn size on screen (a tall rig, the '!' over a promise), not only by their footprint */
 const pickAt = (x, y) => { let b = null, bd = 1e9; for (const o of S.obj){ const W = o.type === 'task' ? 5 : RIG[o.type] || o.type === 'testrig' ? 6 : o.type === 'plant' || o.type === 'station' ? 9 : 7, H = o.type === 'task' ? 16 : RIG[o.type] || o.type === 'testrig' ? 30 : o.type === 'plant' ? 18 : 13;
-  const dx = (x - y) - (o.x - o.y), dy = ((x + y) - (o.x + o.y))*0.5; if (Math.abs(dx) > W || dy < -H || dy > 4) continue; const d = Math.abs(dx) + Math.abs(dy + H/3) - (o.type === 'task' ? 50 : 0); if (d < bd){ bd = d; b = o; } } return b; };
+  const dx = (x - y) - (o.x - o.y), dy = ((x + y) - (o.x + o.y))*0.5; if (Math.abs(dx) > W || dy < -H || dy > 4) continue; const d = Math.abs(dx) + Math.abs(dy + H/3) - (o.type === 'task' ? 50 : RIG[o.type] ? 6 : 0); if (d < bd){ bd = d; b = o; } } return b; };
 const vilAt = (x,y) => S.vil.find(v => Math.abs(v.x - x) <= v.w/2 + 4 && Math.abs(v.y - y) <= v.h/2 + 6);
 const lineNear = y => S.lines.reduce((b, l) => Math.abs(l.y - y) < Math.abs(b.y - y) ? l : b);
 const lineAt = y => { let b = null; for (const l of S.lines) if (Math.abs(l.y - y) <= 5 && (!b || Math.abs(l.y - y) < Math.abs(b.y - y))) b = l; return b; };
@@ -864,6 +864,15 @@ function siteState(s){ if (!s.on) return 'container on the way'; if (!s.permitOk
 const ADDONS = {lobby:{n:'Maison de la géothermie', h:'The association moves into a wing of the Bureau: men in suits, polls, the congress, platine membership, smoother favours at the gendarmerie, Strate 4 and 5.'},
   experts:{n:'Centre de compétences', h:'The association’s research compound: second-pass readings, tracer tests, the seismic network, the traffic-light plan, the federal application, deep rigs.'},
   workshop:{n:'Atelier', h:'A workshop by the depot: owning rigs, directional drilling, soundproofing, the stimulation kit for a power plant.'}};
+/* replace a panel's content without swapping nodes under the pointer: a click that starts on a button still lands on it */
+const morphT = document.createElement('template');
+function morphNode(a, b){ if (a.nodeType !== b.nodeType || a.nodeName !== b.nodeName){ a.replaceWith(b.cloneNode(true)); return; }
+  if (a.nodeType === 3 || a.nodeType === 8){ if (a.nodeValue !== b.nodeValue) a.nodeValue = b.nodeValue; return; }
+  for (const at of [...a.attributes]) if (!b.hasAttribute(at.name)) a.removeAttribute(at.name); for (const at of [...b.attributes]) if (a.getAttribute(at.name) !== at.value) a.setAttribute(at.name, at.value);
+  if (a.nodeName === 'SELECT' || a.nodeName === 'INPUT' || a.nodeName === 'TEXTAREA'){ if (a.nodeName !== 'SELECT' || a.innerHTML !== b.innerHTML){ a.innerHTML = b.innerHTML; } if (a.nodeName === 'SELECT'){ const o = b.querySelector('option[selected]'); a.value = o ? o.value : (a.options[0] || {}).value; } else if ('value' in b && b.getAttribute('value') !== null) a.value = b.getAttribute('value'); if ('checked' in a) a.checked = b.hasAttribute('checked'); return; }
+  morphKids(a, b); }
+function morphKids(a, b){ const ak = [...a.childNodes], bk = [...b.childNodes]; for (let i = 0; i < bk.length; i++){ if (i < ak.length) morphNode(ak[i], bk[i]); else a.appendChild(bk[i].cloneNode(true)); } for (let i = bk.length; i < ak.length; i++) ak[i].remove(); }
+function setHTML(el, h, key){ key = key || 'h'; if (el.dataset[key] === h) return; el.dataset[key] = h; if (!el.firstChild){ el.innerHTML = h; return; } morphT.innerHTML = h; morphKids(el, morphT.content); }
 let sideKey = '';
 function renderSide(){ const el = $('#pal'); if (!S.started){ if (el.dataset.h !== 'x'){ el.innerHTML = ''; el.dataset.h = 'x'; } return; }
   const b = bureau(), items = S.inbox || [], groups = {}; for (const it of items){ const k = atKey(it.at); (groups[k] = groups[k] || []).push(it); }
@@ -876,7 +885,7 @@ function renderSide(){ const el = $('#pal'); if (!S.started){ if (el.dataset.h !
     for (const o of S.obj.filter(q => q.type === 'flag' || q.type === 'site')) h += '<button class="it side proj" data-a="goto" data-v="' + o.id + '"><b>' + (o.type === 'flag' ? '⚑ ' : '▣ ') + o.name + '</b><small>' + (o.type === 'flag' ? 'prospect' : siteState(o)) + '</small></button>'; }
   const keys = Object.keys(groups); if (keys.length){ h += '<h3 style="--g:#c8571b">Attention</h3>'; for (const k of keys){ const g = groups[k], it = g[0]; h += '<button class="it side att' + (it.ev.rig ? ' rig' : '') + '" data-a="att" data-v="' + k + '"><b>! ' + (g.length > 1 ? g.length + ' letters' : it.ev.title) + '</b><small>' + atName(it.at) + '</small></button>'; } }
   if (staffPick){ const p = S.staff.find(q => q.id === staffPick); if (p) h += '<div class="side-note">Sending <b>' + p.name + '</b> (' + TRADES[p.tr].n.toLowerCase() + '): click ' + (p.tr === 'suit' ? 'a village, a mairie or the gendarmerie' : 'a site') + '. Esc cancels.</div>'; }
-  if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } }
+  setHTML(el, h); }
 function focusOn(x, y){ const sc = $('#scroll'), c = $('#game'), p = P(x, y, 0), r = c.getBoundingClientRect(), sr = sc.getBoundingClientRect(); sc.scrollLeft += r.left + p[0]/CW*r.width - (sr.left + sr.width/2); sc.scrollTop += r.top + p[1]/CH*r.height - (sr.top + sr.height/2); }
 
 /* ================================================================== cards for the new things on the map */
@@ -893,7 +902,7 @@ function siteCard(s){ const pads = S.obj.filter(o => RIG[o.type] && o.site === s
   h += '<table class="why">' + SITE_TRADES.map(tr => { const n = crewAt(s.id, tr).length, i = idle(tr).length; if (!n && !i && tr !== 'driller') return ''; return '<tr><td>' + TRADES[tr].pl + '</td><td><button class="btn sm" data-a="crew" data-v="' + tr + ':-1"' + (n ? '' : ' disabled') + '>−</button> <b>' + n + '</b> <button class="btn sm" data-a="crew" data-v="' + tr + ':1"' + (i ? '' : ' disabled') + '>+</button></td></tr>'; }).join('') + '</table>';
   const coming = S.staff.filter(p => p.st === 'travel' && p.at === s.id).length; if (coming) h += '<div class="sub">' + coming + ' on the way.</div>';
   h += '<div class="sub">At the site: ' + Object.keys(MAT).map(k => Math.floor(s.mat[k] || 0) + ' ' + MAT[k].n.split(' ')[0].toLowerCase()).join(' · ') + '. Spent here: ' + fmt(s.spent || 0) + '.</div>';
-  h += '<div>' + pads.map(o => 'Well ' + (pads.indexOf(o) + 1) + ': ' + (o.drilling ? 'drilling at ' + M(o.drilling.pos.d) : o.well.length ? M(tip(o).d) + ' deep' : 'not drilled') + (o.rig ? '' : o.coming ? ', rig on the way' : ', no rig')).join('<br>') + '</div>';
+  h += '<div>' + pads.map(o => '<button class="btn sm" data-a="goto" data-v="' + o.id + '">Well ' + (pads.indexOf(o) + 1) + '</button> ' + (o.drilling ? 'drilling at ' + M(o.drilling.pos.d) : o.well.length ? M(tip(o).d) + ' deep' : 'not drilled') + (o.rig ? (!o.drilling && !o.well.length ? ', <b>the rig waits for a plan</b>' : '') : o.coming ? ', rig on the way' : ', no rig') + (o.waitEv ? ' <span class="neg">!</span>' : '')).join('<br>') + '</div>';
   const acts = []; if (s.waitRoad && !s.roadOrdered){ const pad = pads[0] || s, rp = roadPlan(pad), ql = quote('road', rp.cost, rp.mo, true), qo = quote('road', rp.cost, rp.mo, false); acts.push('<button class="btn main" data-a="road" data-v="local">Access road, local firm (' + fmt(ql.cost) + ', ' + dur(ql.end - S.t) + ')</button><button class="btn" data-a="road" data-v="out">Outside firm (' + fmt(qo.cost) + ', ' + dur(qo.end - S.t) + ')</button>'); }
   if (s.on && !s.canton && has('experts')) acts.push('<button class="btn" data-a="canton">Ask the canton for deep wells (' + dur(cantonMo()) + ')</button>');
   if (s.on && pads.length < 3) acts.push('<button class="btn" data-a="tool" data-v="pad">Add a well pad</button>');
@@ -1187,7 +1196,7 @@ function renderCampaign(){ const el = $('#camp'), C = S.camp || {done:{}, run:[]
   for (const k in CAMP){ const d = CAMP[k];
     if (d.per){ h += '<div class="row"><div><b>' + d.n + '</b><div class="sub" style="margin:0">' + d.d + '</div></div></div><div class="acts">' + S.vil.map(v => C.done[k + v.id] ? '<span class="sub">' + v.name + ' ✓</span>' : '<button class="btn" data-a="camp" data-v="' + k + ':' + v.id + '"' + (campOpen() ? '' : ' disabled') + '>' + v.name + ' · ' + fmt(d.c) + '</button>').join('') + '</div>'; continue; }
     h += '<div class="row"><div><b>' + d.n + '</b><div class="sub" style="margin:0">' + d.d + '</div></div>' + (C.done[k] ? '<span class="pos">' + (C.run.some(r => r.k === k) ? 'Under way' : 'Done') + '</span>' : '<button class="btn" data-a="camp" data-v="' + k + '"' + (campOpen() ? '' : ' disabled') + '>' + fmt(d.c) + '</button>') + '</div>'; }
-  if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } }
+  setHTML(el, h); }
 
 /* ================================================================== letters: small decisions, in thousands of variations */
 const pick = a => a[(Math.random()*a.length)|0];
@@ -2629,7 +2638,7 @@ function hud(){
   if (linking){ const st = byId(linking.st); hs = st ? 'Linking the ' + ROLE[linking.role] + ' of the ' + DEF[st.type].n.toLowerCase() + ' near ' + nearestVillage(st.x, st.y).name + ': click a rig on the map. Esc cancels.' : ''; }
   else if (plan) hs = ''; else if (staffPick) hs = 'Click where to send them. Esc cancels.'; else if (tool === 'office') hs = 'Choose where the Bureau goes: near a road, outside the villages. A small depot comes with it.'; else if (tool === 'flag') hs = 'Click a grid line to plant a prospect flag. Free; nothing is decided yet.'; else if (tool === 'pad') hs = 'Click a grid line within about 1.5 km of the site for a second well.'; else if (tool) hs = anchor ? 'Now click the village to heat.' : SITE[tool] && hover && view === 'map' && hover.x !== undefined && inZone({x:hover.x, y:RIG[tool] || tool === 'testrig' ? lineNear(hover.y).y : hover.y}) === 2 ? 'Inside a spring’s protection zone (S2): the canton fines CHF 500k and stops work for a month, and the village does not forget.' : SITE[tool] && hover && view === 'map' && hover.x !== undefined && inZone({x:hover.x, y:RIG[tool] || tool === 'testrig' ? lineNear(hover.y).y : hover.y}) === 3 ? 'Outer protection zone (S3) of a spring: allowed, but any spill here reaches the drinking water.' : (RIG[tool] || tool === 'testrig') && hover && view === 'map' && onRoad(hover.x, lineNear(hover.y).y) ? 'Here the grid line runs along the main road: a rig on this spot closes the road, and the village is cut off a little every month. Move along the line to a spot off the road.' : (pendingFin && pendingFin.tk === tool ? DEF[tool].n + ', ' + lc((finOptions(tool).find(o => o.k === pendingFin.k) || {n:' '}).n) + ': click where it should stand. Esc cancels the order.' : DEF[tool].n + ': ' + DEF[tool].h);
   else if (view === 'section') hs = 'Line ' + S.lines[line].name + '. Drag to move, + and − to zoom. Click a rig at the surface, then Draw well. Where the bands break there is probably a fault; only drilling shows the rock.';
-  else if (view === 'map') hs = cutLine !== null ? 'The block is cut along line ' + S.lines[cutLine].name + '. Click the face to open it flat.' : 'Click a dotted grid line to cut the block. Click a village to hear it.';
+  else if (view === 'map') hs = cutLine !== null ? 'The block is cut along line ' + S.lines[cutLine].name + '. Click the face to open it flat.' : 'Click a place to open it; a ! means it wants an answer. Click a dotted grid line to cut the block.';
   if (hs){ if (hint.textContent !== hs){ hint.textContent = hs; hint.dataset.plan = ''; } hint.hidden = false; } else if (!plan) hint.hidden = true;
   if (officeHold && $('#ledger').hidden){ officeHold = false; if (!S.event && !S.offer && !S.secret && !S.over) S.paused = officeWas; } else if (officeHold) S.paused = true;
   if (toastT && performance.now() > toastT){ $('#toast').hidden = true; toastT = 0; }
@@ -2647,7 +2656,7 @@ function advice(v, cs){ const t = [], has = k => (v.causes[k] || 0);
   if (v.mute > 0) t.push('Not listening for ' + v.mute + ' more month' + (v.mute > 1 ? 's' : '') + ' after the quake: persuasion has no effect.');
   if (v.mood < 25) t.push('<span class="neg">Below 25: protest camps. A site burns after 3 months, 6 if fenced. A public-order unit clears camps.</span>');
   else if (v.mood < 33) t.push('<span class="neg">Below 33: tractors may block your nearest site. A police patrol sends them home.</span>');
-  if (has('Rig noise') < -1) t.push('Rig noise: soundproof the rig (engineers), or drill further away.');
+  if (has('Rig noise') < -1) t.push('Rig noise: soundproof the rig (workshop), or drill further away.');
   if (v.heat !== 'on' && !polluted(v)) t.push('Nothing wins hearts like a cheaper heating bill: pipe a heat station here (+0.8 a month).');
   if (v.festYear !== year()) t.push('A Fête de la géothermie this year: +5 a month for two months (doubled at the autumn feast, November).');
   if (has('Public-order unit') < -1 || has('Police presence') < -1) t.push('Uniforms cost mood every month, and the anger comes back after they leave.');
@@ -2846,16 +2855,16 @@ function renderLedger(){ const el = $('#ledger'), A = (S.acct && S.acct.last) ||
         h += '<div class="bcard ' + (o && o.on && !o.off ? 'on' : '') + '"><b>' + d.n + '</b><small>' + (d.en || '') + '</small><span class="st ' + st[0] + '">' + st[1] + '</span>' + (opens.length ? '<div class="sub">Unlocks: ' + opens.join(', ') + '</div>' : '') + '</div>'; }
       h += '</div>'; } }
   h += '</div></div>';
-  if (el.dataset.h !== h){ const sc = el.querySelector('.obody'), top = sc ? sc.scrollTop : 0; el.innerHTML = h; el.dataset.h = h; const s2 = el.querySelector('.obody'); if (s2) s2.scrollTop = top; } }
+  if (el.dataset.h !== h){ const sc = el.querySelector('.obody'), top = sc ? sc.scrollTop : 0; setHTML(el, h); const s2 = el.querySelector('.obody'); if (s2 && s2.scrollTop !== top) s2.scrollTop = top; } }
 function renderPolls(){ const el = $('#polls'), all = S.vil.reduce((a, u) => a + u.pop, 0), [blo, bhi] = fcBand(), fresh = pollFresh(), pv = id => fresh && S.poll.vil.find(x => x.id === id), hw = (bhi - blo)/2;
   let h = '<button class="x" data-a="closepolls" aria-label="Close">×</button><h4>Polls</h4><div class="sub">Somewhere between <b>' + Math.round(blo) + '%</b> and <b>' + Math.round(bhi) + '%</b> yes; 50.1% needed. ' + Math.round(undecided()*100) + '% of voters are undecided' + (S.month >= CFG.END - 6 ? ' and deciding now: recent events weigh more.' : '; they decide in the last six months.') + ' ' + Math.max(0, CFG.END - S.month) + ' months to the vote.</div>';
   h += '<div class="sub">' + (fresh ? (S.poll.src === 'uni' ? 'University survey' : 'Poll by the Maison de la géothermie') + ', ' + MONTHS[S.poll.m % 12] + ', year ' + ((S.poll.m/12|0) + 1) + ', margin ±' + S.poll.err + ' plus the undecided (the range).' : 'No recent poll. Commission one at the Maison de la géothermie (cheap, rough) or the university (precise).') + '</div><table>';
   for (const v of S.vil){ const c = Object.entries(v.causes).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]))[0], d = v.delta || 0, p = pv(v.id), y = p ? v.sh.hi*p.g.hi + v.sh.lo*p.g.lo + v.sh.fa*p.g.fa : villageYes(v) + (S.fcNoise || 0);
     h += '<tr data-a="vil" data-v="' + v.id + '"><td><b>' + v.name + '</b><div class="sub" style="margin:0">' + v.pop.toLocaleString('en-US') + ' voters · ' + Math.round(v.pop/all*100) + '%' + (c ? ' · ' + c[0].toLowerCase() : '') + '</div>' + (p ? '<div class="sub" style="margin:0">' + Object.keys(GRP).map(g => GRP[g] + ' ' + Math.round(v.sh[g]*100) + '%: <b>' + Math.round(p.g[g]) + '</b>').join(' · ') + '</div>' : '') + '</td><td>' + Math.round(clamp(y - hw, 0, 100)) + '–' + Math.round(clamp(y + hw, 0, 100)) + '%</td><td class="' + (d >= 0 ? 'pos' : 'neg') + '">' + (d >= 0 ? '▲' : '▼') + '</td></tr>'; }
-  h += '</table>'; if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } }
+  h += '</table>'; setHTML(el, h); }
 function renderWire(){ const el = $('#wire');
   let h = '<button class="x" data-a="closewire" aria-label="Close">×</button><h4>The wire</h4><div class="sub">Everything that happened, newest first.</div><ol>' + S.news.slice().reverse().slice(0, 40).map(n => '<li><span class="sub">' + MONTHS[n.m % 12] + ', yr ' + ((n.m/12|0) + 1) + '</span> ' + n.s + '</li>').join('') + '</ol>';
-  if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } }
+  setHTML(el, h); }
 function newPlan(o){ const q = o.lastPlan || {}; return {rig:o.id, pts:[], shoe:o.shoe || 60, bit:q.bit || 'tricone', mud:q.mud || 'normal', top:'polymer', cbl:false, saltMud:!!q.saltMud, err:''}; }
 /* a flow test pumps the well for two weeks and measures what comes up */
 function flowTest(o){ const aq = openIn(o, ROCK.WARM), gr = openIn(o, ROCK.GRANITE), tp = tip(o);
@@ -2888,7 +2897,7 @@ function placeCard(pl){ const v = S.vil[pl.v] || S.vil[0], items = inboxAt('p:' 
 function postList(key){ const items = inboxAt(key); return items.length ? '<div class="post"><b>Post (' + items.length + ')</b>' + items.map(it => '<div class="row"><div>' + it.ev.title + '<div class="sub" style="margin:0">' + (it.ev.from ? uc(it.ev.from) : '') + '</div></div><button class="btn main" data-a="readletter" data-v="' + it.id + '">Read</button></div>').join('') + '</div>' : ''; }
 function renderCard(){
   const el = $('#card'); let h = '<button class="x" data-a="close" aria-label="Close">×</button>';
-  if (sel.p !== undefined){ const pl = placeById(sel.p); if (!pl){ sel = null; el.hidden = true; return; } h += placeCard(pl); if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } el.hidden = false; return; }
+  if (sel.p !== undefined){ const pl = placeById(sel.p); if (!pl){ sel = null; el.hidden = true; return; } h += placeCard(pl); setHTML(el, h); el.hidden = false; return; }
   if (sel.v !== undefined){
     const v = S.vil[sel.v], cs = Object.entries(v.causes).filter(c => Math.abs(c[1]) >= 0.25).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])), d = v.delta || 0, all = S.vil.reduce((a, u) => a + u.pop, 0);
     const feel = v.mood >= 65 ? 'Mostly in favour.' : v.mood >= 50 ? 'Leaning yes, quietly.' : v.mood >= 40 ? 'Sceptical.' : v.mood >= 25 ? 'Against. Signs in the windows.' : 'Furious. Tractors are being fuelled.';
@@ -2907,10 +2916,10 @@ function renderCard(){
     h += '<div class="acts"><button class="btn main" data-a="open">Open section</button>' + (l.legacy ? '<button class="btn" data-a="toggle">' + (showPaper ? 'Survey view' : '1970s paper') + '</button>' : '') + '<button class="btn" data-a="uncut">Close cut</button></div>';
   } else {
     const o = byId(sel.id); if (!o){ sel = null; el.hidden = true; return; }
-    if (o.type === 'flag' || o.type === 'site'){ h += o.type === 'flag' ? flagCard(o) : siteCard(o); if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } el.hidden = false; return; }
+    if (o.type === 'flag' || o.type === 'site'){ h += o.type === 'flag' ? flagCard(o) : siteCard(o); setHTML(el, h); el.hidden = false; return; }
     if (o.type === 'task'){ const left = o.due - S.month; h += '<h4>' + o.title + '</h4><div class="sub">A promise · near ' + S.vil[o.v].name + '</div><div>You said: <b>' + o.act.toLowerCase() + '</b>.</div><div>Due by ' + MONTHS[o.due % 12] + ', year ' + ((o.due/12|0) + 1) + (left <= 0 ? ' <span class="neg">(this month)</span>' : left === 1 ? ', next month' : ', in ' + left + ' months') + '. Not done by then, it counts as a broken promise.</div><div class="acts"><button class="btn main" data-a="dotask">Do it (' + fmt(o.cost) + ')</button></div>';
-      if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } el.hidden = false; return; }
-    if (o.util){ h += '<h4>' + DEF[o.type].n + '</h4><div class="sub">Near ' + nearestVillage(o.x, o.y).name + '</div><div>Sold to the local utility in ' + MONTHS[(o.utilM || 0) % 12] + ', year ' + (((o.utilM || 0)/12|0) + 1) + '. It runs it now, and keeps what it earns.</div>'; if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } el.hidden = false; return; }
+      setHTML(el, h); el.hidden = false; return; }
+    if (o.util){ h += '<h4>' + DEF[o.type].n + '</h4><div class="sub">Near ' + nearestVillage(o.x, o.y).name + '</div><div>Sold to the local utility in ' + MONTHS[(o.utilM || 0) % 12] + ', year ' + (((o.utilM || 0)/12|0) + 1) + '. It runs it now, and keeps what it earns.</div>'; setHTML(el, h); el.hidden = false; return; }
     const opp = OPP[o.type], name = opp || DEF[o.type].n, v = nearestVillage(o.x, o.y); let s = '', acts = '';
     if (o.type === 'station' && S.red > 0 && sellable().includes(o)) acts += '<button class="btn" data-a="sellutil">Sell to the utility (' + fmt(utilPrice(o)) + ')</button>';
     h += '<h4>' + name + '</h4><div class="sub">' + (!opp && DEF[o.type].en ? DEF[o.type].en + ' · ' : '') + 'near ' + v.name + (o.line !== undefined ? ' · line ' + S.lines[o.line].name : '') + (opp ? ' · placed by the opposition' : '') + '</div>';
@@ -2950,6 +2959,8 @@ function renderCard(){
         if (!o.drilling && !o.released){ acts += '<button class="btn main" data-a="plan">' + (o.well.length ? 'Extend well' : 'Draw well') + '</button>'; acts += '<button class="btn" data-a="release">Rig back to the depot' + (o.well.length ? ', keep the well' : '') + '</button>'; }
         if (o.well.length && !o.drilling && !o.test) acts += '<button class="btn" data-a="flowtest">Flow test (' + fmt(DRILL.flowTest) + ')</button>';
         if (!o.pad && !o.released) acts += '<button class="btn" data-a="pad">Seal the drill pad (' + fmt(DRILL.pad) + ')</button>';
+        if (!o.fenced) acts += '<button class="btn" data-a="fenceit">Fence the pad (' + fmt(DEF.fence.cost) + ')</button>';
+        if (!o.quiet && !o.released) acts += has('workshop') ? '<button class="btn" data-a="quietit">Soundproof the rig (' + fmt(DEF.quiet.cost) + ')</button>' : '';
         if (o.well.length && !o.cbl && !o.drilling && has('engineers')) acts += '<button class="btn" data-a="logcem">Run a cement bond log (' + fmt(DRILL.cbl) + ')</button>';
         if (o.well.length && o.cbl && !o.cementOk && !o.drilling && has('engineers')) acts += '<button class="btn" data-a="squeeze">Cement squeeze (' + fmt(DRILL.squeeze) + ')</button>';
         if (!o.traced && has('experts')) acts += '<button class="btn" data-a="tracer">Tracer test (' + fmt(DRILL.tracer) + ')</button>';
@@ -2978,6 +2989,8 @@ function renderCard(){
         if (o.type === 'station' && o.on) acts += '<span class="sub" style="margin:0 4px">Heat tariff, all stations:</span>' + ['low', 'standard', 'high'].map(k => '<button class="btn" data-a="tariff" data-v="' + k + '" aria-pressed="' + ((S.tariff || 'standard') === k) + '">' + k + '</button>').join('');
         if (o.type === 'plant' && o.ph === 'site' && o.on){ s += '<div class="sub">Stimulation: ' + (o.stages ? Math.round(o.stages) + ' stage' + (Math.round(o.stages) === 1 ? '' : 's') + ' · pressure ' + ['none', 'low', 'rising', 'high', 'very high'][Math.min(4, Math.ceil(o.pr || 0))] + ' · largest micro-quake last stage M' + (o.lastM || 0).toFixed(1) : 'not started') + (S.tlPlan ? ' · traffic light filed' : ' · no traffic-light plan') + '. The micro-quakes are drawn in the section.</div>';
           const busy = S.t < (o.stageUntil || 0); acts += '<button class="btn" data-a="stage"' + (busy ? ' disabled' : '') + '>' + (busy ? 'Pumping…' : 'Pump a stage (' + fmt(STAGE_C) + ')') + '</button>' + (o.pr > 0 ? '<button class="btn" data-a="bleed">Open the well, release pressure (' + fmt(BLEED_C) + ')</button>' : '') + (o.stages ? '<button class="btn" data-a="circ">Circulation test (' + fmt(CIRC_C) + ')</button>' : ''); }
+        acts += '<button class="btn main" data-a="pipefrom">Heat pipe to a village…</button>'; if (o.type === 'plant' && !S.plines.some(l => l.from === o.id)) acts += '<button class="btn main" data-a="plinego">Power line to the grid</button>';
+        if (!o.fenced) acts += '<button class="btn" data-a="fenceit">Fence it (' + fmt(DEF.fence.cost) + ')</button>';
         if (o.on) acts += '<button class="btn" data-a="onoff">' + (o.off ? 'Switch on' : 'Switch off' ) + '</button>'; }
       if (view === 'map' && o.line !== undefined) acts += '<button class="btn" data-a="open">Open section</button>';
       if (!o.drilling) acts += '<button class="btn" data-a="rm">Dismantle (' + dur(DISMANTLE[o.type] + (RIG[o.type] && o.well && o.well.length ? 0.5 : 0)) + ')</button>';
@@ -2986,7 +2999,7 @@ function renderCard(){
     if (o.dismantling){ const left = o.dismantling - S.t; s = '<span class="neg">Being dismantled: gone in about ' + (left < 1 ? Math.max(1, Math.round(left*4.3)) + ' week' + (Math.round(left*4.3) > 1 ? 's' : '') : left.toFixed(1) + ' months') + '.</span> ' + s; acts = ''; }
     h += postList('o:' + o.id) + '<div>' + s + '</div>' + (acts ? '<div class="acts">' + acts + '</div>' : '');
   }
-  if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } el.hidden = false;
+  setHTML(el, h); el.hidden = false;
 }
 /* Strate 0 · Surface: the first-project checklist, pinned until the first heat is sold */
 function strate0(){ const pads = S.obj.filter(o => RIG[o.type] && o.site !== undefined), wet = pads.filter(o => o.well && o.well.length && openIn(o, ROCK.WARM));
@@ -2998,7 +3011,7 @@ function renderSteps(){
   const el = $('#steps'); if (!S.started || S.over || S.month > 60 || view !== 'map' || S.producing){ el.hidden = true; return; }
   const st = strate0(); if (st.every(x => x[1])){ el.hidden = true; return; }
   const i = st.findIndex(x => !x[1]); let h = '<span>Strate 0 · first project, step ' + (i + 1) + ' of ' + st.length + ':</span> <b>' + st[i][0] + '</b> <button class="btn sm" data-a="read" data-v="surface">Read Strate 0</button>';
-  if (el.dataset.h !== h){ el.innerHTML = h; el.dataset.h = h; } el.hidden = false;
+  setHTML(el, h); el.hidden = false;
 }
 function planBar(){
   const el = $('#hint'); if (!plan){ if (el.dataset.plan) el.dataset.plan = ''; return; }
@@ -3017,7 +3030,7 @@ function planBar(){
     if (first && plan.shoe < 45) h += '<div class="neg">The shoe at ' + M(plan.shoe) + ' is above the usual base of the karst (400–550 m).</div>'; }
   if (plan.err) h += '<div class="neg">' + plan.err + '</div>';
   h = '<div class="acts" style="margin:0 0 6px"><button class="btn" data-a="undo">Undo point</button><button class="btn main" data-a="commit"' + (plan.pts.length ? '' : ' disabled') + '>Commit, pay ' + (plan.pts.length ? fmt(e.upfront) + ' now' : '') + '</button><button class="btn" data-a="cancelplan">Cancel</button></div>' + h;
-  if (el.dataset.plan !== h){ el.innerHTML = h; el.dataset.plan = h; } el.hidden = false;
+  setHTML(el, h, 'plan'); el.hidden = false;
 }
 
 /* ================================================================== overlays: the contract, offers, the end */
@@ -3031,7 +3044,7 @@ function showContract(hasSave){
     '<li><b>Water.</b> Springs and their protection zones are protected by federal law. The Company is liable for any pollution, and the Canton may stop work.</li>' +
     '<li><b>Earthquakes.</b> Drilling and injection are monitored. The Company pays for damage from felt earthquakes; the Canton may order a stop.</li>' +
     '<li><b>The population.</b> Every site goes through public consultation. The Company may inform, invite and sponsor. A Comité de patronage reports once a year.</li></ol>' +
-    '<div class="stamp">SIGNED AND SEALED</div><p>You are the managing director. Start with a Bureau de projet near a village; membership of the industry association Géothermie-Helvetica comes with it. Then survey a grid line and see what the 1970s left you.</p>' +
+    '<div class="stamp">SIGNED AND SEALED</div><p>You are the managing director. First choose where the Bureau goes; a small depot comes with it, and so does membership of the industry association Géothermie-Helvetica. Then plant a prospect flag on a grid line and see what the 1970s left you.</p>' +
     '<div class="acts"><button class="btn main" data-a="start">Countersign</button>' + (hasSave ? '<button class="btn" data-a="continue">Continue saved game</button>' : '') + '</div></div>';
 }
 function showOffer(k){ lessonWas = null;
@@ -3268,6 +3281,9 @@ function act(a, v){
   if (a === 'logcem'){ if (!canPay(DRILL.cbl)) return toast('A bond log costs ' + fmt(DRILL.cbl) + '.'); S.cash -= DRILL.cbl; acct('Casing, cement and extras', -DRILL.cbl); o.cbl = true; news('The bond log near ' + nearestVillage(o.x, o.y).name + (o.cementOk ? ' shows a good cement job behind the casing.' : ' shows gaps in the cement behind the casing.')); renderCard(); return; }
   if (a === 'squeeze'){ if (!canPay(DRILL.squeeze)) return toast('A squeeze costs ' + fmt(DRILL.squeeze) + '.'); S.cash -= DRILL.squeeze; acct('Casing, cement and extras', -DRILL.squeeze); o.cementOk = true; o.halt = S.t + 0.25; news('A cement squeeze closes the gaps behind the casing near ' + nearestVillage(o.x, o.y).name + '.'); renderCard(); return; }
   if (a === 'tracer'){ if (!canPay(DRILL.tracer)) return toast('A tracer test costs ' + fmt(DRILL.tracer) + '.'); S.cash -= DRILL.tracer; acct('Casing, cement and extras', -DRILL.tracer); o.traced = true; const hit = S.vil.filter(vv => linked(o, vv)); news('Dye poured in at the site near ' + nearestVillage(o.x, o.y).name + (hit.length ? ' comes out at the spring' + (hit.length > 1 ? 's' : '') + ' of ' + hit.map(vv => vv.name).join(' and ') + '. Whatever leaks here goes there.' : ' turns up at no spring in the valley. Leaks here reach no drinking water.')); renderCard(); return; }
+  if (a === 'pipefrom'){ if (missing('pipe').length) return toast('A heat pipe ' + needTxt('pipe') + '.'); tool = 'pipe'; anchor = {id:o.id}; sel = null; $('#card').hidden = true; sfx('click'); return; }
+  if (a === 'plinego'){ const r = place('pline', o.x, o.y); if (r !== 'ok') toast(r); else { sfx('stamp'); toast('The grid company has the order.'); } return; }
+  if (a === 'fenceit' || a === 'quietit'){ const k = a === 'fenceit' ? 'fence' : 'quiet'; if (!canPay(DEF[k].cost)) return toast(DEF[k].n + ' costs ' + fmt(DEF[k].cost) + '.'); const r = place(k, o.x, o.y); if (r !== 'ok' && typeof r === 'string') toast(r); else sfx('stamp'); return; }
   if (a === 'pad'){ if (!canPay(DRILL.pad)) return toast('Sealing the pad costs ' + fmt(DRILL.pad) + '.'); S.cash -= DRILL.pad; acct('Casing, cement and extras', -DRILL.pad); o.pad = true; return; }
   if (a === 'suspend'){ if (!o.drilling) return; o.drilling = null; o.cost = (o.cost || 0) + (o.spent || 0); o.spent = 0; o.cashStop = false; o.released = true; o.off = false; spawnLeave(o); news('Drilling stops near ' + nearestVillage(o.x, o.y).name + ' at ' + M(tip(o).d) + '. The hole is capped and the rig driven away. It can be brought back to carry on.'); renderCard(); return; }
   if (a === 'release'){ const r = rigOff(o); if (r !== 'ok') toast(r); renderCard(); return; }
@@ -3345,7 +3361,7 @@ function boot(fresh){
   if (!bound){ bind(); bound = true; requestAnimationFrame(tt => { lastT = tt; frame(tt); }); }
   zoom = $('#stage').clientWidth < 700 ? 2 : 1; fit(); showContract(hasSave);
 }
-window.JF = {act:(a, v) => act(a, v), get pendingFin(){ return pendingFin; }, set pendingFin(v){ pendingFin = v; }, audio, sfx, setVol, place:(t, x, y) => place(t, x, y), has, get anchor(){ return anchor; }, set anchor(v){ anchor = v; }, placeBureau, plantFlag, surveyFlag, commitSite, hire, fire, sendTo, recall, sendSuit, orderMat, leaseRig, buyRig, rigTo, rigOff, addPad, buildAddon, closeSite, quote, flagInfo, permitInfo, siteOf, crewAt, idle, bureau, depot, tripPos, openCommit, postInbox, openLetter, closeLetter, placeOf, placeById, placeC, roadPos, roadLen, lineNear, select:s => { sel = s; renderCard(); }, newPlan, renderSide, get staffPick(){ return staffPick; }, set staffPick(v){ staffPick = v; }, get tool(){ return tool; }, set tool(v){ tool = v; }, get plan(){ return plan; }, set plan(v){ plan = v; }, sellable, sellUtil, utilPrice, redLetter, agmLetter, FX, stockIssue, stockBuyback, stockValue, stockInit, startRaid, raidTick, her, maybeEvent, roadFree, quakeHit, crisisSay, villageYes, doTask, fcBand, LESSONS, lessonHtml, f35, roadS, scr:(x, y, z) => { const c = $('#game'), r = c.getBoundingClientRect(), p = P(x, y, z || 0); return [r.left + p[0]/CW*r.width, r.top + p[1]/CH*r.height]; }, _draw:(g, o, t) => obj(g, o, t), _veh:(g, k) => vehicle(g, k, 0, 0, 'x', null, 1), OX, OY, borrowShady, repayOne, bankRate, startSecret, addMood, unlockAll:() => { for (const k of Object.keys(DEF).filter(k => DEF[k].bld)) S.obj.push({id:S.nextId++, type:k, x:-400, y:-400, on:true, arrived:true, t0:0, ready:0, w:1, hh:1, test:true}); }, buildRoad, roadPlan, pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, finOptions, setFin:(tk, k) => { pendingFin = k ? {tk, k} : null; }, fedApply, plantTranche, plantTick, heatTested, commitPlan, stimulate:pl => stimStage(pl), stimStage, stimBleed, circTest, tempAt, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, secMaxY()); }, select:s => { sel = s; renderCard(); },
+window.JF = {secScr:(x, d) => { const r = $('#game').getBoundingClientRect(); return [r.left + (x - cam.x)*cam.z/SW*r.width, r.top + (SURF + d - cam.y)*cam.z/SH*r.height]; }, act:(a, v) => act(a, v), get pendingFin(){ return pendingFin; }, set pendingFin(v){ pendingFin = v; }, audio, sfx, setVol, place:(t, x, y) => place(t, x, y), has, get anchor(){ return anchor; }, set anchor(v){ anchor = v; }, placeBureau, plantFlag, surveyFlag, commitSite, hire, fire, sendTo, recall, sendSuit, orderMat, leaseRig, buyRig, rigTo, rigOff, addPad, buildAddon, closeSite, quote, flagInfo, permitInfo, siteOf, crewAt, idle, bureau, depot, tripPos, openCommit, postInbox, openLetter, closeLetter, placeOf, placeById, placeC, roadPos, roadLen, lineNear, select:s => { sel = s; renderCard(); }, newPlan, renderSide, get staffPick(){ return staffPick; }, set staffPick(v){ staffPick = v; }, get tool(){ return tool; }, set tool(v){ tool = v; }, get plan(){ return plan; }, set plan(v){ plan = v; }, sellable, sellUtil, utilPrice, redLetter, agmLetter, FX, stockIssue, stockBuyback, stockValue, stockInit, startRaid, raidTick, her, maybeEvent, roadFree, quakeHit, crisisSay, villageYes, doTask, fcBand, LESSONS, lessonHtml, f35, roadS, scr:(x, y, z) => { const c = $('#game'), r = c.getBoundingClientRect(), p = P(x, y, z || 0); return [r.left + p[0]/CW*r.width, r.top + p[1]/CH*r.height]; }, _draw:(g, o, t) => obj(g, o, t), _veh:(g, k) => vehicle(g, k, 0, 0, 'x', null, 1), OX, OY, borrowShady, repayOne, bankRate, startSecret, addMood, unlockAll:() => { for (const k of Object.keys(DEF).filter(k => DEF[k].bld)) S.obj.push({id:S.nextId++, type:k, x:-400, y:-400, on:true, arrived:true, t0:0, ready:0, w:1, hh:1, test:true}); }, buildRoad, roadPlan, pathRead, newPlan, flowTest, doublet, contaminate, get S(){ return S; }, tick:tickEnts, rockL, place, withdraw, choose, campaign, finOptions, setFin:(tk, k) => { pendingFin = k ? {tk, k} : null; }, fedApply, plantTranche, plantTick, heatTested, commitPlan, stimulate:pl => stimStage(pl), stimStage, stimBleed, circTest, tempAt, advance, forecast, byId, tip, planEst, validPoint, knownAt, CFG, ROCK, sx, mx, openSection, closeSection, get view(){ return view; }, get plan(){ return plan; }, setPlan:(rig, pts, opt) => { plan = Object.assign(newPlan(byId(rig)), {pts}, opt || {}); }, setPaper:b => { showPaper = b; }, setCam:y => { cam.y = clamp(y, 0, secMaxY()); }, select:s => { sel = s; renderCard(); },
   newGame:seed => { newGame(seed); S.started = true; S.paused = false; view = 'map'; cutLine = null; baseMap = null; fit(); $('#overlay').hidden = true; }, setCut:li => { cutLine = li; }, get cutLine(){ return cutLine; }};
 const ready = document.fonts && document.fonts.load ? document.fonts.load('12px "Pixelify Sans"').catch(() => {}) : Promise.resolve();
 ready.then(() => boot(false));
