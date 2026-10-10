@@ -687,7 +687,7 @@ function fedPay(amt, what){ const F = S.fed; if (!F || F.st !== 'granted' || amt
   const back = Math.round(amt*0.6); S.cash += back; acct('Federal exploration contribution', back); F.got = (F.got || 0) + back; news('The Federal Office of Energy pays its contribution for ' + what + ': ' + fmt(back) + '.'); return back; }
 /* when the bank says no: a man in town lends without questions, at a price, and people talk */
 const SHADY = {amt:2000, rate:0.20, term:6};   // interest only; the whole sum is due after six months
-function borrowShady(){ if (S.loans.filter(l => l.shady).length >= 3) return 'Even he says no now.'; addLoan(SHADY.amt, SHADY.rate, SHADY.term, true); const L = S.loans[S.loans.length - 1]; L.pay = L.bal*L.rate/12; news('A private loan from a businessman in ' + S.vil[0].name + ': ' + fmt(SHADY.amt) + ', no paperwork, a handshake in the back office of a garage. Interest every month, the whole sum back in six months. He does not send reminders.'); return 'ok'; }
+function borrowShady(){ if (S.loans.filter(l => l.shady).length >= 3) return 'Even he says no now.'; addLoan(SHADY.amt, SHADY.rate, SHADY.term, true); const L = S.loans[S.loans.length - 1]; L.pay = L.bal*L.rate/12; news('A private loan from a businessman in ' + S.vil[0].name + ': ' + fmt(SHADY.amt) + ', no paperwork, a handshake in the back office of a garage. Interest every month, the whole sum back in six months. He sends one card, a month ahead.'); return 'ok'; }
 function repayOne(id){ const l = S.loans.find(x => x.id === Number(id)); if (!l) return 'No such loan.'; if (!canPay(l.bal)) return 'Repaying loan #' + l.id + ' takes ' + fmt(l.bal) + '.'; S.cash -= l.bal; acct(l.shady ? 'Private loan repaid' : 'Loans repaid early', -l.bal); S.loans.splice(S.loans.indexOf(l), 1); news('Loan #' + l.id + ' repaid' + (l.shady ? '. The businessman shakes hands again.' : '.')); return 'ok'; }
 function repayAll(){ let n = 0, t = 0; for (const l of S.loans.filter(l => !l.shady).sort((a, b) => (b.rate || 0) - (a.rate || 0))) if (S.cash >= l.bal + 2000){ S.cash -= l.bal; t += l.bal; S.loans.splice(S.loans.indexOf(l), 1); n++; } if (n){ acct('Loans repaid early', -t); news(n + ' loan' + (n > 1 ? 's' : '') + ' repaid: ' + fmt(t) + '.'); } return n ? 'ok' : 'Keep ' + fmt(2000) + ' in hand after repaying a loan.'; }
 const canPay = k => S.cash >= k;
@@ -1079,11 +1079,11 @@ function buildAddon(k){ if (!bureau()) return 'The Bureau comes first.'; if (S.o
   for (const [dx, dy] of ring){ const x = base.x + dx, y = base.y + dy; if (y < HOR + 6 || y > MH - 6 || x < 6 || x > MW - 6) continue;
     if (S.obj.some(o => Math.hypot(o.x - x, o.y - y) < 8) || (S.places || []).some(pl => Math.hypot(placeC(pl).x - x, placeC(pl).y - y) < 8) || onRoad(x, y) || vilAt(x, y) || inZone({x, y}) === 2 || wetAt(x, y)) continue; spot = {x, y}; break; }
   if (!spot) return 'No room next to the ' + (k === 'workshop' ? 'depot' : 'Bureau') + '.'; const r = place(k, spot.x, spot.y); pendingFin = null; if (r === 'ok') sfx('coin'); return r; }
-function closeSite(s){ const pads = S.obj.filter(o => RIG[o.type] && o.site === s.id); if (pads.some(o => o.rig || o.coming || o.drilling)) return 'Send the rigs back to the depot first.';
+function closeSite(s){ const pads = S.obj.filter(o => RIG[o.type] && o.site === s.id); if (pads.some(o => !o.burnt && (o.rig || o.coming || o.drilling))) return 'Send the rigs back to the depot first.';
   for (const p of crewAt(s.id)) recall(p); for (const p of S.staff.filter(q => q.st === 'travel' && q.at === s.id)){ p.at = null; }
   const d = depot(); if (!s.everOn){} else if (d) trip('lorry', {x:s.x, y:s.y}, {x:d.x, y:d.y}, 'containerback', {load:Object.assign({}, s.mat)}); else S.containers++;
   for (const o of S.obj) if (o.site === s.id) o.site = null; { const rw = S.rigs.find(r => r.id === s.rigWait); if (rw){ rw.reserved = false; if (rw.at === 'reserved') rw.at = 'depot'; } }
-  for (const o of pads) if (!(o.well && o.well.length)) rm(o);
+  for (const o of pads) if (!(o.well && o.well.length)){ if (o.holeD > 0 && !o.plugPaid){ o.plugPaid = true; S.cash -= 500; acct('Plugging wells (required by law)', -500); news('The half-drilled hole near ' + nearestVillage(o.x, o.y).name + ' is filled with cement, as the law requires: ' + fmt(500) + '.'); } rm(o); }
   news('The site ' + s.name + ' is closed. The container goes back to the depot' + (pads.some(o => o.well && o.well.length) ? '; the wells stay, capped.' : '.')); rm(s); return 'ok'; }
 FXT.containerback = a => { S.containers = (S.containers || 0) + 1; for (const k in a.load) S.mat[k] += Math.floor(a.load[k] || 0); };
 /* ================================================================== placement (map coordinates) */
@@ -2952,7 +2952,7 @@ const PLACE_TXT = {
   bourse:() => 'The Bourse du Jura: one trader, a coffee machine, and an LED ticker over the door that the whole town can read.',
   fed:() => 'A coworking space nobody uses. By the door, a brass plate: the Federal Office of Energy, geothermal desk, open Tuesdays.',
   sushi:() => 'Closed on Mondays. The rest of the week, too, mostly.',
-  villa:() => 'A white villa with a pool and a fence. A businessman lends money here, without paperwork. He does not send reminders.',
+  villa:() => 'A white villa with a pool and a fence. A businessman lends money here, without paperwork. He sends one card, a month ahead.',
   utility:() => 'The local utility’s depot. It buys heat stations, at its price.',
   farm:v => 'Cows, hay, a tractor that is older than the farmer. The nearest village is ' + v.name + '.' };
 function placeCard(pl){ const v = S.vil[pl.v] || S.vil[0], items = inboxAt('p:' + pl.id);
