@@ -56,7 +56,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #pal .it.side{flex-direction:column;align-items:flex-start;gap:0;padding:5px 8px 5px 10px;--g:#6a4c93;box-shadow:inset 4px 0 0 var(--g),0 0 0 1px var(--lo2)}
 #pal .it.side.add{--g:#2f7a6a}#pal .it.side.add.built{opacity:.55}#pal .it.side.tool{--g:#2f6fb0;background:#eef5fc}#pal .it.side.proj{--g:#2f6fb0}
 #pal .it.side.att{--g:#c8571b;background:#fff7e6}#pal .it.side.att.rig{--g:#b3261e;background:#fdecea}#pal .it.side[disabled]{cursor:default}
-.sp{position:relative}#soundp{position:absolute;z-index:9;top:100%;left:auto;right:0;margin-top:4px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;min-width:180px;font-size:12.5px}#soundp label{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.sp{position:relative}#soundp{position:absolute;z-index:9;max-height:none;overflow:visible;top:100%;left:auto;right:0;margin-top:4px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;min-width:180px;font-size:12.5px}#soundp label{display:flex;justify-content:space-between;gap:8px;align-items:center}
 #pal .side-note{margin:6px 4px;padding:6px 8px;background:#fff3c4;font-size:12px;border-left:4px solid #f2c230}
 #comm select{font:inherit;padding:3px 4px;max-width:100%}#comm .cm{display:inline-flex;align-items:center;gap:3px;margin:2px 10px 2px 0;font-size:12.5px;white-space:nowrap}.btn.sm{padding:1px 6px;font-size:12px}
 #stage{position:relative;min-width:0;min-height:0;overflow:hidden;background:linear-gradient(#f6f8fa,#dbe1e7);display:flex;align-items:center;justify-content:center}
@@ -1532,7 +1532,7 @@ function stepDrill(o, dm){
     if (site && crewAt(site.id, 'geologist').length) reveal(o.line, dr.pos.x - 6, dr.pos.x + 6, dr.pos.d, dr.pos.d + (crewHas(site.id, 'geologist', 'socle') ? 40 : 14), 3);
     dr.pos = {x:from.x + (to.x - from.x)*dr.f, d:from.d + (to.d - from.d)*dr.f};
     const pt = rockL(o.line, dr.pos.x, dr.pos.d); reveal(o.line, dr.pos.x - 6, dr.pos.x + 6, dr.pos.d - 4, dr.pos.d + 3, 4);   // cuttings tell the rock at the bit
-    o.hit = o.hit || {}; if (!o.hit[pt]){ o.hit[pt] = 1; onHit(o, pt, dr.pos.d); if (S.offer) return; }
+    o.hit = o.hit || {}; if (!o.hit[pt]){ o.hit[pt] = Math.max(1, dr.pos.d); onHit(o, pt, dr.pos.d); if (S.offer) return; }
     if (pt === ROCK.WATER && dr.mud === 'light' && o.top === 'polymer' && !dr.zones.poly && hash(o.id, 5, 5, S.seed) < 0.3){ dr.zones.poly = 1; contaminate(o, 1, 'polymer mud seeping into the karst'); }
     if (o.shoe && !o.cased && dr.pos.d >= o.shoe){ o.cased = true; o.halt = S.t + 0.15; news('Casing run to ' + M(o.shoe) + ' near ' + nearestVillage(o.x, o.y).name + ' and cemented to surface' + (o.cbl ? ', bond log checked.' : '. No bond log was run.')); return; }
     if (drillEvent(o, pt, dr)) return;
@@ -1612,7 +1612,7 @@ function routeLetter(e){ if (e.at) return e.at; if (e.rig) return {o:e.rig}; con
   return pl('mairie'); }
 const atKey = at => at.p ? 'p:' + at.p : 'o:' + at.o;
 const inboxAt = key => (S.inbox || []).filter(i => atKey(i.at) === key);
-function atName(at){ if (at.p){ const pl = placeById(at.p); return pl ? placeName(pl) : 'the valley'; } const o = byId(at.o); return o ? (DEF[o.type] ? DEF[o.type].n : OPP[o.type] || 'site') + ' near ' + nearestVillage(o.x, o.y).name : 'the valley'; }
+function atName(at){ if (at.p){ const pl = placeById(at.p); return pl ? placeName(pl) : 'the valley'; } const o = byId(at.o); return o ? (RIG[o.type] ? 'the ' + (DEF[o.type].en || 'rig').toLowerCase() : DEF[o.type] ? DEF[o.type].n : OPP[o.type] || 'site') + ' near ' + nearestVillage(o.x, o.y).name : 'the valley'; }
 function atPos(at){ if (at.p){ const pl = placeById(at.p); return pl ? placeC(pl) : null; } const o = byId(at.o); return o ? {x:o.x, y:o.y} : null; }
 function postInbox(e, at){ at = at || routeLetter(e); if (!at || (at.p && !placeById(at.p)) || (at.o && !byId(at.o))) at = {p:placeOf('mairie', 0).id};
   S.inbox = S.inbox || []; const it = {id:++S.inN, at, ev:e, m:S.month, due:e.rig ? 1e9 : S.month + LETTER_MO}; S.inbox.push(it);
@@ -1808,7 +1808,7 @@ function continuous(dm){
   for (const l of S.lines) for (const sg of l.segs) if (sg.active && !sg.arrived && S.t >= (sg.start || 0) + 0.15) sg.arrived = true;
   for (const l of S.lines) for (const sg of l.segs) if (sg.active && sg.arrived){ sg.prog += dm*CFG.SURVEY_SPEED; const n = sg.x1 - sg.x0; reveal(l.id, sx(sg.x0), sx(sg.x0 + Math.min(n, sg.prog)), 0, UGH, Math.min(3, sg.pass + 1)); if (sg.prog >= n){ sg.active = false; for (const e of S.ents) if (e.seg === sg.id){ e.leaving = true; e.vs = e.vs > 0 ? 40 : -40; e.seg = null; } } }
   for (const o of S.obj.slice()){
-    if (o.waitRoad && roadFree(o)){ o.waitRoad = false; o.t0 = Math.max(S.t, roadPlan(o).ready); o.ready = o.t0 + ((DEF[o.type] || {}).build || 0)*bf(); news('A road now reaches the ' + (o.type === 'site' ? 'site' : DEF[o.type].n.toLowerCase() + ' site') + ' near ' + nearestVillage(o.x, o.y).name + '.' + (o.type === 'site' ? '' : ' Building starts.')); }
+    if (o.waitRoad && roadFree(o)){ o.waitRoad = false; o.t0 = Math.max(S.t, roadPlan(o).ready); o.ready = o.t0 + ((DEF[o.type] || {}).build || 0)*bf(); news('A road now reaches the ' + (o.type === 'site' ? 'site' : (DEF[o.type].en || DEF[o.type].n).toLowerCase() + ' site') + ' near ' + nearestVillage(o.x, o.y).name + '.' + (o.type === 'site' ? '' : ' Building starts.')); }
     if (!o.arrived && S.t >= (o.t0 || 0) + 0.25){ o.arrived = true; const e = S.ents.find(q => q.owner === o.id); if (e && !e.park){ e.owner = null; e.leaving = true; } }
     if (!o.on && !o.burnt && !o.waitRoad && S.t >= o.ready && o.arrived){ o.on = true; onReady(o); }
     if (o.dismantling && S.t >= o.dismantling){ withdraw(o); continue; }
@@ -2390,9 +2390,9 @@ function drawPlace(g, pl, t, snow){ const x = pl.x, y = pl.y, sgn = (PLACE[pl.k]
     case 'gendarmerie': house(g, x, y, 1, false, snow); plaque(g, x + 4, y + 6, 4.6, sgn, '#1f4fa0', '#f6f6f2'); { const q = P(x + 8.5, y + 3, 5.5), on = ((t*2)|0) % 2; R(g, on ? '#5aa0ff' : '#2a5aa0', q[0] - 0.6, q[1] - 1.2, 1.2, 1.2); } break;
     case 'bourse': { shadowAt(g, x, y, 9, 7); box(g, x, y, 9, 7, 6, '#7fb6da', {top:'#e9ecef', left:'#93c9e8', right:'#5f9cc4', line:'rgba(255,255,255,.85)'});
       g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 0.25; g.beginPath(); for (let i = 1; i < 9; i += 1.5){ const a = P(x + i, y + 7, 0), b = P(x + i, y + 7, 6); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } g.stroke();
-      { const st = S.stock || {p:10, hist:[10]}, h = st.hist || [], up = h.length > 1 ? st.p - h[h.length - 2] : 0, txt = 'EGS ' + st.p.toFixed(2) + (up >= 0 ? ' ▲' : ' ▼') + '   EGS ' + st.p.toFixed(2) + (up >= 0 ? ' ▲' : ' ▼') + '   ', q = P(x + 4.5, y + 7, 6.6), w = 10;
-        R(g, '#111', q[0] - w/2, q[1] - 3, w, 2.6); g.save(); g.beginPath(); g.rect(q[0] - w/2, q[1] - 3, w, 2.6); g.clip(); g.font = '2.4px "Pixelify Sans"'; const tw = g.measureText(txt).width/2, off = (t*(st.p < (h[h.length - 13] || st.p) ? 2.5 : 4)) % tw;
-        g.fillStyle = up >= 0 ? '#3ad16a' : '#ff4a3a'; g.fillText(txt, q[0] - w/2 - off, q[1] - 0.9); g.restore(); } break; }
+      { const st = S.stock || {p:10, hist:[10]}, h = st.hist || [], up = h.length > 1 ? st.p - h[h.length - 2] : 0, txt = 'EGS ' + st.p.toFixed(2) + (up >= 0 ? ' ▲' : ' ▼') + '   EGS ' + st.p.toFixed(2) + (up >= 0 ? ' ▲' : ' ▼') + '   ', q = P(x + 4.5, y + 7, 6.6), w = 13;
+        R(g, '#111', q[0] - w/2, q[1] - 3.6, w, 3.4); g.save(); g.beginPath(); g.rect(q[0] - w/2, q[1] - 3.6, w, 3.4); g.clip(); g.font = '3px "Pixelify Sans"'; const tw = g.measureText(txt).width/2, off = (t*(st.p < (h[h.length - 13] || st.p) ? 2.5 : 4)) % tw;
+        g.fillStyle = up >= 0 ? '#3ad16a' : '#ff4a3a'; g.fillText(txt, q[0] - w/2 - off, q[1] - 1.1); g.restore(); } break; }
     case 'fed': { shadowAt(g, x, y, 8, 6); box(g, x, y, 8, 6, 4.5, '#d9dcd6', {line:'rgba(0,0,0,.4)'}); for (let i = 1; i < 8; i += 2){ const q = P(x + i, y + 6, 2.6); R(g, '#9cc4dd', q[0] - 0.7, q[1] - 1.4, 1.4, 2.2); } { const q = P(x + 7.2, y + 6, 1.6); R(g, '#c9a24a', q[0] - 0.8, q[1] - 1, 1.6, 1.2); } plaque(g, x + 4, y + 6, 5.6, sgn, '#e9ecef'); break; }
     case 'sushi': { shadowAt(g, x, y, 6, 5); box(g, x, y, 6, 5, 3.2, '#2b2b2b', {top:'#3a3a3a', line:'rgba(0,0,0,.5)'}); const q = P(x + 3, y + 5, 2); R(g, '#d8342a', q[0] - 1.8, q[1] - 1, 3.6, 1); plaque(g, x + 3, y + 5, 4, sgn, '#f6f3ea', '#d8342a'); break; }
     case 'villa': { const z = pl.z || 0; shadowAt(g, x, y, 12, 8); box(g, x, y, 12, 8, 4.5, '#f6f3ea', {line:'rgba(0,0,0,.4)'}, z); box(g, x - 0.5, y - 0.5, 13, 9, 0.6, '#3b3b42', {line:'rgba(0,0,0,.45)'}, z + 4.5);
@@ -2960,7 +2960,7 @@ function renderCard(){
           s += 'Drilling at <b>' + M(dr.pos.d) + '</b> in ' + RNAME[here] + '. Day rate ' + fmt(DRILL.dayRate[o.type] || 20) + '; spent on this well so far ' + fmt(o.spent || 0) + '. ' + (goal.d - dr.pos.d > 2 ? M(Math.max(0, goal.d - dr.pos.d)) + ' to go, about ' + Math.max(0.1, rest.days/DPM).toFixed(1) + ' months if nothing happens.' : 'Nearly at the target.') + (o.cashStop ? ' <span class="neg">Drilling stopped: no money. The rig waits on standby.</span>' : '') + '<div class="meter"><i style="width:' + clamp(dr.pos.d/Math.max(1, goal.d)*100, 0, 100) + '%"></i></div>'; }
         else if (o.well.length) s += 'Well <b>' + M(tp.d) + '</b> deep, rock about ' + tempAt(o.line, tp.x, tp.d) + ' °C at the bottom' + (openIn(o, ROCK.WARM) && !openIn(o, ROCK.GRANITE) ? ', Muschelkalk water about ' + wellT(o) + ' °C' : '') + '.' + ' Casing to ' + M(o.shoe || 0) + ', cement ' + (o.cbl ? 'checked by bond log' : 'not logged') + '.' + (openIn(o, ROCK.WATER) ? ' The open hole crosses the karst groundwater.' : '') + (o.cbl && !o.cementOk ? ' The bond log shows gaps in the cement.' : '') + (openIn(o, ROCK.FAULT) ? ' The open hole crosses a fault zone.' : '');
         else s += (o.released ? (o.well && o.well.length ? 'A capped wellhead, no rig.' : 'A staked-out pad. No rig yet.') : 'No well yet. This rig reaches ' + M(maxDepth(o)) + (maxBend(o) ? ' and may bend 30°.' : ', straight down.'));
-        const seen = Object.keys(o.hit || {}).map(Number).filter(t => t !== ROCK.SOIL).map(t => RNAME[t]); if (seen.length && !o.drilling) s += '<div class="sub">Cuttings showed: ' + seen.join(', ') + '.</div>';
+        const seen = Object.keys(o.hit || {}).map(Number).filter(t => t !== ROCK.SOIL).sort((a, b) => o.hit[a] - o.hit[b]).map(t => RNAME[t]); if (seen.length && !o.drilling) s += '<div class="sub">Cuttings showed: ' + seen.join(', ') + '.</div>';
         if (o.test) s += '<div><b>Flow test:</b> ' + o.test + '</div>';
         if (role) s += '<div class="sub">' + (role.prod === o.id ? 'P: production' : 'I: injection') + ' well of the ' + DEF[role.type].n.toLowerCase() + ' near ' + nearestVillage(role.x, role.y).name + '.</div>';
         for (const st of S.obj.filter(b => (b.type === 'station' || b.type === 'plant') && !b.burnt && !b.dismantling)) for (const rl of ['prod', 'inj']) if (st[rl] !== o.id && !st[rl] && st.prod !== o.id && st.inj !== o.id) acts += '<button class="btn" data-a="linkto" data-v="' + st.id + ':' + rl + '">Use as ' + (rl === 'prod' ? 'P' : 'I') + ' well of the ' + DEF[st.type].n.toLowerCase() + ' near ' + nearestVillage(st.x, st.y).name + '</button>';
@@ -3142,7 +3142,7 @@ function soundPane(){ const el = $('#soundp'); el.innerHTML = '<b>Sound</b>' + [
 /* ================================================================== input */
 function toWorld(e){ const c = $('#game'), r = c.getBoundingClientRect();
   if (view === 'map'){ const cx = (e.clientX - r.left)/r.width*CW, cy = (e.clientY - r.top)/r.height*CH, yc = cutLine !== null ? S.lines[cutLine].y : MH, w = unP(cx, cy);
-    if (w.x >= 0 && w.x <= MW && w.y >= 0 && w.y <= yc) return {x:w.x, y:w.y};
+    if (w.x >= 0 && w.x <= MW && w.y >= 0 && w.y <= yc) return {x:w.x, y:w.y, cx, cy};
     const xf = cx - OX + yc*KX, v = (cy - OY - (xf + yc)*KY)*UGH/D; if (xf >= 0 && xf <= MW && v >= 0 && v <= UGH) return {face:true, u:xf*SW/MW, v}; return {}; }
   const x = (e.clientX - r.left)/r.width*SW/cam.z + cam.x, y = (e.clientY - r.top)/r.height*SH/cam.z + cam.y; return {x, y, ug:y > SURF ? {x:clamp(x, 0, SW-1), d:clamp(y - SURF, 0, UGH-1)} : null}; }
 const secMaxY = () => Math.max(0, SURF + UGH - SH/cam.z), secMaxX = () => Math.max(0, SW - SW/cam.z);
@@ -3178,6 +3178,7 @@ function addPad(x, y){ const s = sel && sel.id && siteOf(byId(sel.id)) || S.obj.
   news('A second well pad is staked out for ' + s.name + ' on line ' + ln.name + '.' + (roadFree(pad) ? '' : ' It needs its own access road for the rig.')); return pad; }
 function clickWorld(p){
   if (S.over || !S.started || S.event || S.offer || S.secret || S.raid || performance.now() - (lastAnswer || 0) < 450) return;
+  if (view === 'map' && p.cx !== undefined && !tool && !staffPick && !linking){ for (const it of (S.inbox || [])){ const c = atPos(it.at); if (!c) continue; const q = P(c.x, c.y, 14); if (Math.abs(q[0] - p.cx) < 6 && q[1] - p.cy < 6 && p.cy - q[1] < 9){ act('att', atKey(it.at)); return; } } }
   if (view === 'section'){
     if (plan){ if (!p.ug) return; const o = byId(plan.rig); if (!o){ plan = null; return; } const prev = plan.pts.length ? plan.pts[plan.pts.length-1] : tip(o); const q = {x:maxBend(o) ? p.ug.x : prev.x, d:p.ug.d};
       const err = validPoint(o, prev, q); if (err){ plan.err = err; sfx('no'); return; } plan.err = ''; plan.pts.push(q); sfx('click'); return; }
@@ -3272,7 +3273,7 @@ function act(a, v){
   if (a === 'commcancel'){ closeComm(); pipeQ = null; return; }
   if (a === 'sellutil'){ const o = sel && byId(sel.id); if (o && sellable().includes(o)){ sellUtil(o); sfx('coin'); renderCard(); } return; }
   if (a === 'pipeok'){ pipeLocal = v !== 'out'; closeComm(); const q = pipeQ; pipeQ = null; const src = q && byId(q.src), vv = q && S.vil[q.v]; if (!src || !vv) return; pipeOk = q; anchor = {id:src.id}; uiPlace = true; let r; try { r = place('pipe', vv.x, vv.y); } finally { uiPlace = false; pipeOk = null; } if (r === 'ok'){ tool = null; sfx('coin'); } else if (r) toast(r); return; }
-  if (a === 'windup'){ if (windArm !== S.month){ windArm = S.month; renderLedger(); return; } windArm = -1; $('#ledger').hidden = true; officeHold = false; news('The board winds up the Company. The bank takes what is left.'); end('wound'); return; }
+  if (a === 'windup'){ if (windArm !== S.month){ windArm = S.month; renderLedger(); return; } windArm = -1; $('#ledger').hidden = true; officeHold = false; news('The board winds up the Company. The creditors are paid; the shareholders get what is left.'); end('wound'); return; }
   if (a === 'credit'){ const r = borrowBank(); if (r !== 'ok') toast(r); else sfx('coin'); renderLedger(); return; }
   if (a === 'issue' || a === 'buyback'){ const r = a === 'issue' ? stockIssue() : stockBuyback(); if (r !== 'ok') toast(r); renderLedger(); return; }
   if (a === 'fedapply'){ const r = fedApply(); if (r !== 'ok') toast(r); renderLedger(); return; }
