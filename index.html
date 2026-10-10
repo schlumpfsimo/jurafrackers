@@ -293,7 +293,7 @@ const CFG = {
   PIPE_K:150, LINE_K:30, PIPE_MAX:200, WINTER:1.5, HEAT_PRICE:0.14, POWER_PRICE:0.475,   // k CHF per MWh: heat net of heat-pump power, power at the old federal feed-in tariff for petrothermal plants up to 5 MW, before 2019 (47.5 Rp./kWh; the tariff closed to new plants in 2023, which now get investment contributions instead, but a game needs a price)
   QUAKE_NEAR:-14, QUAKE_FAR:-5, QUAKE_MUTE:3, DRIFT:0.08
 };
-const REVIEW_PEN = 5000;
+const REVIEW_PEN = 5000, CANTON_GRANT = 15000;   // missing the canton's target costs 5 M; meeting it brings 15 M from the canton
 const writeOff = o => { S.assets = Math.max(0, (S.assets || 0) - ((o.paid ?? (DEF[o.type] || {}).cost ?? 0) + (o.cost || 0) + (o.spent || 0))); };
 const graniteDone = () => !!S.granite || S.obj.some(w => RIG[w.type] && w.well && w.well.length && openIn(w, ROCK.GRANITE) && tip(w).d >= 300);
 const DEF = {
@@ -1697,9 +1697,10 @@ function heatedCount(){ return S.vil.filter(v => v.heat === 'on').length; }
 const deepStarted = () => S.obj.some(o => (o.type === 'deep' && (o.drilling || o.deepGo || (o.well && o.well.length && tip(o).d > 2000))) || o.type === 'plant');
 const deepBusy = () => S.obj.some(o => (o.type === 'deep' && o.drilling) || (o.type === 'plant' && o.ph === 'site' && (o.pr || 0) > 0));
 function midTick(){ const m = S.month;
+  if (!S.cantonGrant && m < 84 && graniteDone()){ S.cantonGrant = true; S.cash += CANTON_GRANT; acct('Canton’s contribution', CANTON_GRANT); sfx('stamp'); news('The canton invests ' + fmt(CANTON_GRANT) + ': a well reaches the crystalline basement below 3,000 m. The energy office sends a photographer.'); }
   if (m % 12 === 9 && m < CFG.END && drilledWell()) news('The autumn feast is next month. A Fête de la géothermie in November counts for more.');
-  if (m >= 30 && !S.review){ S.review = {k:'basement', due:84, t:'show what lies under the Muschelkalk: a well at least 3,000 m deep into the crystalline basement by January of year 8', plan:null};
-    postLetter({from:'the canton’s energy office', title:'The concession review', text:'The concession was granted for electricity. At its review the canton wants a well at least 3,000 m deep into the crystalline basement, by January of year 8' + (graniteDone() ? ' (the Company already has one: the canton has it on file)' : '') + '. Otherwise it takes ' + fmt(REVIEW_PEN) + '. In January of year 6 there is a hearing: without a deep well under way by then, a deposit of ' + fmt(500) + ' is due, returned when the target is met. For now the office asks how the Company means to get there.', opts:graniteDone() ? [{l:'Thank the office', note:'the deep well is on file', fx:'rvPlan', arg:'deep'}] : [
+  if (m >= 30 && !S.review){ S.review = {k:'basement', due:84, t:'show what lies under the Muschelkalk: a well at least 3,000 m deep into the crystalline basement by January of year 8; the canton puts in ' + fmt(CANTON_GRANT) + ' when it is met', plan:null};
+    postLetter({from:'the canton’s energy office', title:'The concession review', text:'The concession was granted for electricity. At its review the canton wants a well at least 3,000 m deep into the crystalline basement, by January of year 8' + (graniteDone() ? ' (the Company already has one: the canton has it on file)' : '') + '. A well that gets there in time brings ' + fmt(CANTON_GRANT) + ' from the canton; otherwise it takes ' + fmt(REVIEW_PEN) + '. In January of year 6 there is a hearing: without a deep well under way by then, a deposit of ' + fmt(500) + ' is due, returned when the target is met. For now the office asks how the Company means to get there.', opts:graniteDone() ? [{l:'Thank the office', note:'the deep well is on file', fx:'rvPlan', arg:'deep'}] : [
       {l:'File a drilling plan to the granite', note:'an engineering study, ' + fmt(80) + '. The hearing will look for a deep well', fx:'rvPlan', arg:'deep'},
       {l:'File the heat network as it is', note:'nothing now. The hearing in year 6 will still look for a deep well', fx:'rvPlan', arg:'heat'},
       {l:'Ask for more time', note:'the minutes are public', fx:'rvPlan', arg:'late'}]}); }
