@@ -293,7 +293,7 @@ const CFG = {
   PIPE_K:150, LINE_K:30, PIPE_MAX:200, WINTER:1.5, HEAT_PRICE:0.14, POWER_PRICE:0.475,   // k CHF per MWh: heat net of heat-pump power, power at the old federal feed-in tariff for petrothermal plants up to 5 MW, before 2019 (47.5 Rp./kWh; the tariff closed to new plants in 2023, which now get investment contributions instead, but a game needs a price)
   QUAKE_NEAR:-14, QUAKE_FAR:-5, QUAKE_MUTE:3, DRIFT:0.08
 };
-const REVIEW_PEN = 9000;
+const REVIEW_PEN = 5000;
 const writeOff = o => { S.assets = Math.max(0, (S.assets || 0) - ((o.paid ?? (DEF[o.type] || {}).cost ?? 0) + (o.cost || 0) + (o.spent || 0))); };
 const graniteDone = () => !!S.granite || S.obj.some(w => RIG[w.type] && w.well && w.well.length && openIn(w, ROCK.GRANITE) && tip(w).d >= 300);
 const DEF = {
