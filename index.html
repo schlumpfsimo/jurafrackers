@@ -293,7 +293,7 @@ const CFG = {
   PIPE_K:150, LINE_K:30, PIPE_MAX:200, WINTER:1.5, HEAT_PRICE:0.11, POWER_PRICE:0.475,   // k CHF per MWh: heat net of heat-pump power, power at the old federal feed-in tariff for petrothermal plants up to 5 MW, before 2019 (47.5 Rp./kWh; the tariff closed to new plants in 2023, which now get investment contributions instead, but a game needs a price)
   QUAKE_NEAR:-14, QUAKE_FAR:-5, QUAKE_MUTE:3, DRIFT:0.08
 };
-const REVIEW_PEN = 6000;
+const REVIEW_PEN = 9000;
 const writeOff = o => { S.assets = Math.max(0, (S.assets || 0) - ((o.paid ?? (DEF[o.type] || {}).cost ?? 0) + (o.cost || 0) + (o.spent || 0))); };
 const graniteDone = () => !!S.granite || S.obj.some(w => RIG[w.type] && w.well && w.well.length && openIn(w, ROCK.GRANITE));
 const DEF = {
@@ -324,7 +324,7 @@ const DEF = {
   fence:{g:'Connect',n:'Clôture de chantier',en:'Fence',cost:50,build:1,h:'Click a site. Protesters take twice as long to get in.'},
   suit:{g:'Persuade',n:'Monsieur en complet',en:'Man in a suit',up:0,c:'CHF 15k a month',h:'Hired at the Bureau once the Maison stands, sent out from there: a black car, a handshake with the maire, an apéro, fewer rumours. After half a year everyone knows him and it works half as well; somewhere new it works again.'},
   stand:{g:'Persuade',n:'Stand d’information',en:'Information stand',cost:20,up:3,h:'Set up from the village shop. Brochures, a parasol and someone to answer questions. Its leaflets explain the basics.'},
-  fest:{g:'Persuade',n:'Fête de la géothermie',en:'Geothermal fest',cost:80,h:'Thrown from the mairie. Needs a drilled well: the sausages are heated in its water. A carousel and the brass band; twice the effect at the autumn feast in November. Twice a year looks like a bribe.'},
+  fest:{g:'Persuade',n:'Fête de la géothermie',en:'Geothermal fest',cost:80,h:'Thrown from the mairie. Needs a drilled well: the sausages are heated in its water. A carousel and the brass band; more effect at the autumn feast in November, and a little less each time. Twice a year looks like a bribe.'},
   congress:{g:'Persuade',n:'Congrès de la géothermie',en:'Congress',cost:200,now:1,h:'The association’s yearly congress, in town, right away.'},
   school:{g:'Persuade',n:'École: halle de gym offerte',en:'School funding',cost:2500,build:6,c:'CHF 2.5 M',h:'A gift at the mairie. A new sports hall with your name on it.'},
   police:{g:'Force',n:'Patrouille de gendarmerie',en:'Police patrol',up:60,c:'CHF 20k per call-out + 60k/mo',h:'Click near a blockade or site. CHF 20k per call-out, then CHF 60k a month while it stays.'},
@@ -973,7 +973,7 @@ const PLACE_WIN = {bank:1, bourse:1, canton:1, fed:1};
 function placeWin(k){ const card = (t, b, cls) => '<section class="ocard' + (cls ? ' ' + cls : '') + '"><h5>' + t + '</h5>' + b + '</section>', tile = (n, v, sub, cls) => '<div class="tile"><small>' + n + '</small><b class="' + (cls || '') + '">' + v + '</b><span>' + (sub || '') + '</span></div>', ck = ok => ok ? '<span class="pos">✓</span>' : '<span class="neg">✗</span>';
   const pl = placeOf(k); let h = '<div class="cols two">' + (pl && inboxAt('p:' + pl.id).length ? card('Post', postList('p:' + pl.id).replace(/<div class="post"><b>Post \(\d+\)<\/b>/, '<div>')) : '');
   if (k === 'bank') h += bankHtml(card, tile, ck);
-  if (k === 'bourse') h += bourseHtml(card, tile, ck) + card('The shareholders', '<p>' + (S.stock ? (S.stock.n*1e6).toLocaleString('en-US') + ' shares' : '') + '. The annual meeting is held in the Bourse’s events room every spring; its letter waits here.</p>');
+  if (k === 'bourse') h += bourseHtml(card, tile, ck) + card('The shareholders', '<p>' + (S.stock ? Math.round(S.stock.n*1e6).toLocaleString('en-US') + ' shares' : '') + '. The annual meeting is held in the Bourse’s events room every spring; its letter waits here.</p>');
   if (k === 'fed') h += fedHtml(card, tile, ck);
   if (k === 'canton'){ const rows = []; if (S.review) rows.push('<li><b>Five-year review:</b> ' + S.review.t + (S.review.done ? (S.review.ok ? ' <span class="pos">met</span>' : ' <span class="neg">missed</span>') : '') + '.</li>');
     rows.push('<li><b>The vote:</b> ' + MONTHS[CFG.END % 12] + ', year ' + ((CFG.END/12|0) + 1) + '. The campaign opens six months before' + (has('lobby') ? '.' : ' and needs the Maison de la géothermie.') + '</li>');
@@ -1147,7 +1147,7 @@ function place(type, x, y){
     case 'fest': {
       if (!v) return 'Click a village.'; if (v.festYear === year() && v.fest2 === year()) return v.name + ' has had two fêtes this year. A third would be a provocation.'; if (v.mute > 0) return v.name + ' is not listening after the quake: a Fête now would change nothing. ' + (v.mute === 1 ? 'Next month.' : 'In ' + v.mute + ' months.'); const fw = S.obj.filter(o => RIG[o.type] && o.well && o.well.length && !o.burnt).sort((a, b) => vdist(v, a.x, a.y) - vdist(v, b.x, b.y))[0]; if (!fw) return 'A Fête de la géothermie needs a drilled well: the sausages are heated in its water.'; S.cash -= def.cost; acct(def.n, -def.cost); sfx('jingle');
       if (v.festYear === year()){ v.fest2 = year(); bump(v, 'Fest seen as a bribe', -8); const f = freeSpot(v.x, v.y + v.h/2 + 14, 20, i => hash(S.month, i, 4, S.seed)) || {x:v.x, y:v.y + v.h/2 + 12}; add('counterfest', f.x, f.y, {v:v.id, opp:1, until:S.t + 1, w:7, hh:8}); news('Second fest this year in ' + v.name + '. "We are not for sale," say people eating the free sausages. Mood −8, and a counter-fest.'); return 'ok'; }
-      v.festYear = year(); v.festUntil = S.t + 2; happen('fest', {v:v.id}); v.festMult = S.month % 12 === 10 ? 2 : 1;
+      v.festYear = year(); v.festUntil = S.t + 2; happen('fest', {v:v.id}); v.festMult = S.month % 12 === 10 ? 1.5 : 1; v.festN = (v.festN || 0) + 1;
       news('Fête de la géothermie in ' + v.name + ': sausages heated in ' + wellT(fw) + ' °C water from the well near ' + nearestVillage(fw.x, fw.y).name + ', a carousel, the brass band.' + (v.festMult === 2 ? ' It is the autumn feast too: blood sausage, cream tart, plum brandy between courses.' : '') + ' Mood +' + 5*v.festMult + ' a month there for two months.'); return 'ok';
     }
     case 'school': {
@@ -1673,14 +1673,14 @@ function heatedCount(){ return S.vil.filter(v => v.heat === 'on').length; }
 const deepStarted = () => S.obj.some(o => (o.type === 'deep' && (o.drilling || o.deepGo || (o.well && o.well.length && tip(o).d > 2000))) || o.type === 'plant');
 const deepBusy = () => S.obj.some(o => (o.type === 'deep' && o.drilling) || (o.type === 'plant' && o.ph === 'site' && (o.pr || 0) > 0));
 function midTick(){ const m = S.month;
-  if (m % 12 === 9 && m < CFG.END && drilledWell()) news('The autumn feast is next month. A Fête de la géothermie in November counts twice.');
+  if (m % 12 === 9 && m < CFG.END && drilledWell()) news('The autumn feast is next month. A Fête de la géothermie in November counts for more.');
   if (m >= 30 && !S.review){ S.review = {k:'basement', due:84, t:'show what lies under the Muschelkalk: a well into the crystalline basement by January of year 8', plan:null};
     postLetter({from:'the canton’s energy office', title:'The five-year review', text:'The concession was granted for electricity. At the five-year review the canton wants a well into the crystalline basement, by January of year 8' + (graniteDone() ? ' (the Company already has one: the canton has it on file)' : '') + '. Otherwise it takes ' + fmt(REVIEW_PEN) + '. In January of year 6 there is a hearing: without a deep well under way by then, a deposit of ' + fmt(500) + ' is due, returned when the target is met. For now the office asks how the Company means to get there.', opts:[
       {l:'File a drilling plan to the granite', note:'an engineering study, ' + fmt(80) + '. The hearing will look for a deep well', fx:'rvPlan', arg:'deep'},
       {l:'File the heat network as it is', note:'nothing now. The hearing in year 6 will still look for a deep well', fx:'rvPlan', arg:'heat'},
       {l:'Ask for more time', note:'the minutes are public', fx:'rvPlan', arg:'late'}]}); }
   if (S.review && 'plan' in S.review && !S.review.heard && m >= 60){ S.review.heard = true; sfx('organ');
-    if (deepStarted() || graniteDone()){ for (const v of S.vil) bump(v, 'Progress at the canton’s hearing', 1); stockShock(0.04); news('The canton’s hearing: a deep well is under way. The office is satisfied for now.' + (graniteDone() ? ' The granite target is met.' : ' The target stays: the crystalline basement by January of year 8.')); }
+    if (deepStarted() || graniteDone()){ for (const v of S.vil) bump(v, 'Progress at the canton’s hearing', 1); stockShock(0.04); news('The canton’s hearing: ' + (graniteDone() ? 'a well already reaches the granite.' : 'a deep well is under way.') + ' The office is satisfied for now.' + (graniteDone() ? ' The granite target is met.' : ' The target stays: the crystalline basement by January of year 8.')); }
     else { const dep = 500; S.review.dep = dep; S.cash -= dep; acct('Deposit to the canton', -dep); stockShock(-0.08); for (const v of S.vil) bumpG(v, 'No deep well at the canton’s hearing', 'hi', -2);
       news('The canton’s hearing: no deep well. ' + (S.review.plan === 'deep' ? 'The drilling plan filed in year 3 is still a plan. ' : S.review.plan === 'late' ? 'The Company asked for more time and used it. ' : '') + 'The canton takes a deposit of ' + fmt(dep) + ', returned if the target is met. Without a well into the basement by January of year 8 it keeps it and takes ' + fmt(REVIEW_PEN) + ' more.'); } }
   if (S.review && !S.review.done && (S.review.due - m === 12 || S.review.due - m === 3) && !graniteDone()) news('The canton reminds the Company of its target, ' + S.review.t.replace(/:$/, '') + '. Otherwise it takes ' + fmt(REVIEW_PEN) + ' in ' + (S.review.due - m) + ' months.');
@@ -1921,7 +1921,7 @@ function monthTick0(){
     if (eff > 0) put('Men in suits', 0.6*eff*(stands.length ? 1.5 : 1)*pm*sk);
     if (stands.length && !(opst && !suits.length)) put('Information stand', 0.3*pm*sk);
     if (lob > 1) put('Lobby "embassy"', -0.8); else if (count('lobby') === 1) put('Maison de la géothermie', 0.4*pm);
-    if (v.festUntil > S.t - 1e-6) put('Fête de la géothermie', 5*v.festMult*pm*sk);
+    if (v.festUntil > S.t - 1e-6) put('Fête de la géothermie', 3*v.festMult*pm*sk/(1 + 0.25*(v.festN || 0)));
     if (S.obj.some(o => o.type === 'school' && o.on && o.v === v.id)) put('School funding', 0.6*pm*sk);
     if (chairs === 1) put('Antenne universitaire', 0.3*pm);
     if (v.heat === 'on') put('Cheap heat', 0.8); if (v.heat === 'build') put('Dug-up road', -1);
@@ -2823,7 +2823,7 @@ function bankHtml(card, tile, ck){ let h = '';
   return h; }
 function bourseHtml(card, tile, ck){ let h = '';
     { const st = stockInit(), hh = st.hist.map((p, i) => ({p})); h += card('Shares', '<div class="tiles">' + tile('Share price', 'CHF ' + st.p.toFixed(2), 'started at CHF ' + (CFG.START_CASH/1000/SH0).toFixed(2)) + tile('Market value', fmt(stockCap()), (st.n*1e6).toLocaleString('en-US') + ' shares') + '</div>' + (hh.length > 1 ? trendSVG(hh, [{n:'Price', c:'#2f6fb0', v:x => x.p}], {w:520, h:110, min:0, fmt:v => 'CHF ' + v.toFixed(2), label:'Share price by month'}) : '')
-      + (issueWhy() ? '<p class="neg">' + issueWhy() + '</p>' : '') + '<div class="acts"><button class="btn main" data-a="issue"' + (issueWhy() ? ' disabled' : '') + '>Capital increase: a quarter more shares at CHF ' + (st.p*issueDisc()).toFixed(2) + ' (about ' + fmt(st.n*0.25*st.p*issueDisc()*1000*0.97) + ')</button><button class="btn" data-a="buyback">Buy back a tenth (' + fmt(st.n*0.1*st.p*1.03*1000) + ')</button></div><p class="sub">The market prices what the Company owns and earns, and what it may still find under the valley. News moves it. A shareholders’ meeting is needed for each increase or buyback: at most every six months. The banks underwriting an issue want a share price of at least CHF 2 and, after the third year, a deep well or a power plant under way.</p>'); }
+      + (issueWhy() ? '<p class="neg">' + issueWhy() + '</p>' : '') + '<div class="acts"><button class="btn main" data-a="issue"' + (issueWhy() ? ' disabled' : '') + '>Capital increase: a quarter more shares at CHF ' + (st.p*issueDisc()).toFixed(2) + ' (about ' + fmt(st.n*0.25*st.p*issueDisc()*1000*0.97) + ')</button><button class="btn" data-a="buyback"' + (S.month - st.last < 6 ? ' disabled title="Needs the next shareholders’ meeting"' : '') + '>Buy back a tenth (' + fmt(st.n*0.1*st.p*1.03*1000) + ')</button></div><p class="sub">The market prices what the Company owns and earns, and what it may still find under the valley. News moves it. A shareholders’ meeting is needed for each increase or buyback: at most every six months. The banks underwriting an issue want a share price of at least CHF 2 and, after the third year, a deep well or a power plant under way.</p>'); }
   return h; }
 function fedHtml(card, tile, ck){ let h = ''; const F = S.fed;
     h += card('Federal exploration contribution', '<ul class="dec">' + FED_CONDS.map(q => '<li>' + ck(q.ok()) + ' ' + q.n + '</li>').join('') + '</ul>'
