@@ -33,7 +33,8 @@ function build(fn){
     Q:(pts, c, o) => push(Object.assign({t:'q', pts, c}, o || {})),                                // flat 3D polygon: fins, blades; o.face shows it only from that side
     V:(x, y, z, w, d, h, c) => { for (let i = x; i < x + w; i++) for (let j = y; j < y + d; j++) for (let k = z; k < z + h; k++) vox.set(i + ',' + j + ',' + k, c); },   // voxels (people), 0.1 m cubes
     SD:(x0, x1, y0, y1, z0, z1, fn, o) => { const L = (o && o.lift) || 0, f = L ? (x, y, z) => fn(x, y, z - L) : fn; return push(Object.assign({t:'sdf', b:[x0, x1, y0, y1, z0 + L, z1 + L], fn:f, zt:z1 + L}, o || {})); },
-    raw:p => push(p),   // smooth volume, rendered per pixel
+    raw:p => push(p),
+    HF:(W, D, cell, heights, colours, o) => push(Object.assign({t:'hf', W, D, cell, heights, colours, k:-1e6}, o || {})),   // terrain: heights on a grid, a colour per cell   // smooth volume, rendered per pixel
     VF:(u, x0, x1, y0, y1, z0, z1, fn) => { const cells = []; for (let i = Math.floor(x0/u); i*u < x1; i++) for (let j = Math.floor(y0/u); j*u < y1; j++) for (let k = Math.floor(z0/u); k*u < z1; k++){ const c = fn((i + 0.5)*u, (j + 0.5)*u, (k + 0.5)*u); if (c) cells.push([i, j, k, c]); }
       return push({t:'vox', u, cells, zt:(Math.max(...cells.map(q => q[2])) + 1)*u}); },
     row:(f, a0, a1, step, z, w, h, c) => { const r = []; for (let a = a0; a <= a1 + 1e-6; a += step) r.push([f, a, z, w, h, c]); return r; },
@@ -134,6 +135,8 @@ function draw(g, model, rot, S, ox, oy, post){
         const m1 = P((A[0] + Bq[0])/2, (A[1] + Bq[1])/2, z + hh/2), len = Math.hypot(Bq[0] - A[0], Bq[1] - A[1])*S*1.12, fs = Math.max(6, Math.round(S*hh*0.8)), skew = fr === 'S' ? 0.5 : -0.5;
         post.push(() => { g.save(); g.fillStyle = tc; g.font = fs + 'px "Silkscreen", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; const tw = g.measureText(txt).width, fit = Math.min(1, (len*0.9)/tw);
           g.translate(m1[0], m1[1]); g.transform(1, skew, 0, 1, 0, 0); g.scale(fit, 1); g.fillText(txt, 0, 0.5); g.restore(); }); }
+    } else if (p.t === 'hf'){
+      items.push({k:-1e6 + (p.k2 || 0), i, f(){ heightfield(g, p, rot, S, ox, oy, W, D); }});
     } else if (p.t === 'fig'){
       const q = rp(p.x, p.y); items.push({k:q[0] + q[1] + (p.k || 0), i, f(){ figure(g, P(q[0], q[1], 0), S, rot, p.o); }});
     } else if (p.t === 'puff'){
@@ -201,6 +204,33 @@ function volume(g, p, rot, S, ox, oy, W, D){
     // a darker pixel where something nearer covers this part: reads as a contour
     for (const nb of [pt(i + 1, j), pt(i - 1, j), pt(i, j + 1), pt(i, j - 1)]) if (nb && depth(nb) - dq > 0.35){ f *= flat ? 1 : 0.84; break; }
     const [R, G, B] = c[0] === '#' ? hex(c) : c.match(/\d+/g).map(Number), k = v => Math.max(0, Math.min(255, Math.round(f > 1 ? v + (255 - v)*(f - 1) : v*f))), o = (j*w + i)*4; d[o] = k(R); d[o + 1] = k(G); d[o + 2] = k(B); d[o + 3] = 255; }
+  const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h; tmp.getContext('2d').putImageData(img, 0, 0); g.drawImage(tmp, sx0, sy0);
+}
+
+/* Terrain traced pixel by pixel like the volumes: march down each pixel's view ray until it meets the heightfield, take that
+   cell's colour (shading, outlines and shadows are baked into the colours), and earth where the ray enters the map's side. */
+function heightfield(g, p, rot, S, ox, oy, W, D){
+  const {cell, heights, colours} = p, nx = Math.round(p.W/cell), ny = Math.round(p.D/cell), Hh = (i, j) => heights[j*(nx + 1) + i];
+  const inv = rot === 0 ? (X, Y) => [X, Y] : rot === 1 ? (X, Y) => [Y, D - X] : rot === 2 ? (X, Y) => [W - X, D - Y] : (X, Y) => [W - Y, X];
+  let zmin = Infinity, zmax = -Infinity; for (const v of heights){ if (v < zmin) zmin = v; if (v > zmax) zmax = v; } zmin -= p.base || 6;
+  const RW = rot % 2 ? D : W, RD = rot % 2 ? W : D, P = (x, y, z) => [ox + (x - y)*S, oy + (x + y)*S/2 - z*S];
+  const pts = []; for (const x of [0, RW]) for (const y of [0, RD]) for (const z of [zmin, zmax]) pts.push(P(x, y, z));
+  const sx0 = Math.floor(Math.min(...pts.map(q => q[0]))), sx1 = Math.ceil(Math.max(...pts.map(q => q[0]))), sy0 = Math.floor(Math.min(...pts.map(q => q[1]))), sy1 = Math.ceil(Math.max(...pts.map(q => q[1])));
+  const w = sx1 - sx0 + 1, h = sy1 - sy0 + 1, img = g.createImageData(w, h), d = img.data;
+  const hAt = (x, y) => { const fx = x/cell, fy = y/cell, i = Math.min(nx - 1, Math.max(0, Math.floor(fx))), j = Math.min(ny - 1, Math.max(0, Math.floor(fy))), u = fx - i, v = fy - j;
+    return Hh(i, j)*(1 - u)*(1 - v) + Hh(i + 1, j)*u*(1 - v) + Hh(i, j + 1)*(1 - u)*v + Hh(i + 1, j + 1)*u*v; };
+  const earth = p.earth || [138, 116, 88], step = Math.min(0.25, 0.6/S), cc = p.ccell || cell, cnx = Math.round(p.W/cc), cny = Math.round(p.D/cc);
+  for (let jy = 0; jy < h; jy++) for (let ix = 0; ix < w; ix++){ const a = (sx0 + ix + 0.5 - ox)/S, b = (sy0 + jy + 0.5 - oy)/S;
+    const zt = Math.min(zmax, RW - a/2 - b, RD - b + a/2), zb = Math.max(zmin, -a/2 - b, -b + a/2); if (zt < zb) continue;
+    let col = null, prev = null, first = true;
+    for (let z = zt; z >= zb - 1e-6; z -= step){ const [x, y] = inv(a/2 + b + z, b + z - a/2); if (x < -1e-6 || y < -1e-6 || x > p.W + 1e-6 || y > p.D + 1e-6){ prev = null; first = true; continue; }
+      const hz = hAt(x, y);
+      if (z <= hz){
+        if (first && hz - z > step*0.75){ const f = 0.82 + 0.1*((Math.floor(z*1.2) % 2 + 2) % 2); col = earth.map(v => Math.round(v*f)); break; }   // the ray came in through the map's side
+        let lo = z, hi = prev === null ? z + step : prev; for (let k = 0; k < 6; k++){ const m = (lo + hi)/2, [mx, my] = inv(a/2 + b + m, b + m - a/2); if (m <= hAt(mx, my)) lo = m; else hi = m; }
+        const [fx, fy] = inv(a/2 + b + lo, b + lo - a/2), ci = Math.min(cnx - 1, Math.max(0, Math.floor(fx/cc))), cj = Math.min(cny - 1, Math.max(0, Math.floor(fy/cc))); col = colours[cj*cnx + ci]; break; }
+      prev = z; first = false; }
+    if (!col) continue; const o = (jy*w + ix)*4; d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = 255; }
   const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h; tmp.getContext('2d').putImageData(img, 0, 0); g.drawImage(tmp, sx0, sy0);
 }
 

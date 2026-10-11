@@ -17,8 +17,8 @@ const SCENE = ART.compose(W, D, (H, K) => {
   const segD = (x, y, pl) => { let best = 1e9; for (let i = 0; i < pl.length - 1; i++){ const [ax, ay] = pl[i], [bx, by] = pl[i + 1], vx = bx - ax, vy = by - ay, t = clamp(((x - ax)*vx + (y - ay)*vy)/(vx*vx + vy*vy), 0, 1); best = Math.min(best, Math.hypot(x - ax - vx*t, y - ay - vy*t)); } return best; };
   // settlements: one compact town, three hamlets, farms on the slopes
   const placed = []; const fits = (x, y, w, d) => placed.every(([a, b, c, e]) => x + w + 1 < a || x - 1 > c || y + d + 1 < b || y - 1 > e) && ROAD.every(pl => { for (let u = 0; u <= 1; u += 0.25) for (let v = 0; v <= 1; v += 0.25) if (segD(x + w*u, y + d*v, pl) < 3.0) return false; return true; }) && segD(x + w/2, y + d/2, STREAM) > 7;
-  const items = [], yard = [];
-  const building = (name, x, y, recol) => { const m = K.M.find(q => q.n === name); if (!fits(x, y, m.W, m.D)) return false; placed.push([x, y, x + m.W, y + m.D]); const z = level(x - 1, y - 1, x + m.W + 1, y + m.D + 1); items.push(() => K.place(H, name, x, y, z, recol, true)); yard.push([x, y, x + m.W, y + m.D, name === 'Farm' ? '#c2b48a' : null]); return true; };
+  const items = [], yard = [], casters = [];
+  const building = (name, x, y, recol) => { const m = K.M.find(q => q.n === name); if (!fits(x, y, m.W, m.D)) return false; placed.push([x, y, x + m.W, y + m.D]); const z = level(x - 1, y - 1, x + m.W + 1, y + m.D + 1); items.push(() => K.place(H, name, x, y, z, recol, true)); yard.push([x, y, x + m.W, y + m.D, name === 'Farm' ? '#c2b48a' : null]); const zt = Math.max(...m.parts.filter(q => q.t === 'blk').map(q => q.z + Math.max(...q.h)), 3); casters.push([x + 1, y + 1, x + m.W - 1, y + m.D - 1, zt*0.8]); return true; };
   const ROOFS = [null, {'#a8473a':'#b8553e'}, {'#a8473a':'#8e3f32'}, {'#a8473a':'#9a5a3a'}, {'#a8473a':'#c0624a'}];
   const village = (cx, cy, n, rad, extras) => { for (const [name, dx, dy] of extras) building(name, cx + dx, cy + dy);
     let tries = 0, k = 0; while (k < n && tries < 4000){ tries++; const a = r()*Math.PI*2, d = Math.sqrt(r())*rad, x = cx + Math.cos(a)*d - 5, y = cy + Math.sin(a)*d*0.8 - 5; if (building(r() < 0.45 ? 'House, two storeys' : 'House, small', x, y, ROOFS[Math.floor(r()*ROOFS.length)])) k++; } };
@@ -40,23 +40,29 @@ const SCENE = ART.compose(W, D, (H, K) => {
   const forestAt = (x, y, h) => h > 19 + 5*(vn(x/20, y/20) - 0.5) || (plot(x, y).s.kind > 0.86);
   // colour of a ground cell
   const L = [0.345, 0.636, 1], Ln = Math.hypot(...L);
-  const ground = (x, y, h, hx, hy) => { let c;
-    if (ROAD.some(pl => segD(x, y, pl) < 2.6)) c = '#7a7d80'; else if (segD(x, y, STREAM) < 2.2) c = '#6f9fbf'; else if (segD(x, y, STREAM) < 3.4) c = '#7d9a6a';
-    else if (RAIL.length && segD(x, y, RAIL) < 1.6) c = segD(x, y, RAIL) < 0.9 ? '#6a6e72' : '#a39d8e'; else if (TRACK.some(pl => segD(x, y, pl) < 1.4)) c = '#bca57c';
-    else if (yard.some(([a, b, c2, e, col]) => col && x > a + 2 && x < c2 - 2 && y > b + 2 && y < e - 2)) c = '#c2b48a';
-    else if (placed.some(([a, b, c2, e]) => x > a - 1 && x < c2 + 1 && y > b - 1 && y < e + 1)) c = '#9db87a';
-    else if (forestAt(x, y, h)) c = '#4e7a42';
-    else { const p = plot(x, y); c = p.edge < 2.2 ? '#6f9452' : FIELD[Math.floor(p.s.kind*FIELD.length*0.999)]; if (!p.edge < 2.2 && FIELD.indexOf(c) === 5 && ((x + y) % 2.4) < 1.2) c = '#a08560'; }
-    const n = [-hx, -hy, 1], nl = Math.hypot(...n), lit = (n[0]*L[0] + n[1]*L[1] + n[2]*L[2])/(nl*Ln), f = 0.8 + 0.28*lit + (hsh(Math.floor(x/2), Math.floor(y/2), 5) - 0.5)*0.05;
-    const haze = clamp((360 - (x + y))/360, 0, 1)*0.42, [R, G, B] = c.match(/\w\w/g).map(v => parseInt(v, 16)), mix = (v, t) => Math.round(Math.min(255, v*f)*(1 - haze) + t*haze);
+  const kindAt = (x, y) => { const h = height(x, y);
+    if (ROAD.some(pl => segD(x, y, pl) < 2.6)) return 'road'; if (segD(x, y, STREAM) < 2.2) return 'water'; if (segD(x, y, STREAM) < 3.4) return 'bank';
+    if (segD(x, y, RAIL) < 1.6) return 'rail'; if (TRACK.some(pl => segD(x, y, pl) < 1.4)) return 'track';
+    if (yard.some(([a, b, c2, e, col]) => col && x > a + 2 && x < c2 - 2 && y > b + 2 && y < e - 2)) return 'yard';
+    if (placed.some(([a, b, c2, e]) => x > a - 1 && x < c2 + 1 && y > b - 1 && y < e + 1)) return 'garden';
+    if (forestAt(x, y, h)) return 'forest'; const p = plot(x, y); return p.edge < 2.2 ? 'hedge' : 'f' + Math.floor(p.s.kind*FIELD.length*0.999); };
+  const shade = (c, f) => '#' + c.match(/\w\w/g).map(v => Math.round(parseInt(v, 16)*f).toString(16).padStart(2, '0')).join('');
+  const BASE = {road:'#6b7075', water:'#5f8fb0', bank:'#7d8f6a', rail:'#9e978a', track:'#b39d72', yard:'#bdb08a', garden:'#9db383', forest:'#4e7a42', hedge:'#5f8a48'};
+  const inShadow = (x, y) => { for (const [a, b, c2, e, h] of casters){ if (x > c2 + 1 || y > e + 1 || x < a - h || y < b - h*1.9) continue; for (let t = 0.3; t <= h; t += 0.6){ const px = x + 0.345*t, py = y + 0.636*t; if (px > a && px < c2 && py > b && py < e) return true; } } return false; };
+  const ground = (x, y, h, hx, hy, k, edgeK) => { let c = BASE[k];
+    if (!c){ const i = +k.slice(1), p = plot(x, y); c = FIELD[i]; const ang = p.s.kind*40, u = x*Math.cos(ang) + y*Math.sin(ang);
+      if ((i === 0 || i === 1 || i === 5 || i === 6) && (((u % 1.6) + 1.6) % 1.6) < 0.5) c = shade(c, 0.88); }
+    if (k === 'rail' && segD(x, y, RAIL) < 0.8) c = '#5a5e62';
+    // outlines where two kinds of ground meet, like the dark edges on the objects
+    const edge = edgeK;
+    const n = [-hx, -hy, 1], nl = Math.hypot(...n), lit = (n[0]*L[0] + n[1]*L[1] + n[2]*L[2])/(nl*Ln);
+    let f = Math.round((0.78 + 0.3*lit)*10)/10; if (edge) f *= 0.82; if (inShadow(x, y)) f *= 0.78;
+    if (k !== 'road' && k !== 'water' && hsh(Math.floor(x/2), Math.floor(y/2), 5) > 0.8) f *= 0.95;
+    const haze = clamp((360 - (x + y))/360, 0, 1)*0.16, [R, G, B] = (c[0] === '#' ? c.match(/\w\w/g).map(v => parseInt(v, 16)) : c.match(/\d+/g).map(Number)), mix = (v, tt) => Math.round(Math.min(255, v*f)*(1 - haze) + tt*haze);
     return 'rgb(' + mix(R, 214) + ',' + mix(G, 224) + ',' + mix(B, 226) + ')'; };
-  // terrain cells: blocks with four corner heights, drawn before everything else
-  for (let x = 0; x < W; x += CELL) for (let y = 0; y < D; y += CELL){ const h00 = height(x, y), h10 = height(x + CELL, y), h11 = height(x + CELL, y + CELL), h01 = height(x, y + CELL), m = Math.min(h00, h10, h11, h01) - 0.5;
-    const hc = (h00 + h10 + h11 + h01)/4, top = ground(x + 1, y + 1, hc, (h10 + h11 - h00 - h01)/(2*CELL), (h01 + h11 - h00 - h10)/(2*CELL));
-    H.raw({t:'blk', x, y, z:-6, w:CELL, d:CELL, h:[h00 + 6, h10 + 6, h11 + 6, h01 + 6], c:'#8a7458', side:'#8a7458', top, seam:1, topOnly:!(x + CELL >= W || y + CELL >= D), terrain:1, k:-1e6}); }
   items.forEach(f => f());
   // trees: forest on the ridge and in the woods, rows along hedges and the stream, fruit trees near the farms and hamlets
-  const tree = (x, y, kind, s) => { const f = kind === 's' ? K.spruce : kind === 'f' ? K.fruitTree : K.beech, hh = (kind === 's' ? 10.5 : kind === 'f' ? 4.2 : 7.6)*s, z = height(x, y) - 0.2;
+  const tree = (x, y, kind, s) => { const f = kind === 's' ? K.spruce : kind === 'f' ? K.fruitTree : K.beech, hh = (kind === 's' ? 10.5 : kind === 'f' ? 4.2 : 7.6)*s, z = height(x, y) - 0.2; casters.push([x - 1.2*s, y - 1.2*s, x + 1.2*s, y + 1.2*s, hh*0.85]);
     H.SD(x - 2.6*s, x + 2.6*s, y - 2.6*s, y + 2.6*s, 0, hh, (px, py, pz) => f(px - x, py - y, pz, s), {step:0.18, lift:z}); };
   const clear = (x, y) => !placed.some(([a, b, c, e]) => x > a - 3 && x < c + 3 && y > b - 3 && y < e + 3) && !ROAD.some(pl => segD(x, y, pl) < 4) && segD(x, y, STREAM) > 3.5 && segD(x, y, RAIL) > 3;
   for (let i = 0; i < 5200; i++){ const x = r()*W, y = r()*D, h = height(x, y); if (!forestAt(x, y, h) || !clear(x, y)) continue; tree(x, y, r() < 0.7 ? 's' : 'b', 0.75 + r()*0.4); }
@@ -68,6 +74,16 @@ const SCENE = ART.compose(W, D, (H, K) => {
   pasture.forEach(([x, y, h], i) => i % 3 ? H.SD(x, x + 2.8, y, y + 1, 0, 1.5, (px, py, pz) => K.cowM(i % 2 ? {graze:1} : {})(px - x, py - y, pz), {step:0.06, lift:h}) : H.SD(x, x + 1.4, y, y + 0.6, 0, 0.9, (px, py, pz) => K.sheepFn({graze:1})(px - x, py - y, pz), {step:0.05, lift:h}));
   K.place(H, 'Post bus', 168, 136.2, height(172, 137)); K.place(H, 'Tractor with manure spreader', 84, 204, height(88, 205));
   K.VILL.slice(0, 10).forEach((o, i) => { const x = 140 + r()*30, y = 118 + r()*26; if (clear(x, y) || ROAD.some(pl => segD(x, y, pl) < 4)) K.figure(H, o, x, y, i % 2 ? K.POSE.walkA : null, height(x + 0.75, y + 0.75)); });
+  // terrain: heights on a 1 m grid, a colour per cell (shading in tone steps, outlines between kinds of ground, shadows), traced per pixel
+  const C1 = 1, nx = W/C1, ny = D/C1, CC = 0.5, cx = W/CC, cy = D/CC, heights = new Float32Array((nx + 1)*(ny + 1)), kinds = new Array(cx*cy), colours = new Array(cx*cy);
+  for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) heights[j*(nx + 1) + i] = height(i*C1, j*C1);
+  for (let j = 0; j < cy; j++) for (let i = 0; i < cx; i++) kinds[j*cx + i] = kindAt((i + 0.5)*CC, (j + 0.5)*CC);
+  const KA = (i, j) => kinds[Math.min(cy - 1, Math.max(0, j))*cx + Math.min(cx - 1, Math.max(0, i))], hh = (q, r2) => heights[Math.min(ny, r2)*(nx + 1) + Math.min(nx, q)];
+  for (let j = 0; j < cy; j++) for (let i = 0; i < cx; i++){ const x = (i + 0.5)*CC, y = (j + 0.5)*CC, k = kinds[j*cx + i], gi = Math.floor(x), gj = Math.floor(y);
+    const hx = (hh(gi + 1, gj) + hh(gi + 1, gj + 1) - hh(gi, gj) - hh(gi, gj + 1))/2, hy = (hh(gi, gj + 1) + hh(gi + 1, gj + 1) - hh(gi, gj) - hh(gi + 1, gj))/2;
+    const edge = [[1, 0], [0, 1], [-1, 0], [0, -1], [2, 0], [0, 2]].some(([dx, dy]) => { const k2 = KA(i + dx, j + dy); return k2 !== k && k !== 'bank' && k2 !== 'bank'; });
+    colours[j*cx + i] = ground(x, y, 0, hx, hy, k, edge).match(/\d+/g).map(Number); }
+  H.HF(W, D, C1, heights, colours, {base:6, ccell:CC});
 });
 (document.fonts && document.fonts.load ? Promise.all([document.fonts.load('bold 16px Silkscreen'), document.fonts.ready]) : Promise.resolve()).then(() => {
   const S = +(new URLSearchParams(location.search).get('s') || 2.5), c = document.getElementById('c'), pad = 40; c.width = Math.ceil((W + D)*S) + pad*2; c.height = Math.ceil((W + D)/2*S + 60*S) + pad*2;
