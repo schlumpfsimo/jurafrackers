@@ -54,7 +54,7 @@ function renderAll(){
   for (const m of ART.models){
     const isB = m.cat === 'b', num = isB ? 'B' + String(++nb).padStart(2, '0') : 'V' + String(++nv).padStart(2, '0');
     const views = card(document.getElementById(isB ? 'gb' : 'gv'), num, m.n, m.note);
-    const zt = extent(m), span = m.W + m.D, pad = 6, s = Math.max(1.2, Math.min(7, 118/span, 150/(span/2 + Math.max(zt, 1))));
+    const zt = extent(m), span = m.W + m.D, pad = 6, s = Math.max(1.2, Math.min(m.cat === 'v' ? 11 : 7, 118/span, 150/(span/2 + Math.max(zt, 1))));
     for (let r = 0; r < 4; r++){
       const c = document.createElement('canvas'); c.width = Math.ceil(span*s + pad*2); c.height = Math.ceil(span*s/2 + Math.max(zt, 1)*s + pad*2);
       const g = c.getContext('2d'), ox = (r % 2 ? m.D : m.W)*s + pad, oy = Math.max(zt, 1)*s + pad;
@@ -63,7 +63,7 @@ function renderAll(){
   }
   ART.people.forEach((p, i) => {
     const views = card(document.getElementById('gp'), 'P' + String(i + 1).padStart(2, '0'), p.n, p.note);
-    for (let d = 0; d < 4; d++){ const c = document.createElement('canvas'); c.width = 52; c.height = 92; ART.drawPerson(c.getContext('2d'), 26, 86, 3, p, d); addView(views, ['front-left', 'front-right', 'back-left', 'back-right'][d], c); }
+    for (let d = 0; d < 4; d++){ const c = document.createElement('canvas'); c.width = 64; c.height = 100; ART.drawPerson(c.getContext('2d'), 32, 94, 2.9, p, d); addView(views, ['front-left', 'front-right', 'back-left', 'back-right'][d], c); }
   });
 }
 (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(renderAll);

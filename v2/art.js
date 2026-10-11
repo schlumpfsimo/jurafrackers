@@ -16,9 +16,11 @@ function build(fn){
     // block; h is one height or four corner heights [x0y0, x1y0, x1y1, x0y1]
     B:(x, y, z, w, d, h, c, o) => push(Object.assign({t:'blk', x, y, z, w, d, h:Array.isArray(h) ? h : [h, h, h, h], c}, o || {})),
     // gable roof on a w×d footprint; ridge along x ('x') or y ('y'); side = gable wall colour
-    R(x, y, z, w, d, h, c, ax, side, ov){ ov = ov ?? 0.4; const o = {side:side || c, roof:1};
+    R(x, y, z, w, d, h, c, ax, side, ov){ ov = ov ?? 0.4; const o = {side:side || c, roof:1, kx:x + w/2, ky:y + d/2};
       if ((ax || 'x') === 'x'){ push(Object.assign({t:'blk', x:x - 0.1, y:y - ov, z, w:w + 0.2, d:d/2 + ov, h:[0, 0, h, h], c}, o)); push(Object.assign({t:'blk', x:x - 0.1, y:y + d/2, z, w:w + 0.2, d:d/2 + ov, h:[h, h, 0, 0], c}, o)); }
       else { push(Object.assign({t:'blk', x:x - ov, y:y - 0.1, z, w:w/2 + ov, d:d + 0.2, h:[0, h, h, 0], c}, o)); push(Object.assign({t:'blk', x:x + w/2, y:y - 0.1, z, w:w/2 + ov, d:d + 0.2, h:[h, 0, 0, h], c}, o)); } },
+    W:(x, y, r, w, o) => push(Object.assign({t:'whl', x, y, r, w:w || r*0.6}, o || {})),              // wheel, axle along y
+    Y:(x, y, z, w, d, h, c, o) => push(Object.assign({t:'pyr', x, y, z, w, d, h, c}, o || {})),       // pyramid (spires, hip caps)
     C:(x, y, z, r, h, c, o) => push(Object.assign({t:'cyl', x, y, z, r, h, c}, o || {})),          // vertical cylinder centred on x,y
     L:(pts, c, lw, o) => push(Object.assign({t:'ln', pts, c, lw:lw || 1}, o || {})),                 // 3D polyline
     F:(pts, c, o) => push(Object.assign({t:'flat', pts, c}, o || {})),                                // ground decal
@@ -43,14 +45,26 @@ function draw(g, model, rot, S, ox, oy, post){
       const L = [[p.x, p.y, p.h[0]], [p.x + p.w, p.y, p.h[1]], [p.x + p.w, p.y + p.d, p.h[2]], [p.x, p.y + p.d, p.h[3]]].map(([x, y, h]) => { const q = rp(x, y); return [q[0], q[1], h]; });
       const xs = L.map(q => q[0]), ys = L.map(q => q[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
       const hAt = (x, y) => L.find(q => Math.abs(q[0] - x) < 1e-6 && Math.abs(q[1] - y) < 1e-6)[2];
-      items.push({k:(x0 + x1)/2 + (y0 + y1)/2 + (p.k || 0) + (p.roof ? 0.01 : 0), i, f(){
+      const kc = p.kx !== undefined ? rp(p.kx, p.ky) : [(x0 + x1)/2, (y0 + y1)/2];
+      items.push({k:kc[0] + kc[1] + p.z*1.2 + (p.k || 0) + ((x0 + x1)/2 + (y0 + y1)/2)*0.001, i, f(){
         const z = p.z, c = p.c, line = p.noline ? null : 'rgba(20,24,28,.38)';
         const h00 = hAt(x0, y0), h10 = hAt(x1, y0), h11 = hAt(x1, y1), h01 = hAt(x0, y1);
         const sideS = p.side || c, sideE = p.side || c;
+        if (p.bv){ const b = p.bv, zt = z + h00, zb = zt - b;
+          poly([P(x0, y0, zb), P(x1, y0, zb), P(x1 - b, y0 + b, zt), P(x0 + b, y0 + b, zt)], sh(c, 0.95), null);
+          poly([P(x0, y0, zb), P(x0, y1, zb), P(x0 + b, y1 - b, zt), P(x0 + b, y0 + b, zt)], sh(c, 1.0), null);
+          poly([P(x0, y1, z), P(x1, y1, z), P(x1, y1, zb), P(x0, y1, zb)], sh(c, 0.9), line);
+          poly([P(x1, y0, z), P(x1, y1, z), P(x1, y1, zb), P(x1, y0, zb)], sh(c, 0.74), line);
+          poly([P(x0, y1, zb), P(x1, y1, zb), P(x1 - b, y1 - b, zt), P(x0 + b, y1 - b, zt)], sh(c, 1.02), line);
+          poly([P(x1, y0, zb), P(x1, y1, zb), P(x1 - b, y1 - b, zt), P(x1 - b, y0 + b, zt)], sh(c, 0.86), line);
+          poly([P(x0 + b, y0 + b, zt), P(x1 - b, y0 + b, zt), P(x1 - b, y1 - b, zt), P(x0 + b, y1 - b, zt)], p.top || sh(c, 1.14), line); }
+        else {
         if (h01 > 0 || h11 > 0) poly([P(x0, y1, z), P(x1, y1, z), P(x1, y1, z + h11), P(x0, y1, z + h01)], sh(sideS, 0.9), line);
         if (h10 > 0 || h11 > 0) poly([P(x1, y0, z), P(x1, y1, z), P(x1, y1, z + h11), P(x1, y0, z + h10)], sh(sideE, 0.74), line);
         const sx = (h10 + h11) - (h00 + h01), sy = (h01 + h11) - (h00 + h10), top = p.top || (sx + sy < -1e-6 ? sh(c, 1.1) : sx + sy > 1e-6 ? sh(c, 0.72) : sh(c, 1.1));
         poly([P(x0, y0, z + h00), P(x1, y0, z + h10), P(x1, y1, z + h11), P(x0, y1, z + h01)], top, line);
+        if (p.roof){ g.strokeStyle = sh(c, 0.55); g.lineWidth = Math.max(1, S*0.22); const lo = [[x0, y0, h00], [x1, y0, h10], [x1, y1, h11], [x0, y1, h01]].filter(q => q[2] < 1e-6); if (lo.length === 2){ g.beginPath(); const a = P(lo[0][0], lo[0][1], z), b = P(lo[1][0], lo[1][1], z); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); } }
+        }
         for (const wv of p.win || []){ const [f, a, wz, ww, wh, wc, txt, tc] = wv, fr = rf(f); if (fr !== 'E' && fr !== 'S') continue;
           const lp = f === 'E' ? [[p.x + p.w, p.y + a], [p.x + p.w, p.y + a + ww]] : f === 'W' ? [[p.x, p.y + p.d - a], [p.x, p.y + p.d - a - ww]] : f === 'S' ? [[p.x + a, p.y + p.d], [p.x + a + ww, p.y + p.d]] : [[p.x + p.w - a, p.y], [p.x + p.w - a - ww, p.y]];
           const A = rp(...lp[0]), Bq = rp(...lp[1]), col = wc || PAL.glass, base = z + wz;
@@ -60,7 +74,7 @@ function draw(g, model, rot, S, ox, oy, post){
               g.translate(m1[0], m1[1]); g.transform(1, skew, 0, 1, 0, 0); g.scale(fit, 1); g.fillText(txt, 0, 0.5); g.restore(); }); } }
       }});
     } else if (p.t === 'cyl'){
-      const q = rp(p.x, p.y); items.push({k:q[0] + q[1] + (p.k || 0), i, f(){
+      const q = rp(p.x, p.y); items.push({k:q[0] + q[1] + p.z*1.2 + (p.k || 0), i, f(){
         const b = P(q[0], q[1], p.z), t = P(q[0], q[1], p.z + p.h), rx = p.r*S*1.41, ry = rx/2;
         g.fillStyle = sh(p.c, 0.85); g.fillRect(b[0] - rx, t[1], rx*2, b[1] - t[1]); g.beginPath(); g.ellipse(b[0], b[1], rx, ry, 0, 0, Math.PI); g.fill();
         g.fillStyle = sh(p.c, 0.72); g.fillRect(b[0] + rx*0.35, t[1], rx*0.65, b[1] - t[1]);
@@ -68,7 +82,17 @@ function draw(g, model, rot, S, ox, oy, post){
       }});
     } else if (p.t === 'ln'){
       const pts = p.pts.map(([x, y, z]) => { const q = rp(x, y); return [q[0], q[1], z]; }), ax = pts.reduce((a, q) => a + q[0] + q[1], 0)/pts.length;
-      items.push({k:ax + (p.k || 0), i, f(){ g.beginPath(); pts.forEach((q, j) => { const s = P(q[0], q[1], q[2]); j ? g.lineTo(s[0], s[1]) : g.moveTo(s[0], s[1]); }); g.strokeStyle = p.c; g.lineWidth = Math.max(0.8, S*0.18*p.lw); g.stroke(); }});
+      items.push({k:ax + Math.min(...pts.map(q => q[2]))*1.2 + (p.k || 0), i, f(){ g.beginPath(); pts.forEach((q, j) => { const s = P(q[0], q[1], q[2]); j ? g.lineTo(s[0], s[1]) : g.moveTo(s[0], s[1]); }); g.strokeStyle = p.c; g.lineWidth = Math.max(0.8, S*0.18*p.lw); g.stroke(); }});
+    } else if (p.t === 'pyr'){
+      const cs = [[p.x, p.y], [p.x + p.w, p.y], [p.x + p.w, p.y + p.d], [p.x, p.y + p.d]].map(q => rp(q[0], q[1])), ap = rp(p.x + p.w/2, p.y + p.d/2);
+      const xs = cs.map(q => q[0]), ys = cs.map(q => q[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), A = P(ap[0], ap[1], p.z + p.h);
+      items.push({k:ap[0] + ap[1] + p.z*1.2 + (p.k || 0), i, f(){ const ln = 'rgba(20,24,28,.38)';
+        poly([P(x0, y0, p.z), P(x1, y0, p.z), A], sh(p.c, 0.8), ln); poly([P(x0, y0, p.z), P(x0, y1, p.z), A], sh(p.c, 0.95), ln);
+        poly([P(x0, y1, p.z), P(x1, y1, p.z), A], sh(p.c, 1.08), ln); poly([P(x1, y0, p.z), P(x1, y1, p.z), A], sh(p.c, 0.78), ln); }});
+    } else if (p.t === 'whl'){
+      const q = rp(p.x, p.y), alongX = rot % 2 === 0;   // disk plane: x–z before rotation, y–z after an odd turn
+      items.push({k:q[0] + q[1] + (p.k || 0), i, f(){ const ring = (rr, dy, col) => { g.beginPath(); for (let t = 0; t <= 24; t++){ const a = t/24*Math.PI*2, cx = Math.cos(a)*rr, cz = Math.sin(a)*rr + p.r; const s2 = alongX ? P(q[0] + cx, q[1] + dy, cz) : P(q[0] + dy, q[1] + cx, cz); t ? g.lineTo(s2[0], s2[1]) : g.moveTo(s2[0], s2[1]); } g.closePath(); g.fillStyle = col; g.fill(); };
+        ring(p.r, 0, '#1f2226'); ring(p.r*0.5, 0.01, '#9aa3ab'); ring(p.r*0.2, 0.02, '#5a6066'); }});
     } else if (p.t === 'flat'){
       const pts = p.pts.map(([x, y]) => rp(x, y)); items.push({k:-1e4 + i, i, f(){ poly(pts.map(q => P(q[0], q[1], p.z || 0)), p.c, p.line || null); }});
     } else if (p.t === 'txt'){
@@ -185,11 +209,23 @@ def('b', 'Village shop', 11, 9, ({B, R, F, row}, c) => { F([[0, 0], [11, 0], [11
   B(1.5, 1.5, 0, 8, 5.5, 3.4, '#f1e7d2', {win:[['S', 0.8, 0.4, 3, 1.8], ['S', 4.3, 0, 1.3, 2.4, '#5a6066'], ['S', 6, 0.4, 1.4, 1.8], ['S', 0.6, 2.4, 6.8, 0.8, '#3d6b45', 'ÉPICERIE', '#fff']]});
   B(1.5, 7, 2.2, 8, 0.9, 0.1, '#c94c3a', {h:[0.3, 0.3, 0, 0]}); R(1.5, 1.5, 3.4, 8, 5.5, 2.4, c.roof, 'x', '#f1e7d2', 0.5); B(9.6, 6, 0, 0.8, 1.2, 1.6, '#3a4148', {win:[['S', 0.05, 0.2, 0.7, 1.2, '#f4f2ec']]});
 }, 'Rumours pinned to the board outside; leaflets against them.');
-def('b', 'Church', 18, 12, ({B, R, F, L, row}, c) => { F([[0, 0], [18, 0], [18, 12], [0, 12]], '#a7b98b');
-  B(5, 3, 0, 11, 7, 6.5, '#f2efe8', {win:[...row('S', 1.5, 9, 2.5, 2, 1, 3), ...row('E', 1.5, 4.5, 3, 2, 1, 3)]}); R(5, 3, 6.5, 11, 7, 4.5, c.roof2, 'x', '#f2efe8', 0.4);
-  B(1.5, 4, 0, 4, 4, 13, '#f2efe8', {win:[['S', 1.4, 0, 1.2, 2.6, c.wood], ['S', 1.5, 9.5, 1, 1.4, '#3a3a3a'], ['E', 1.5, 9.5, 1, 1.4, '#3a3a3a'], ['S', 1.2, 7, 1.6, 1.6, '#f4f2ec']]});
-  B(1.5, 4, 13, 4, 4, 5, c.slate, {h:[0, 0, 0, 0]}); L([[1.5, 4, 13], [3.5, 6, 19], [5.5, 8, 13]], c.slate, 3); L([[5.5, 4, 13], [3.5, 6, 19], [1.5, 8, 13]], '#4a5059', 3); L([[3.5, 6, 19], [3.5, 6, 21]], '#c9a23a', 0.6);
-}, 'Nave and bell tower. Quakes crack it; it can be rebuilt.');
+const church = (state) => ({B, R, F, L, Y}, c) => { F([[0, 0], [18, 0], [18, 12], [0, 12]], '#a7b98b'); const wall = '#f2efe8';
+  B(5, 3, 0, 11, 7, 6.5, wall, {win:[...[1.5, 4, 6.5, 9].map(a => ['S', a, 2, 1, 3, '#7fa6c4']), ...[1.5, 4.5].map(a => ['E', a, 2, 1, 3, '#7fa6c4'])]});
+  if (state === 'broken'){ R(5, 3, 6.5, 6, 7, 4.5, c.roof2, 'x', wall, 0.4); B(11.2, 3.2, 6.5, 1.2, 3.4, [0.6, 1.8, 0.9, 0.2], c.roof2); B(12.6, 6.2, 6.5, 1.4, 3.6, [0.4, 0.1, 1.2, 2.2], c.roof2);
+    L([[9, 10, 6.4], [9.6, 10, 4.6], [9.1, 10, 3.2], [9.8, 10, 1.6]], '#3a3a3a', 1); L([[14.5, 10, 6.4], [14, 10, 4.2], [14.6, 10, 2.6]], '#3a3a3a', 1); L([[16, 5, 6.4], [16, 6, 4], [16, 5.4, 2.4]], '#3a3a3a', 1);
+    B(1.5, 4, 0, 4, 4, 9, wall, {win:[['S', 1.4, 0, 1.2, 2.6, c.wood], ['S', 1.2, 6, 1.6, 1.6, '#f4f2ec']]}); B(1.5, 4, 9, 2.4, 4, [1.6, 0.4, 0.2, 2.2], wall); B(3.9, 4, 9, 1.6, 2, [0.8, 0.2, 0.6, 1.2], wall);
+    L([[3.5, 8, 8.8], [3, 8, 6.5], [3.6, 8, 4.4]], '#3a3a3a', 1);
+    for (const [x, y, w, h] of [[6.5, 10.6, 1.2, 0.6], [8.4, 10.8, 0.9, 0.5], [12.6, 10.6, 1.4, 0.7], [0.6, 9, 1.2, 0.8], [14.6, 11, 0.8, 0.4], [7.6, 11.2, 1.2, 0.3]]) B(x, y, 0, w, w*0.8, h, '#cfc8b8', {bv:0.12});
+    for (const p of [[4.5, 11.5], [17, 11.5]]) L([[p[0], p[1], 0], [p[0], p[1], 1]], '#e8b730', 0.5); L([[4.5, 11.5, 0.8], [17, 11.5, 0.8]], '#e8b730', 0.6); }
+  else { R(5, 3, 6.5, 11, 7, 4.5, c.roof2, 'x', wall, 0.4);
+    B(1.5, 4, 0, 4, 4, 13, wall, {win:[['S', 1.4, 0, 1.2, 2.6, c.wood], ['S', 1.5, 9.5, 1, 1.4, '#3a3a3a'], ['E', 1.5, 9.5, 1, 1.4, '#3a3a3a'], ['S', 1.2, 7, 1.6, 1.6, '#f4f2ec']]});
+    Y(1.3, 3.8, 13, 4.4, 4.4, 6.5, c.slate); L([[3.5, 6, 19.5], [3.5, 6, 21.2]], '#c9a23a', 0.7); L([[3.1, 6, 20.6], [3.9, 6, 20.6]], '#c9a23a', 0.6);
+    if (state === 'repair'){ for (const x of [0.8, 3.5, 6.2]) L([[x, 8.8, 0], [x, 8.8, 15]], '#c98b3a', 0.7, {k:4}); for (const y of [3.3, 6, 8.8]) L([[6.2, y, 0], [6.2, y, 15]], '#c98b3a', 0.7, {k:4});
+      for (let z = 2.5; z < 15; z += 2.5){ L([[0.8, 8.8, z], [6.2, 8.8, z], [6.2, 3.3, z]], '#c98b3a', 0.6, {k:4}); B(0.8, 8.4, z - 0.1, 5.4, 0.4, 0.1, '#a87a4a', {k:4, noline:1}); }
+      B(13, 10.4, 0, 2, 1.4, 1.2, '#9aa3ab', {bv:0.15}); } } };
+def('b', 'Church', 18, 12, church('ok'), 'Nave and bell tower.');
+def('b', 'Church after a quake', 18, 12, church('broken'), 'Cracked walls, half the nave roof and the top of the tower gone, rubble, tape around it.');
+def('b', 'Church under repair', 18, 12, church('repair'), 'Scaffolding around the tower while it is rebuilt.');
 def('b', 'Chapel', 9, 7, ({B, R, F, L}, c) => { F([[0, 0], [9, 0], [9, 7], [0, 7]], '#a7b98b');
   B(1.5, 1.5, 0, 6, 4, 3.4, '#f2efe8', {win:[['S', 2.5, 0, 1, 2, c.wood], ['E', 1.5, 1.2, 0.8, 1.4]]}); R(1.5, 1.5, 3.4, 6, 4, 2.6, c.roof2, 'x', '#f2efe8', 0.3);
   B(6.4, 3.1, 6, 0.9, 0.9, 1.6, '#f2efe8'); L([[6.85, 3.55, 7.6], [6.85, 3.55, 8.8]], '#3a3a3a', 0.6); L([[6.45, 3.55, 8.3], [7.25, 3.55, 8.3]], '#3a3a3a', 0.6);
@@ -263,38 +299,49 @@ def('b', 'Burning barricade', 7, 5, ({B, C, F}, c) => { for (let i = 0; i < 5; i
   B(1, 2, 0.9, 1.2, 1, 1.4, '#e8742a', {noline:1, h:[0.4, 1.6, 0.6, 1.1]}); B(3, 2, 0.9, 1.4, 1, 1.8, '#f2b23a', {noline:1, h:[1.2, 0.4, 1.8, 0.6]});
 }, 'Tyres on the road. The gendarmerie comes by itself.');
 
-/* Vehicles (length along x) */
-const wheels = (B, xs, y0, y1, r) => { for (const x of xs){ B(x - r, y0 - 0.15, 0, r*2, 0.3, r*2, '#1c1f22'); B(x - r, y1 - 0.15, 0, r*2, 0.3, r*2, '#1c1f22'); } };
-def('v', 'Company car (old 911)', 4.4, 1.8, ({B}, c) => { const col = '#3f5e3a';
-  B(0.2, 0.1, 0.25, 4, 1.6, 0.55, col, {h:[0.4, 0.55, 0.55, 0.4], win:[['S', 3.6, 0.15, 0.35, 0.2, '#f2e7b0'], ['E', 0.15, 0.25, 0.3, 0.18, '#f2e7b0'], ['E', 1.15, 0.25, 0.3, 0.18, '#f2e7b0']]});
-  B(1.1, 0.25, 0.8, 1.9, 1.3, 0.5, col, {h:[0.15, 0.5, 0.5, 0.15], win:[['S', 0.2, 0.05, 1.5, 0.35], ['E', 0.15, 0.05, 1, 0.35]]}); wheels(B, [0.9, 3.4], 0.1, 1.7, 0.32);
+/* Vehicles (length along x, front at +x). Rounded bodies (bevel), round wheels. */
+const lights = (x, d, z) => [['E', 0.15, z, 0.3, 0.22, '#fff2b0'], ['E', d - 0.45, z, 0.3, 0.22, '#fff2b0']];
+const axle = (W, xs, y0, y1, r) => { for (const x of xs){ W(x, y0, r); W(x, y1, r); } };
+def('v', 'Company car (old 911)', 4.4, 1.8, ({B, W}, c) => { const col = '#4a6b45';
+  axle(W, [0.95, 3.45], 0.2, 1.6, 0.33);
+  B(0.2, 0.2, 0.3, 4, 1.4, 0.5, col, {bv:0.18, win:[...lights(3.95, 1.4, 0.18)]});
+  B(0.55, 0.32, 0.8, 1.2, 1.16, [0.03, 0.42, 0.42, 0.03], col);
+  B(1.75, 0.32, 0.8, 1.1, 1.16, 0.42, col, {bv:0.12, win:[['S', 0.12, 0.06, 0.86, 0.28]]});
+  B(2.85, 0.32, 0.8, 0.55, 1.16, [0.42, 0.04, 0.04, 0.42], '#9fc3d6');
 }, 'Never named. Drives the CEO to debates, interviews and crises.');
-def('v', 'Geologist\'s pickup', 5.2, 1.9, ({B}, c) => { B(0.2, 0.1, 0.35, 5, 1.7, 0.75, '#f2f2ef', {win:[['S', 0.6, 0.35, 1.2, 0.4, c.co, 'ÉG', '#fff'], ['E', 0.2, 0.3, 0.4, 0.2, '#f2e7b0'], ['E', 1.1, 0.3, 0.4, 0.2, '#f2e7b0']]});
-  B(2.4, 0.15, 1.1, 2, 1.6, 0.7, '#f2f2ef', {win:[['S', 0.15, 0.1, 1.7, 0.45], ['E', 0.15, 0.1, 1.3, 0.45]]}); B(0.25, 0.15, 1.1, 2.1, 1.6, 0.25, '#d9d9d4'); wheels(B, [1.1, 4.1], 0.1, 1.8, 0.38);
+def('v', 'Geologist\'s pickup', 5.2, 1.9, ({B, W}, c) => { axle(W, [1.1, 4.1], 0.2, 1.7, 0.4);
+  B(0.2, 0.2, 0.35, 4.8, 1.5, 0.75, '#f6f5f0', {bv:0.15, win:[['S', 0.5, 0.3, 1.4, 0.32, c.co, 'ÉG', '#fff'], ...lights(4.8, 1.5, 0.35)]});
+  B(2.5, 0.28, 1.1, 1.8, 1.34, 0.7, '#f6f5f0', {bv:0.14, win:[['S', 0.15, 0.1, 1.45, 0.42], ['E', 0.12, 0.1, 1.1, 0.42]]});
+  B(0.3, 0.3, 1.1, 2.1, 1.3, 0.22, '#d4d3cc'); B(4.3, 0.5, 1.15, 0.2, 0.9, 0.4, '#3a3f45');
 }, 'Plants the prospect flags.');
-def('v', 'Supply lorry', 8, 2.4, ({B}, c) => { B(0.2, 0.1, 0.6, 2, 2.2, 2.2, c.co, {win:[['S', 0.2, 1, 1.5, 0.8], ['E', 0.2, 1, 1.8, 0.8]]}); B(2.4, 0.1, 0.6, 5.4, 2.2, 2.4, '#e4e7ea', {win:[['S', 0.6, 0.8, 4.2, 0.7, c.co, 'ÉNERGIE-GÉO', '#fff']]}); wheels(B, [1.2, 5.6, 6.8], 0.1, 2.3, 0.45); }, 'Brings drilling supplies from the depot.');
-def('v', 'Low-loader with rig', 14, 2.8, ({B, L}, c) => { B(0.2, 0.2, 0.6, 2.4, 2.4, 2.4, '#c2552c', {win:[['S', 0.3, 1.2, 1.6, 0.8], ['E', 0.2, 1.2, 2, 0.8]]}); B(2.6, 0.3, 0.6, 11, 2.2, 0.3, '#3a3f45');
-  B(3.4, 0.5, 0.9, 7, 1.8, 1.4, '#6c737a'); L([[4, 1.4, 2.3], [13, 1.4, 2.3]], c.co2, 2); L([[4, 0.7, 2.3], [12, 1.4, 2.3], [4, 2.1, 2.3]], c.co2, 0.8); wheels(B, [1.4, 9.6, 10.8, 12], 0.2, 2.6, 0.45); }, 'Brings a rig to a pad and back.');
-def('v', 'Vibro-truck', 8, 2.6, ({B, L}, c) => { B(0.2, 0.2, 0.7, 2.4, 2.2, 2.2, '#e8b730', {win:[['S', 0.3, 1, 1.6, 0.8], ['E', 0.2, 1, 1.8, 0.8]]}); B(2.8, 0.2, 0.7, 5, 2.2, 1.6, '#e8b730', {win:[['S', 0.4, 0.5, 3.6, 0.6, '#3a3f45', 'VIBRO-SOND', '#e8b730']]});
-  B(4, 0.5, 0.1, 2.4, 1.6, 0.6, '#3a3f45'); wheels(B, [1.3, 6.8], 0.2, 2.4, 0.5); }, 'Shakes the ground along a survey line, in a slow convoy.');
-def('v', 'Tipper (builders)', 7, 2.4, ({B}, c) => { B(0.2, 0.1, 0.6, 2, 2.2, 2.2, '#d9d6cc', {win:[['S', 0.2, 1, 1.5, 0.8], ['E', 0.2, 1, 1.8, 0.8]]}); B(2.4, 0.1, 0.9, 4.4, 2.2, 1.4, '#8a6a3a', {h:[1.2, 1.6, 1.6, 1.2]}); wheels(B, [1.1, 4.6, 5.8], 0.1, 2.3, 0.45); }, 'Roads, pads, flattening, buildings.');
-def('v', 'Excavator', 5, 3, ({B, L}, c) => { B(0.4, 0.3, 0, 4.2, 0.6, 0.7, '#2b2b2b'); B(0.4, 2.1, 0, 4.2, 0.6, 0.7, '#2b2b2b'); B(1, 0.6, 0.7, 3, 1.9, 1, '#e8b730'); B(1.2, 0.8, 1.7, 1.2, 1.2, 1.3, '#e8b730', {win:[['S', 0.1, 0.4, 1, 0.7], ['E', 0.1, 0.4, 1, 0.7]]});
-  L([[3.6, 1.5, 1.6], [5.6, 1.5, 3.2], [6.6, 1.5, 0.8]], '#d9a23a', 2.2); B(6.2, 1.1, 0.2, 0.8, 0.8, 0.6, '#3a3f45'); }, '');
-def('v', 'Post bus', 11, 2.5, ({B}, c) => { B(0.2, 0.1, 0.4, 10.6, 2.3, 2.8, '#f2c230', {win:[...[0.5, 2, 3.5, 5, 6.5, 8].map(a => ['S', a, 1.3, 1.3, 0.9]), ['E', 0.2, 1.1, 1.9, 1.2], ['S', 9.5, 0, 1, 2.2, '#5a6066'], ['S', 0.6, 0.5, 4, 0.5, '#f2c230', 'CAR POSTAL', '#b8322a']]}); B(0.2, 0.1, 3.2, 10.6, 2.3, 0.1, '#e8e8e2'); wheels(B, [1.8, 8.6], 0.1, 2.4, 0.45); }, 'Evening bus as a village gift.');
-def('v', 'Police car', 4.8, 1.9, ({B}, c) => { B(0.2, 0.1, 0.3, 4.4, 1.7, 0.7, '#f4f4f2', {win:[['S', 0.3, 0.2, 3.8, 0.2, '#2a4fa0'], ['S', 1.3, 0.35, 2, 0.3, '#f4f4f2', 'POLICE', '#2a4fa0']]}); B(1.3, 0.25, 1, 2.2, 1.4, 0.55, '#f4f4f2', {win:[['S', 0.15, 0.08, 1.9, 0.4], ['E', 0.1, 0.08, 1.2, 0.4]]});
-  B(2.1, 0.6, 1.55, 0.6, 0.7, 0.15, '#2f6fe0'); wheels(B, [1, 3.8], 0.1, 1.8, 0.33); }, 'From the gendarmerie, never from the edge of the map.');
-def('v', 'Police van', 6, 2.2, ({B}, c) => { B(0.2, 0.1, 0.4, 5.6, 2, 2.2, '#f4f4f2', {win:[['S', 0.3, 0.6, 5, 0.25, '#2a4fa0'], ['S', 0.4, 1.2, 1.2, 0.7], ['E', 0.2, 1.2, 1.6, 0.7], ['S', 2.2, 0.9, 2.6, 0.5, '#f4f4f2', 'POLICE', '#2a4fa0']]}); B(2.4, 0.8, 2.6, 0.8, 0.6, 0.15, '#2f6fe0'); wheels(B, [1.2, 4.6], 0.1, 2.1, 0.4); }, '');
-def('v', 'Riot police bus', 10, 2.5, ({B}, c) => { B(0.2, 0.1, 0.4, 9.6, 2.3, 2.8, '#2a3550', {win:[...[0.6, 2.6, 4.6, 6.6].map(a => ['S', a, 1.4, 1.5, 0.7, '#4b5a73']), ['E', 0.2, 1.2, 1.9, 1, '#4b5a73'], ['S', 1, 0.5, 4, 0.5, '#2a3550', 'POLICE', '#e8e8e2']]}); B(4, 0.8, 3.2, 0.8, 0.8, 0.15, '#2f6fe0'); wheels(B, [1.8, 8], 0.1, 2.4, 0.45); }, 'Shields, no batons.');
-def('v', 'Black van (the lender)', 5.4, 2.1, ({B}, c) => { B(0.2, 0.1, 0.4, 5, 1.9, 1.9, '#17191c', {win:[['S', 0.3, 1, 1.1, 0.6, '#2b3036'], ['E', 0.2, 1, 1.5, 0.6, '#2b3036']]}); wheels(B, [1.1, 4.2], 0.1, 2, 0.38); }, 'Three of them, slowly, from the villa. No plates.');
-def('v', 'Tractor with manure spreader', 9, 2.6, ({B, C}, c) => { B(0.4, 0.5, 0.8, 2.4, 1.6, 1, '#b8322a'); B(1.8, 0.6, 1.8, 1.2, 1.4, 1.4, '#b8322a', {win:[['S', 0.1, 0.2, 1, 1], ['E', 0.1, 0.2, 1.2, 1]]}); B(0.7, 0.2, 0, 1, 0.4, 1, '#1c1f22'); B(0.7, 2, 0, 1, 0.4, 1, '#1c1f22'); B(2.1, 0.1, 0, 1.6, 0.5, 1.6, '#1c1f22'); B(2.1, 2, 0, 1.6, 0.5, 1.6, '#1c1f22');
-  B(4.4, 0.4, 0.7, 4.2, 1.8, 1.4, '#3d6b45'); B(4.5, 0.5, 2, 4, 1.6, 0.15, '#5a4632'); B(5.6, 0.2, 0, 1, 0.3, 0.9, '#1c1f22'); B(5.6, 2.2, 0, 1, 0.3, 0.9, '#1c1f22'); }, 'The farmers\' blockade.');
-def('v', 'Fire engine', 9, 2.5, ({B, L}, c) => { B(0.2, 0.1, 0.5, 8.6, 2.3, 2.4, '#c4231c', {win:[['S', 0.3, 1.2, 1.4, 0.8], ['E', 0.2, 1.2, 1.9, 0.8], ['S', 2.4, 0.4, 5.6, 0.25, '#e8e8e2'], ['S', 3, 1, 4, 0.5, '#c4231c', 'POMPIERS', '#fff']]}); L([[2.4, 1.2, 3.1], [8.2, 1.2, 3.1]], '#c9ccd0', 1.2); wheels(B, [1.6, 6.6, 7.8], 0.1, 2.4, 0.45); }, '');
-def('v', 'Army truck', 8, 2.5, ({B}, c) => { B(0.2, 0.1, 0.7, 2.2, 2.3, 2, '#5b6b45', {win:[['S', 0.3, 1, 1.5, 0.7], ['E', 0.2, 1, 1.9, 0.7]]}); B(2.6, 0.1, 0.8, 5.2, 2.3, 2.4, '#6b7a52', {h:[2.4, 2.4, 2.4, 2.4]}); wheels(B, [1.2, 5.4, 6.8], 0.1, 2.4, 0.5); }, 'Only in the secret ending.');
-def('v', 'Police helicopter', 11, 2.4, ({B, L}, c) => { B(0.4, 0.5, 1.2, 4, 1.4, 1.6, '#f4f4f2', {win:[['S', 0.2, 0.5, 1.6, 0.9], ['E', 0.1, 0.5, 1.2, 0.9], ['S', 2.2, 0.2, 1.6, 0.3, '#2a4fa0']]}); B(4.4, 1, 1.9, 5, 0.4, 0.4, '#f4f4f2'); B(9, 1, 1.9, 0.6, 0.4, 1.2, '#2a4fa0');
-  L([[2.4, 1.2, 3.1], [2.4, 1.2, 3.5]], '#3a3f45', 1); L([[-2.6, 1.2, 3.5], [7.4, 1.2, 3.5]], '#3a3f45', 0.8); L([[2.4, -3.8, 3.5], [2.4, 6.2, 3.5]], '#3a3f45', 0.8); L([[0.8, 0.4, 0.5], [3.8, 0.4, 0.5]], '#3a3f45', 0.6); L([[0.8, 2, 0.5], [3.8, 2, 0.5]], '#3a3f45', 0.6); }, 'The last resort.');
-def('v', 'F-35', 16, 11, ({B, L}, c) => { const g = '#7d848b'; B(0, 4.6, 6, 16, 1.8, 1.2, g, {h:[0.6, 1.2, 1.2, 0.6]}); B(5, 0, 6.2, 6, 11, 0.3, g, {h:[0.1, 0.3, 0.3, 0.1]}); B(13, 3, 6.3, 2.6, 5, 0.2, g); B(12.6, 4.4, 6.9, 2, 0.4, 2, g); B(12.6, 6.2, 6.9, 2, 0.4, 2, g);
-  B(2.2, 4.9, 7, 2.6, 1.2, 0.6, '#c9a23a', {h:[0.2, 0.6, 0.6, 0.2]}); }, 'Only in the secret ending.');
-def('v', 'Regional train', 24, 3, ({B}, c) => { for (const x0 of [0.3, 12.2]) B(x0, 0.2, 0.6, 11.5, 2.6, 3, '#c9ccd0', {win:[...[0.6, 2.4, 4.2, 6, 7.8, 9.6].map(a => ['S', a, 1.4, 1.3, 0.9]), ['S', 0.2, 0.4, 11, 0.3, '#b8322a']]}); }, 'Along the top of the valley.');
+const truck = (B, W, cab, body, len, opts) => { opts = opts || {}; axle(W, opts.axles || [1.3, len - 2.2, len - 1.1], 0.25, 2.25, 0.48);
+  B(len - 2.3, 0.2, 0.55, 2.1, 2.1, 2.3, cab, {bv:0.3, win:[['S', 0.2, 1.05, 1.4, 0.8], ['E', 0.2, 1.05, 1.7, 0.8], ...lights(len - 0.2 - (len - 2.3), 2.1, 0.25)]}); };
+def('v', 'Supply lorry', 8, 2.5, ({B, W}, c) => { truck(B, W, c.co, 0, 8); B(0.2, 0.2, 0.7, 5.3, 2.1, 2.3, '#eceef0', {bv:0.15, win:[['S', 0.6, 0.8, 4, 0.6, c.co, 'ÉNERGIE-GÉO', '#fff']]}); }, 'Brings drilling supplies from the depot.');
+def('v', 'Low-loader with rig', 14, 2.8, ({B, W, L}, c) => { axle(W, [1.2, 2.4, 3.6, 11.4], 0.3, 2.5, 0.45);
+  B(11.6, 0.3, 0.55, 2.2, 2.2, 2.3, '#d0663a', {bv:0.3, win:[['S', 0.2, 1.05, 1.5, 0.8], ['E', 0.2, 1.05, 1.8, 0.8]]}); B(0.2, 0.4, 0.55, 11.2, 2, 0.35, '#3a3f45', {bv:0.08});
+  B(1, 0.6, 0.9, 7.5, 1.6, 1.3, '#7a828a', {bv:0.15}); B(1.2, 1.1, 2.2, 10, 0.6, 0.35, c.co2, {bv:0.08}); }, 'Brings a rig to a pad and back; the mast lies folded on top.');
+def('v', 'Vibro-truck', 8, 2.6, ({B, W}, c) => { truck(B, W, '#f0c33c', 0, 8, {axles:[1.3, 6.7]}); B(0.2, 0.25, 0.7, 5.2, 2.1, 1.6, '#f0c33c', {bv:0.2, win:[['S', 0.4, 0.5, 3.8, 0.55, '#3a3f45', 'VIBRO-SOND', '#f0c33c']]});
+  B(2, 0.6, 0.15, 2.2, 1.4, 0.5, '#3a3f45', {bv:0.1}); }, 'Shakes the ground along a survey line, in a slow convoy.');
+def('v', 'Tipper (builders)', 7, 2.5, ({B, W}, c) => { truck(B, W, '#e6e3da', 0, 7, {axles:[1.1, 2.3, 5.8]}); B(0.2, 0.25, 0.9, 4.4, 2.05, 1.3, '#a07a46', {bv:0.15, h:[1.1, 1.5, 1.5, 1.1]}); }, 'Roads, pads, flattening, buildings.');
+def('v', 'Excavator', 5.4, 3, ({B, L}, c) => { B(0.4, 0.2, 0, 4.4, 0.7, 0.7, '#2f3337', {bv:0.25}); B(0.4, 2.1, 0, 4.4, 0.7, 0.7, '#2f3337', {bv:0.25}); B(1, 0.6, 0.7, 3, 1.8, 0.9, '#f0c33c', {bv:0.2});
+  B(1.2, 0.8, 1.6, 1.4, 1.3, 1.3, '#f0c33c', {bv:0.15, win:[['S', 0.12, 0.35, 1.1, 0.75], ['E', 0.12, 0.35, 1, 0.75]]}); L([[3.6, 1.5, 1.6], [5.4, 1.5, 3.1], [6.3, 1.5, 0.9]], '#d9a23a', 2.4); B(5.9, 1.1, 0.2, 0.8, 0.8, 0.6, '#3a3f45', {bv:0.1}); }, '');
+def('v', 'Post bus', 11, 2.5, ({B, W}, c) => { axle(W, [1.9, 8.8], 0.2, 2.3, 0.45); B(0.2, 0.2, 0.4, 10.6, 2.1, 2.7, '#f5c636', {bv:0.35, win:[...[0.6, 2.1, 3.6, 5.1, 6.6, 8.1].map(a => ['S', a, 1.25, 1.25, 0.85]), ['E', 0.25, 1.05, 1.6, 1.15], ['S', 9.4, 0, 0.9, 2, '#5a6066'], ['S', 0.6, 0.45, 4, 0.5, '#f5c636', 'CAR POSTAL', '#b8322a'], ...lights(10.6, 2.1, 0.3)]}); }, 'Evening bus as a village gift.');
+def('v', 'Police car', 4.8, 1.9, ({B, W}, c) => { axle(W, [1, 3.8], 0.2, 1.7, 0.34); B(0.2, 0.2, 0.3, 4.4, 1.5, 0.62, '#f6f6f3', {bv:0.2, win:[['S', 0.4, 0.2, 3.6, 0.16, '#2a4fa0'], ['S', 1.2, 0.36, 2, 0.22, '#f6f6f3', 'POLICE', '#2a4fa0'], ...lights(4.4, 1.5, 0.22)]});
+  B(1.2, 0.32, 0.92, 2.3, 1.26, 0.55, '#f6f6f3', {bv:0.16, win:[['S', 0.16, 0.08, 1.95, 0.36], ['E', 0.1, 0.08, 1, 0.36]]}); B(2.05, 0.65, 1.47, 0.6, 0.6, 0.16, '#3b7bf0', {bv:0.05}); }, 'From the gendarmerie, never from the edge of the map.');
+def('v', 'Police van', 6, 2.2, ({B, W}, c) => { axle(W, [1.2, 4.7], 0.2, 2, 0.4); B(0.2, 0.2, 0.4, 5.6, 1.8, 2.1, '#f6f6f3', {bv:0.3, win:[['S', 0.3, 0.55, 5, 0.22, '#2a4fa0'], ['S', 0.4, 1.15, 1.2, 0.65], ['E', 0.2, 1.15, 1.4, 0.65], ['S', 2.2, 0.85, 2.6, 0.45, '#f6f6f3', 'POLICE', '#2a4fa0'], ...lights(5.6, 1.8, 0.3)]}); B(2.4, 0.8, 2.5, 0.8, 0.6, 0.15, '#3b7bf0', {bv:0.05}); }, '');
+def('v', 'Riot police bus', 10, 2.5, ({B, W}, c) => { axle(W, [1.8, 8.1], 0.2, 2.3, 0.45); B(0.2, 0.2, 0.4, 9.6, 2.1, 2.7, '#33405e', {bv:0.35, win:[...[0.6, 2.6, 4.6, 6.6].map(a => ['S', a, 1.35, 1.5, 0.7, '#55658a']), ['E', 0.25, 1.15, 1.6, 0.95, '#55658a'], ['S', 1, 0.45, 4, 0.5, '#33405e', 'POLICE', '#e8e8e2'], ...lights(9.6, 2.1, 0.3)]}); B(4, 0.8, 3.1, 0.8, 0.8, 0.15, '#3b7bf0', {bv:0.05}); }, 'Shields, no batons.');
+def('v', 'Black van (the lender)', 5.4, 2.1, ({B, W}, c) => { axle(W, [1.1, 4.3], 0.2, 1.9, 0.38); B(0.2, 0.2, 0.4, 5, 1.7, 1.85, '#1d2024', {bv:0.32, win:[['S', 0.3, 0.95, 1.1, 0.55, '#3a4048'], ['E', 0.2, 0.95, 1.3, 0.55, '#3a4048'], ...lights(5, 1.7, 0.25)]}); }, 'Three of them, slowly, from the villa. No plates.');
+def('v', 'Tractor with manure spreader', 9.4, 2.6, ({B, W}, c) => { W(0.9, 0.35, 0.45); W(0.9, 2.25, 0.45); W(2.9, 0.3, 0.8, 0.5); W(2.9, 2.3, 0.8, 0.5); W(6.2, 0.3, 0.45); W(6.2, 2.3, 0.45);
+  B(5.1, 0.6, 0.75, 4, 1.4, 0.75, '#c63a2c', {bv:0.25, win:[...lights(4, 1.4, 0.2)].map(w => w)}); B(2.1, 0.55, 1.4, 1.6, 1.5, 1.5, '#c63a2c', {bv:0.2, win:[['S', 0.12, 0.25, 1.35, 1], ['E', 0.12, 0.25, 1.25, 1]]});
+  B(0.2, 0.45, 0.6, 3.9, 1.7, 1.2, '#3f7a4a', {bv:0.2}); B(0.3, 0.55, 1.8, 3.7, 1.5, 0.18, '#5a4632'); }, 'The farmers\' blockade.');
+def('v', 'Fire engine', 9, 2.5, ({B, W, L}, c) => { axle(W, [1.6, 6.5, 7.7], 0.2, 2.3, 0.45); B(0.2, 0.2, 0.45, 8.6, 2.1, 2.4, '#d02a20', {bv:0.3, win:[['S', 6.9, 1.05, 1.4, 0.8], ['E', 0.2, 1.05, 1.7, 0.8], ['S', 0.4, 0.35, 6, 0.22, '#f2f0ea'], ['S', 1.2, 0.9, 4, 0.45, '#d02a20', 'POMPIERS', '#fff'], ...lights(8.6, 2.1, 0.3)]}); L([[0.6, 1.25, 2.95], [7.4, 1.25, 2.95]], '#c9ccd0', 1.4); }, '');
+def('v', 'Army truck', 8, 2.5, ({B, W}, c) => { truck(B, W, '#5b6b45', 0, 8); B(0.2, 0.2, 0.75, 5.3, 2.1, 2.35, '#6b7a52', {bv:0.4}); }, 'Only in the secret ending.');
+def('v', 'Police helicopter', 16, 2.4, ({B, L, C}, c) => { B(5.6, 0.5, 1.1, 4.2, 1.4, 1.6, '#f6f6f3', {bv:0.55, win:[['E', 0.12, 0.55, 1.15, 0.8], ['S', 2.4, 0.15, 1.6, 0.26, '#2a4fa0']]}); B(8.8, 0.6, 1.3, 1.2, 1.2, 1.1, '#9fc3d6', {bv:0.4});
+  B(0.8, 1, 1.9, 5, 0.4, 0.4, '#f6f6f3', {bv:0.12}); B(0.4, 1, 1.9, 0.6, 0.4, 1.2, '#2a4fa0', {bv:0.1});
+  L([[7.6, 1.2, 2.7], [7.6, 1.2, 3.2]], '#3a3f45', 1); L([[2.6, 1.2, 3.2], [12.6, 1.2, 3.2]], '#3a3f45', 0.8); L([[7.6, -3.8, 3.2], [7.6, 6.2, 3.2]], '#3a3f45', 0.8); L([[6, 0.4, 0.4], [9.2, 0.4, 0.4]], '#3a3f45', 0.6); L([[6, 2, 0.4], [9.2, 2, 0.4]], '#3a3f45', 0.6); }, 'The last resort.');
+def('v', 'F-35', 16, 11, ({B}, c) => { const g = '#7d848b'; B(0, 4.6, 6, 16, 1.8, 1.2, g, {h:[0.6, 1.2, 1.2, 0.6]}); B(5, 0, 6.2, 6, 11, 0.3, g, {h:[0.1, 0.3, 0.3, 0.1]}); B(0, 3, 6.3, 2.6, 5, 0.2, g); B(0.4, 4.4, 6.9, 2, 0.4, 2, g); B(0.4, 6.2, 6.9, 2, 0.4, 2, g);
+  B(11.2, 4.9, 7, 2.6, 1.2, 0.6, '#c9a23a', {h:[0.6, 0.2, 0.2, 0.6]}); }, 'Only in the secret ending.');
+def('v', 'Regional train', 24, 3, ({B}, c) => { for (const x0 of [0.3, 12.2]) B(x0, 0.2, 0.6, 11.5, 2.6, 3, '#d4d7da', {bv:0.4, win:[...[0.6, 2.4, 4.2, 6, 7.8, 9.6].map(a => ['S', a, 1.4, 1.3, 0.9]), ['S', 0.2, 0.45, 11, 0.28, '#b8322a']]}); }, 'Along the top of the valley.');
 
 /* ---------------------------------------------------------------- people */
 const PEOPLE = [];
@@ -326,41 +373,48 @@ person('Association presenter', {top:'#3d6b45', bot:'#4a4f55', hair:'#7a4a2a', l
 person('Soldier', {top:'#5b6b45', bot:'#5b6b45', hair:'#2b2522', skin:'#e8c09c', hat:'#4a5838', helmet:1}, 'Only in the secret ending.');
 person('Child', {top:'#e8b730', bot:'#3a4a63', hair:'#8a5a3a', skin:'#f2d2b6', small:1}, '');
 
-/* draws a person standing on (x, y) in screen pixels; u = pixel size; dir 0 front-left, 1 front-right, 2 back-left, 3 back-right */
+/* draws a person standing on (x, y) in screen pixels; u = pixel size; dir 0 front-left, 1 front-right, 2 back-left, 3 back-right.
+   Chibi proportions: big round head, short body; a dark outline pass first, then colours. */
 function drawPerson(g, x, y, u, p, dir){
-  const R = (c, px, py, w, h) => { g.fillStyle = c; g.fillRect(Math.round(x + px*u), Math.round(y + py*u), Math.round(w*u), Math.round(h*u)); };
-  const back = dir >= 2, flip = dir === 1 || dir === 3;
+  const back = dir >= 2, flip = dir === 1 || dir === 3, k = p.small ? 0.78 : 1, OUT = '#2a2d33';
   g.save(); if (flip){ g.translate(x*2, 0); g.scale(-1, 1); }
-  const k = p.small ? 0.75 : 1, H = (v) => v*k;
-  R('rgba(0,0,0,.18)', -3, -0.5, 6, 1);
-  // legs
-  if (p.skirt){ R(p.skin, -1.6, H(-4), 1.2, H(4)); R(p.skin, 0.4, H(-4), 1.2, H(4)); R(p.bot, -2.2, H(-7), 4.4, H(3.4)); }
-  else { R(p.bot, -1.8, H(-6), 1.6, H(6)); R(p.bot, 0.2, H(-6), 1.6, H(6)); }
-  R('#1c1f22', -2, -0.8, 1.9, 0.8); R('#1c1f22', 0.1, -0.8, 1.9, 0.8);
-  // body
-  R(p.top, -2.4, H(-11.5), 4.8, H(5.6)); R(p.top, -3.2, H(-11), 1, H(4.6)); R(p.top, 2.2, H(-11), 1, H(4.6));
-  R(p.skin, -3.2, H(-6.6), 1, 1); R(p.skin, 2.2, H(-6.6), 1, 1);
-  if (p.vest){ R('#f2e23a', -2.4, H(-9.4), 4.8, 0.7); }
-  if (p.tie && !back){ R('#f4f2ec', -0.6, H(-11.5), 1.2, 1.4); R(p.tie, -0.3, H(-11), 0.6, 3.2); }
-  if (p.sash && !back){ for (let i = 0; i < 5; i++) R(i % 2 ? '#f4f2ec' : '#b8322a', -2.2 + i*0.9, H(-11) + i*0.9, 1, 1); }
-  // head
-  R(p.skin, -1.8, H(-15.2), 3.6, 3.8);
-  if (back) R(p.hair, -1.9, H(-15.4), 3.8, p.long ? 4.6 : 3.2);
-  else { R(p.hair, -1.9, H(-15.6), 3.8, 1.2); R(p.hair, 1.4, H(-15.2), 0.6, p.long ? 4.4 : 1.8); if (p.long) R(p.hair, -1.9, H(-15), 0.6, 4.2);
-    R('#1c1f22', -1, H(-13.6), 0.6, 0.6); R('#1c1f22', 0.5, H(-13.6), 0.6, 0.6); if (p.glasses) R('#1c1f22', -1.3, H(-13.8), 2.7, 0.8); }
-  if (p.hat){ if (p.helmet) R(p.hat, -2.2, H(-16.2), 4.4, 2.2); else if (p.cap){ R(p.hat, -2, H(-16.2), 4, 1.4); if (!back) R(p.hat, -3, H(-15.1), 1.6, 0.6); } else { R(p.hat, -2.1, H(-16.4), 4.2, 1.6); R(p.hat, -2.6, H(-15), 5.2, 0.5); } }
-  // item (held on the left of the screen when facing left)
-  if (p.item === 'case') R('#5a3d2a', -4.2, H(-6.4), 2, 1.6);
-  if (p.item === 'board'){ R('#c9a24a', -4.6, H(-9.6), 1.8, 2.4); R('#f4f2ec', -4.4, H(-9.2), 1.4, 1.6); }
-  if (p.item === 'bottle') R('#9fd0e8', -4, H(-7.6), 0.9, 1.8);
-  if (p.item === 'cup') R('#f4f2ec', -4, H(-8.2), 1, 1.1);
-  if (p.item === 'laptop') R('#3a3f45', -4.6, H(-8.4), 2.6, 1.4);
-  if (p.item === 'camera'){ R('#1c1f22', -4.4, H(-11.6), 2.2, 1.5); R('#5a6066', -4.9, H(-11.2), 0.6, 0.7); }
-  if (p.item === 'fork'){ R('#8a6a4a', -3.8, H(-14), 0.5, 13); R('#9aa3ab', -4.4, H(-15.2), 1.7, 0.4); for (let i = 0; i < 3; i++) R('#9aa3ab', -4.4 + i*0.6, H(-16.2), 0.3, 1.1); }
-  if (p.item === 'shield'){ R('#a9c7e8', -5, H(-11.6), 2.4, 8, ); R('#1f2a44', -4.6, H(-9), 1.6, 0.5); }
-  if (p.item === 'sign'){ R('#8a6a4a', -3.9, H(-18), 0.5, 12); R('#f4f2ec', -6.6, H(-22.6), 6, 4.6); R('#1c1f22', -6.6, H(-22.6), 6, 0.3); }
+  g.fillStyle = 'rgba(0,0,0,.16)'; g.beginPath(); g.ellipse(x, y, 4.2*u, 1.2*u, 0, 0, Math.PI*2); g.fill();
+  const pass = (o) => {
+    const R = (c, px, py, w, h, r) => { const e = o ? 0.7 : 0, X = x + (px - e)*u, Y = y + (py*k - e)*u, Wd = (w + e*2)*u, Hd = (h*k + e*2)*u; g.fillStyle = o ? OUT : c;
+      if (r){ const rr = Math.min(r*u, Wd/2, Hd/2); g.beginPath(); g.moveTo(X + rr, Y); g.arcTo(X + Wd, Y, X + Wd, Y + Hd, rr); g.arcTo(X + Wd, Y + Hd, X, Y + Hd, rr); g.arcTo(X, Y + Hd, X, Y, rr); g.arcTo(X, Y, X + Wd, Y, rr); g.fill(); } else g.fillRect(X, Y, Wd, Hd); };
+    // legs and shoes
+    if (p.skirt){ R(p.skin, -1.7, -4.2, 1.3, 3.6); R(p.skin, 0.4, -4.2, 1.3, 3.6); R(p.bot, -2.6, -7.6, 5.2, 3.8, 1.2); }
+    else { R(p.bot, -2, -6.2, 1.8, 5.6, 0.5); R(p.bot, 0.2, -6.2, 1.8, 5.6, 0.5); }
+    R('#2b2522', -2.3, -1.2, 2.2, 1.2, 0.5); R('#2b2522', 0.1, -1.2, 2.2, 1.2, 0.5);
+    // body and arms
+    R(p.top, -2.8, -11.6, 5.6, 6, 1.6); R(p.top, -3.9, -11, 1.4, 4.6, 0.7); R(p.top, 2.5, -11, 1.4, 4.6, 0.7);
+    R(p.skin, -3.9, -6.8, 1.4, 1.3, 0.6); R(p.skin, 2.5, -6.8, 1.4, 1.3, 0.6);
+    // head
+    R(p.skin, -3.4, -19.2, 6.8, 7.4, 2.6);
+    if (o) return;
+    if (p.vest) R('#f2e23a', -2.8, -9.2, 5.6, 0.8);
+    if (p.tie && !back){ R('#f4f2ec', -0.8, -11.6, 1.6, 1.4, 0.4); R(p.tie, -0.4, -11, 0.8, 3.4, 0.3); }
+    if (p.sash && !back) for (let i = 0; i < 5; i++) R(i % 2 ? '#f4f2ec' : '#c63a2c', -2.6 + i*1.05, -11.2 + i*1.05, 1.1, 1.1);
+    // hair
+    if (back) R(p.hair, -3.5, -19.4, 7, p.long ? 8.4 : 6, 2.6);
+    else { R(p.hair, -3.5, -19.6, 7, 2.6, 2); R(p.hair, 2.1, -19.2, 1.4, p.long ? 7.6 : 3.4, 0.7); if (p.long) R(p.hair, -3.5, -19, 1.2, 7.4, 0.6);
+      R('#2a2d33', -1.7, -15.6, 0.9, 1.3, 0.4); R('#2a2d33', 0.6, -15.6, 0.9, 1.3, 0.4); R('#f2a3a3', -2.6, -14, 1.1, 0.7, 0.3); R('#f2a3a3', 1.5, -14, 1.1, 0.7, 0.3); R('#b0645a', -0.5, -13.4, 1, 0.4);
+      if (p.glasses){ R('#1c1f22', -2.3, -16.1, 2, 1.5, 0.4); R('#1c1f22', 0.2, -16.1, 2, 1.5, 0.4); } }
+    if (p.hat){ if (p.helmet){ R(p.hat, -3.8, -20.4, 7.6, 3.6, 2.4); } else if (p.cap){ R(p.hat, -3.6, -20.4, 7.2, 2.4, 1.2); if (!back) R(p.hat, -5, -18.6, 2.4, 0.8, 0.4); } else { R(p.hat, -3.6, -21, 7.2, 3, 1.6); R(p.hat, -4.4, -18.6, 8.8, 0.8, 0.4); } }
+    // items, held on the screen-left side
+    if (p.item === 'case') R('#6a4a32', -5.4, -7, 2.4, 2, 0.5);
+    if (p.item === 'board'){ R('#c9a24a', -5.8, -10.4, 2.2, 2.8, 0.4); R('#f4f2ec', -5.5, -9.9, 1.6, 1.9); }
+    if (p.item === 'bottle') R('#9fd0e8', -5.2, -8.4, 1.2, 2.2, 0.5);
+    if (p.item === 'cup') R('#f4f2ec', -5.2, -8.8, 1.3, 1.4, 0.3);
+    if (p.item === 'laptop') R('#3a3f45', -6, -9, 3, 1.7, 0.3);
+    if (p.item === 'camera'){ R('#1c1f22', -5.8, -12.4, 2.8, 1.9, 0.5); R('#5a6066', -6.4, -11.9, 0.8, 0.9, 0.3); }
+    if (p.item === 'fork'){ R('#8a6a4a', -4.8, -17, 0.6, 16); R('#9aa3ab', -5.6, -18.2, 2.2, 0.5); for (let i = 0; i < 3; i++) R('#9aa3ab', -5.6 + i*0.8, -19.4, 0.4, 1.3); }
+    if (p.item === 'shield'){ R('#a9c7e8', -6.6, -12.4, 3, 9, 0.8); R('#1f2a44', -6.1, -9.4, 2, 0.6); }
+    if (p.item === 'sign'){ R('#8a6a4a', -4.9, -22, 0.6, 14); R('#f4f2ec', -8.4, -27.6, 7.6, 5.6, 0.6); }
+  };
+  pass(true); pass(false);
   g.restore();
-  if (p.item === 'sign' && !back){ g.fillStyle = '#b8322a'; g.font = Math.round(2.8*u) + 'px "Silkscreen", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(p.sign || 'NON', x + (flip ? 3.6 : -3.6)*u, y + H(-20.3)*u); }
+  if (p.item === 'sign' && !back){ g.fillStyle = '#c63a2c'; g.font = Math.round(3.2*u) + 'px "Silkscreen", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(p.sign || 'NON', x + (flip ? 4.6 : -4.6)*u, y + (-24.8*k)*u); }
 }
 
 window.ART = {models:M, people:PEOPLE, draw, drawPerson, PAL};
