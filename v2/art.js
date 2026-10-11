@@ -26,6 +26,7 @@ function build(fn){
     Y:(x, y, z, w, d, h, c, o) => push(Object.assign({t:'pyr', x, y, z, w, d, h, c}, o || {})),       // pyramid (spires, hip caps)
     C:(x, y, z, r, h, c, o) => push(Object.assign({t:'cyl', x, y, z, r, h, c}, o || {})),          // vertical cylinder centred on x,y
     L:(pts, c, lw, o) => push(Object.assign({t:'ln', pts, c, lw:lw || 1}, o || {})),                 // 3D polyline
+    G:(x, y, o, zt) => push({t:'fig', x, y, o, zt}),                                               // a drawn person standing at x,y
     F:(pts, c, o) => push(Object.assign({t:'flat', pts, c}, o || {})),                                // ground decal
     T:(x, y, z, txt, o) => push(Object.assign({t:'txt', x, y, z, txt}, o || {})),                     // floating label (screen-aligned)
     // a row of windows on a face: face, from, to, step, z, w, h
@@ -121,6 +122,8 @@ function draw(g, model, rot, S, ox, oy, post){
         if (!set.has(x + ',' + (y + 1) + ',' + z)) poly([P(X0, Y1, Z0), P(X1, Y1, Z0), P(X1, Y1, Z1), P(X0, Y1, Z1)], sh(c, 0.86));
         if (!set.has((x + 1) + ',' + y + ',' + z)) poly([P(X1, Y0, Z0), P(X1, Y1, Z0), P(X1, Y1, Z1), P(X1, Y0, Z1)], sh(c, 0.7));
         if (!set.has(x + ',' + y + ',' + (z + 1))) poly([P(X0, Y0, Z1), P(X1, Y0, Z1), P(X1, Y1, Z1), P(X0, Y1, Z1)], sh(c, 1.06)); } }});
+    } else if (p.t === 'fig'){
+      const q = rp(p.x, p.y); items.push({k:q[0] + q[1] + (p.k || 0), i, f(){ figure(g, P(q[0], q[1], 0), S, rot, p.o); }});
     } else if (p.t === 'puff'){
       const q = rp(p.x, p.y); items.push({k:9000 + p.z, i, f(){ const c0 = P(q[0], q[1], p.z); g.beginPath(); g.arc(c0[0], c0[1], p.r*S, 0, Math.PI*2); g.fillStyle = p.c; g.fill(); }});
     } else if (p.t === 'pyr'){
@@ -464,45 +467,61 @@ M[M.length - 1].big = 1.7;
 def('v', 'Regional train', 20, 3, ({B, W}, c) => { for (const x0 of [0.3, 10.2]){ wheels(W, [x0 + 1.4, x0 + 8], 3, 0.45);
   B(x0, 0.25, 0.6, 9.5, 2.5, 2.8, '#dfe2e5', {bv:0.5, win:[...[0.6, 2.3, 4, 5.7, 7.4].flatMap(a => sides(a, 1.3, 1.3, 0.85, GL)), ...sides(0.3, 0.45, 8.9, 0.26, '#b8322a'), ['E', 0.3, 1.2, 1.9, 0.9, GL], ['W', 0.3, 1.2, 1.9, 0.9, GL]]}); } }, 'Along the top of the valley.');
 
-/* People in the building style: bevelled blocks, real proportions (about 1.78 m), front at +x. Trial: two figures. */
-const realPerson = (p) => ({B, L}, c) => {
-  const cx = 0.75, cy = 0.75, sk = p.skin, top = p.top, bot = p.bot, shoe = p.boots || '#2b2522', hand = p.gloves || sk;
-  // legs: boots, shins, thighs
-  for (const sy of [-1, 1]){ const y = cy + sy*0.085;
-    B(cx - 0.09, y - 0.06, 0, 0.3, 0.12, p.boots ? 0.15 : 0.09, shoe, {bv:0.03});
-    B(cx - 0.07, y - 0.06, p.boots ? 0.15 : 0.09, 0.14, 0.12, p.boots ? 0.35 : 0.41, bot, {bv:0.02, win:p.band ? [['E', 0, 0.18, 0.12, 0.04, p.band], ['S', 0, 0.18, 0.14, 0.04, p.band], ['N', 0, 0.18, 0.14, 0.04, p.band], ['W', 0, 0.18, 0.12, 0.04, p.band]] : []});
-    B(cx - 0.08, y - 0.07, 0.5, 0.16, 0.14, 0.4, bot, {bv:0.02}); }
-  // hips, waist, chest, shoulders
-  const bw = p.bulk || 1, band = p.band ? [['E', 0, 0.06, 0.32*bw, 0.05, p.band], ['S', 0, 0.06, 0.2, 0.05, p.band], ['N', 0, 0.06, 0.2, 0.05, p.band], ['W', 0, 0.06, 0.32*bw, 0.05, p.band]] : [];
-  B(cx - 0.1, cy - 0.17, 0.88, 0.2, 0.34, 0.14, bot, {bv:0.03, win:p.belt ? [['E', 0.02, 0.1, 0.3, 0.04, p.belt], ['S', 0, 0.1, 0.2, 0.04, p.belt]] : []});
-  B(cx - 0.1, cy - 0.16*bw, 1.02, 0.2*bw, 0.32*bw, 0.18, top, {bv:0.03, win:band});
-  B(cx - 0.11*bw, cy - 0.19*bw, 1.2, 0.22*bw, 0.38*bw, 0.21, top, {bv:0.04, win:p.zip ? [['E', 0.19*bw - 0.01, 0, 0.02, 0.21, p.zip]] : []});
-  B(cx - 0.1*bw, cy - 0.22*bw, 1.41, 0.2*bw, 0.44*bw, 0.08, top, {bv:0.04});
-  if (p.scarf) B(cx - 0.09, cy - 0.11, 1.46, 0.18, 0.22, 0.09, p.scarf, {bv:0.03});
-  B(cx - 0.045, cy - 0.05, 1.49, 0.09, 0.1, 0.07, sk);
-  // head with a face on the front: eyes, brows, mouth, nose, ears
-  const hx = cx - 0.1, hy = cy - 0.08;
-  B(hx, hy, 1.55, 0.2, 0.16, 0.23, sk, {bv:0.035, win:[['E', 0.025, 0.125, 0.03, 0.028, '#22252a'], ['E', 0.105, 0.125, 0.03, 0.028, '#22252a'], ['E', 0.02, 0.16, 0.045, 0.012, p.brow || p.hair], ['E', 0.1, 0.16, 0.045, 0.012, p.brow || p.hair], ['E', 0.055, 0.05, 0.05, 0.014, '#9c4f45'], ...(p.glasses ? [['E', 0.01, 0.115, 0.14, 0.045, p.glasses]] : [])]});
-  B(hx + 0.2, cy - 0.013, 1.62, 0.025, 0.026, 0.05, sk); for (const ey of [hy - 0.015, hy + 0.16]) B(hx + 0.08, ey, 1.62, 0.05, 0.015, 0.06, sk);
-  if (p.beard){ B(hx + 0.15, hy + 0.01, 1.54, 0.06, 0.14, 0.05, p.beard, {bv:0.015}); B(hx + 0.2, hy + 0.05, 1.59, 0.012, 0.06, 0.012, p.beard, {noline:1}); }
-  // hair: back and top (under any hat), long hair falls to the shoulders
-  B(hx - 0.02, hy - 0.01, p.long ? 1.4 : 1.6, 0.06, 0.18, p.long ? 0.36 : 0.18, p.hair, {bv:0.02});
-  if (p.long) for (const ey of [hy - 0.02, hy + 0.15]) B(hx + 0.02, ey, 1.42, 0.09, 0.03, 0.28, p.hair);
-  if (!p.hat) B(hx - 0.01, hy - 0.01, 1.75, 0.21, 0.18, 0.05, p.hair, {bv:0.025});
-  if (p.hat === 'hard'){ B(hx - 0.03, hy - 0.035, 1.76, 0.29, 0.23, 0.025, p.hatc); B(hx - 0.005, hy - 0.01, 1.785, 0.215, 0.18, 0.1, p.hatc, {bv:0.05}); B(hx + 0.08, cy - 0.005, 1.785, 0.05, 0.01, 0.1, sh(p.hatc, 0.8), {noline:1}); }
-  if (p.hat === 'beanie'){ B(hx - 0.015, hy - 0.015, 1.72, 0.23, 0.19, 0.05, p.hatc, {bv:0.01}); B(hx - 0.005, hy - 0.005, 1.77, 0.21, 0.17, 0.07, p.hatc, {bv:0.04}); B(hx + 0.08, cy - 0.025, 1.84, 0.05, 0.05, 0.04, '#f4f2ec', {bv:0.02}); }
-  // arms: hanging, or the right one raised (holding a sign)
-  for (const sy of [-1, 1]){ const y = cy + sy*0.255*bw, up = sy > 0 && p.raise;
-    if (up){ B(cx - 0.05, y - 0.05, 1.42, 0.1, 0.1, 0.28, top, {bv:0.02}); B(cx - 0.045, y - 0.045, 1.7, 0.09, 0.09, 0.25, top); B(cx - 0.04, y - 0.04, 1.95, 0.08, 0.08, 0.09, hand, {bv:0.02}); }
-    else { B(cx - 0.04, y - 0.04, 0.8, 0.08, 0.08, 0.1, hand, {bv:0.02}); B(cx - 0.045, y - 0.045, 0.9, 0.09, 0.09, 0.27, top); B(cx - 0.05, y - 0.05, 1.17, 0.1, 0.1, 0.3, top, {bv:0.02, win:p.band ? [['S', 0, 0.12, 0.1, 0.04, p.band], ['N', 0, 0.12, 0.1, 0.04, p.band], ['E', 0, 0.12, 0.1, 0.04, p.band]] : []}); } }
-  // things carried
-  const ry = cy + 0.255*bw;
-  if (p.item === 'wrench'){ L([[cx + 0.0, ry, 0.82], [cx + 0.0, ry, 0.44]], '#b8322a', 0.35); B(cx - 0.07, ry - 0.02, 0.36, 0.14, 0.04, 0.08, '#8f979e'); }
-  if (p.item === 'sign'){ L([[cx, ry, 1.7], [cx, ry, 2.62]], '#8a6a4a', 0.3); B(cx - 0.015, ry - 0.5, 2.15, 0.03, 1.0, 0.5, '#f4f2ec', {win:[['E', 0.04, 0.06, 0.92, 0.38, '#f4f2ec', p.sign, '#c63a2c'], ['W', 0.04, 0.06, 0.92, 0.38, '#f4f2ec', p.sign, '#c63a2c']]}); }
-};
-const realP = (n, o, note) => { def('p', n, 1.5, 1.5, realPerson(o), note); M[M.length - 1].lines = 1; };
-realP('Driller (new style)', {skin:'#d9a882', top:'#e07a2c', bot:'#e07a2c', band:'#e8ece4', hair:'#3a2b20', beard:'#3a2b20', hat:'hard', hatc:'#f2c230', boots:'#4a3626', gloves:'#c9a24a', belt:'#2b2522', zip:'#b8642a', glasses:'rgba(40,60,70,.55)', bulk:1.08, item:'wrench'}, 'Trial in the new style: orange coveralls with reflective bands, yellow hard hat, safety glasses, gloves, boots, beard, pipe wrench.');
-realP('Protester (new style)', {skin:'#f2d2b6', top:'#3f7a4a', bot:'#3a4a63', hair:'#9a4a2a', long:1, hat:'beanie', hatc:'#c63a2c', scarf:'#e8b730', boots:'#5a4632', zip:'#2f5f38', raise:1, item:'sign', sign:'NON'}, 'Trial in the new style: green parka, jeans, red beanie, yellow scarf, long hair, sign held up.');
+/* People drawn as figures (not built from parts): smooth shapes in a three-quarter view, lit from the upper left like the
+   buildings. Views 1 and 2 show the front, 3 and 4 the back; the figure is mirrored for the two sides. Units are metres. */
+function figure(g, base, S, rot, o){
+  const front = rot < 2, dir = rot === 1 || rot === 2 ? -1 : 1, U = (u, v) => [base[0] + u*S*dir, base[1] - v*S];
+  const smooth = pts => { const n = pts.length, sp = pts.map(([u, v]) => U(u, v)), mid = (a, b) => [(a[0] + b[0])/2, (a[1] + b[1])/2];
+    g.beginPath(); let m0 = mid(sp[n - 1], sp[0]); g.moveTo(m0[0], m0[1]); for (let k = 0; k < n; k++){ const m1 = mid(sp[k], sp[(k + 1) % n]); g.quadraticCurveTo(sp[k][0], sp[k][1], m1[0], m1[1]); } g.closePath(); return sp; };
+  const box = sp => { const xs = sp.map(p => p[0]), ys = sp.map(p => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
+  // fill a shape, shade its right third, optional horizontal bands [v, h, colour]
+  const shape = (pts, c, bands, flat) => { const sp = smooth(pts); g.fillStyle = c; g.fill(); const [x0, y0, x1, y1] = box(sp);
+    g.save(); g.clip(); if (!flat){ g.fillStyle = sh(c, 0.8); g.fillRect(x0 + (x1 - x0)*0.64, y0 - 2, x1 - x0, y1 - y0 + 4); g.fillStyle = sh(c, 1.08); g.fillRect(x0 - 2, y0 - 2, (x1 - x0)*0.22 + 2, y1 - y0 + 4); }
+    for (const [v, h, bc] of bands || []){ const a = U(0, v + h), b = U(0, v); g.fillStyle = bc; g.fillRect(x0 - 2, a[1], x1 - x0 + 4, b[1] - a[1]); } g.restore(); };
+  const ell = (u, v, rx, ry, c, shade) => { const p = U(u, v); g.beginPath(); g.ellipse(p[0], p[1], rx*S, ry*S, 0, 0, Math.PI*2); g.fillStyle = c; g.fill();
+    if (shade){ g.save(); g.clip(); g.fillStyle = sh(c, 0.82); g.fillRect(p[0] + rx*S*0.35, p[1] - ry*S, rx*S, ry*S*2); g.restore(); } };
+  const dot = (u, v, r, c) => { const p = U(u, v), d = Math.max(1, r*S); g.fillStyle = c; g.fillRect(Math.round(p[0] - d/2), Math.round(p[1] - d/2), Math.ceil(d), Math.ceil(d)); };
+  const bk = o.bulk || 1, sk = o.skin, legB = o.legBands || [], topB = o.topBands || [];
+  // far leg and far arm sit behind the body
+  const leg = (c0, dark) => { const col = dark ? sh(o.bot, 0.86) : o.bot; shape([[c0 - 0.075, 0.95], [c0 + 0.075, 0.95], [c0 + 0.06, 0.12], [c0 - 0.05, 0.12]], col, legB);
+    shape(front ? [[c0 - 0.06, 0.13], [c0 + 0.06, 0.13], [c0 + 0.14, 0.05], [c0 + 0.13, 0], [c0 - 0.07, 0]] : [[c0 - 0.065, 0.13], [c0 + 0.065, 0.13], [c0 + 0.07, 0], [c0 - 0.07, 0]], dark ? sh(o.shoe, 0.85) : o.shoe); };
+  const arm = (near, raise) => { const sx = near ? 0.16*bk : -0.15*bk, col = near ? o.top : sh(o.top, 0.86);
+    if (raise){ shape([[sx - 0.05, 1.42], [sx + 0.05, 1.46], [sx + 0.12, 1.95], [sx + 0.05, 1.97]], col); ell(sx + 0.09, 2.0, 0.04, 0.045, o.hand || sk, 1); return; }
+    shape([[sx - 0.045, 1.47], [sx + 0.05, 1.46], [sx + 0.045, 0.98], [sx - 0.035, 0.98]], col, o.armBands); ell(sx + 0.005, 0.93, 0.04, 0.05, o.hand || sk, 1); };
+  if (o.longHair && !front) shape([[-0.1, 1.72], [0.1, 1.72], [0.12, 1.4], [-0.12, 1.4]], o.hair);
+  leg(-0.055, true); arm(false);
+  if (o.item === 'sign' && !front){ signPost(); }
+  leg(0.06, false);
+  shape([[-0.14, 1.0], [0.15, 1.0], [0.145, 0.86], [-0.14, 0.86]], o.bot, o.belt ? [[0.94, 0.04, o.belt]] : []);
+  shape([[-0.19*bk, 1.44], [-0.12*bk, 1.5], [0.12*bk, 1.5], [0.2*bk, 1.44], [0.16*bk, 0.98], [-0.15*bk, 0.98]], o.top, topB);
+  if (o.zip && front){ const a = U(0.06, 1.48), b = U(0.06, 1.0); g.fillStyle = o.zip; g.fillRect(a[0] - 0.5, a[1], Math.max(1, S*0.015), b[1] - a[1]); }
+  if (o.hood) shape([[-0.15, 1.56], [-0.02, 1.53], [-0.03, 1.44], [-0.17, 1.45]], sh(o.top, 0.92));
+  shape([[-0.04, 1.57], [0.05, 1.57], [0.05, 1.47], [-0.04, 1.47]], sh(sk, 0.92), null, 1);
+  if (o.scarf){ shape([[-0.09, 1.53], [0.1, 1.53], [0.1, 1.45], [-0.09, 1.45]], o.scarf); if (front) shape([[0.03, 1.47], [0.09, 1.47], [0.08, 1.28], [0.035, 1.29]], sh(o.scarf, 0.92)); }
+  // head
+  if (o.longHair && front) shape([[-0.11, 1.74], [0.0, 1.76], [-0.02, 1.42], [-0.13, 1.44]], o.hair);
+  ell(0.015, 1.665, 0.088, 0.118, sk, 1);
+  if (front){ ell(-0.05, 1.66, 0.018, 0.03, sh(sk, 0.9));
+    dot(0.045, 1.68, 0.024, '#24262b'); dot(-0.01, 1.68, 0.02, '#24262b'); shape([[0.098, 1.67], [0.12, 1.64], [0.095, 1.635]], sh(sk, 0.85), null, 1);
+    const m0 = U(0.02, 1.615), m1 = U(0.07, 1.615); g.fillStyle = '#9c4f45'; g.fillRect(Math.min(m0[0], m1[0]), m0[1], Math.abs(m1[0] - m0[0]), Math.max(1, S*0.012));
+    if (o.brow) for (const u of [-0.01, 0.045]){ const p = U(u - 0.02, 1.71), q = U(u + 0.02, 1.71); g.fillStyle = o.brow; g.fillRect(Math.min(p[0], q[0]), p[1], Math.abs(q[0] - p[0]), Math.max(1, S*0.012)); }
+    if (o.glasses){ g.save(); g.globalAlpha = 0.75; shape([[-0.03, 1.695], [0.1, 1.695], [0.1, 1.67], [-0.03, 1.67]], o.glasses, null, 1); g.restore(); }
+    if (o.beard) shape([[-0.04, 1.63], [0.0, 1.6], [0.09, 1.6], [0.1, 1.63], [0.07, 1.56], [0.0, 1.55], [-0.05, 1.59]], o.beard, null, 1);
+    if (!o.hat) shape([[-0.085, 1.62], [-0.1, 1.73], [-0.03, 1.79], [0.06, 1.79], [0.105, 1.72], [0.05, 1.735], [-0.02, 1.71], [-0.05, 1.66]], o.hair); }
+  else { shape([[-0.095, 1.58], [-0.1, 1.72], [-0.02, 1.79], [0.07, 1.78], [0.11, 1.7], [0.1, 1.58], [0.0, 1.56]], o.hair); ell(0.1, 1.66, 0.016, 0.03, sh(sk, 0.9)); }
+  if (o.hat === 'hard'){ const top = U(0, 0); shape([[-0.1, 1.74], [-0.08, 1.81], [0.0, 1.85], [0.09, 1.83], [0.12, 1.75]], o.hatc); shape([[-0.13, 1.755], [0.17, 1.755], [0.17, 1.73], [-0.13, 1.735]], sh(o.hatc, 0.85)); }
+  if (o.hat === 'beanie'){ shape([[-0.1, 1.71], [-0.09, 1.8], [0.0, 1.84], [0.09, 1.81], [0.11, 1.71]], o.hatc); shape([[-0.1, 1.735], [0.11, 1.735], [0.11, 1.7], [-0.1, 1.7]], sh(o.hatc, 0.85)); ell(0.005, 1.87, 0.035, 0.03, '#f4f2ec'); }
+  arm(true, o.raise);
+  if (o.item === 'wrench'){ const a = U(0.17*bk, 0.9), b = U(0.17*bk, 0.52); g.fillStyle = '#b8322a'; g.fillRect(a[0] - S*0.012, a[1], S*0.026, b[1] - a[1]); shape([[0.12*bk, 0.56], [0.24*bk, 0.56], [0.24*bk, 0.46], [0.12*bk, 0.46]], '#8f979e'); }
+  if (o.item === 'sign' && front) signPost();
+  function signPost(){ const hu = 0.25*bk, a = U(hu, 1.7), b = U(hu, 2.45); g.fillStyle = '#8a6a4a'; g.fillRect(a[0] - S*0.012, b[1], S*0.025, a[1] - b[1]);
+    const c = [U(hu - 0.5, 2.18 - 0.12), U(hu + 0.5, 2.18 + 0.12), U(hu + 0.5, 2.68 + 0.12), U(hu - 0.5, 2.68 - 0.12)];
+    g.beginPath(); c.forEach((p, k) => k ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.fillStyle = front ? '#f4f2ec' : '#d9d6cc'; g.fill(); g.strokeStyle = '#8a8478'; g.lineWidth = 1; g.stroke();
+    if (front){ const m = U(hu, 2.43), fs = Math.max(6, Math.round(S*0.3)); g.save(); g.translate(m[0], m[1]); g.transform(1, -0.12*dir*2, 0, 1, 0, 0); g.font = fs + 'px "Silkscreen", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#c63a2c'; g.fillText(o.sign || 'NON', 0, 0); g.restore(); } }
+}
+const figP = (n, o, note) => def('p', n, 1.5, 1.5, ({G}) => G(0.75, 0.75, o, o.item === 'sign' ? 2.8 : 1.9), note);
+figP('Driller (drawn)', {skin:'#d9a882', top:'#e07a2c', bot:'#e07a2c', shoe:'#4a3626', hand:'#c9a24a', hair:'#3a2b20', brow:'#3a2b20', beard:'#3a2b20', hat:'hard', hatc:'#f2c230', glasses:'#2a3a44', belt:'#2b2522', zip:'#b8642a', bulk:1.1, topBands:[[1.12, 0.035, '#e8ece4']], legBands:[[0.32, 0.035, '#e8ece4']], armBands:[[1.25, 0.03, '#e8ece4']], item:'wrench'}, 'Trial, drawn: orange coveralls with reflective bands, yellow hard hat, safety glasses, beard, gloves, boots, pipe wrench.');
+figP('Protester (drawn)', {skin:'#f2d2b6', top:'#3f7a4a', bot:'#3a4a63', shoe:'#5a4632', hair:'#9a4a2a', brow:'#7a3a22', longHair:1, hat:'beanie', hatc:'#c63a2c', scarf:'#e8b730', hood:1, zip:'#2f5f38', bulk:1.12, raise:1, item:'sign', sign:'NON'}, 'Trial, drawn: green parka with a hood, jeans, red beanie, yellow scarf, long red hair, sign held up.');
 
 /* People, built from 0.1 m voxels: square heads with pixel faces, front at +x. Each type has its own silhouette. */
 const personModel = (p) => ({V}, c) => {

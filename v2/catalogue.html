@@ -45,7 +45,7 @@ h2{font:700 15px/1 "Silkscreen",monospace;letter-spacing:.5px;margin:28px 0 12px
 <script src="art.js"></script>
 <script>
 const S = 3, ZOOM = 2;
-function extent(m){ let zt = 0; for (const p of m.parts){ if (p.t === 'blk') zt = Math.max(zt, p.z + Math.max(...p.h)); else if (p.t === 'cyl') zt = Math.max(zt, p.z + p.h); else if (p.t === 'ln') for (const q of p.pts) zt = Math.max(zt, q[2]); else if (p.t === 'txt') zt = Math.max(zt, p.z + 3); else if (p.t === 'vox') zt = Math.max(zt, p.zt); } return zt; }
+function extent(m){ let zt = 0; for (const p of m.parts){ if (p.t === 'blk') zt = Math.max(zt, p.z + Math.max(...p.h)); else if (p.t === 'cyl') zt = Math.max(zt, p.z + p.h); else if (p.t === 'ln') for (const q of p.pts) zt = Math.max(zt, q[2]); else if (p.t === 'txt') zt = Math.max(zt, p.z + 3); else if (p.t === 'vox' || p.t === 'fig') zt = Math.max(zt, p.zt); } return zt; }
 function crisp(c){ const g = c.getContext('2d'), d = g.getImageData(0, 0, c.width, c.height), a = d.data; for (let i = 3; i < a.length; i += 4) a[i] = a[i] > 110 ? 255 : 0; g.putImageData(d, 0, 0); }
 function trim(c, pad){ const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let x0 = c.width, y0 = c.height, x1 = 0, y1 = 0; for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) if (d[(y*c.width + x)*4 + 3]){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
   const o = document.createElement('canvas'); o.width = Math.max(1, x1 - x0 + 1 + pad*2); o.height = Math.max(1, y1 - y0 + 1 + pad*2); o.getContext('2d').drawImage(c, x0 - pad, y0 - pad, o.width, o.height, 0, 0, o.width, o.height); return o; }
@@ -56,7 +56,7 @@ function renderAll(){
   for (const m of ART.models){
     const num = pre[m.cat] + String(++n[m.cat]).padStart(2, '0'), views = card(document.getElementById(host[m.cat]), num, m.n, m.note);
     const zt = extent(m), span = m.W + m.D, pad = 6;
-    const s = m.cat === 'p' ? (m.lines ? 56 : 40) : m.cat === 'v' ? Math.min(7, 64/span)*(m.big || 1) : Math.max(1.2, Math.min(7, 118/span, 150/(span/2 + Math.max(zt, 1))));
+    const s = m.cat === 'p' ? (m.parts[0].t === 'fig' ? 56 : 40) : m.cat === 'v' ? Math.min(7, 64/span)*(m.big || 1) : Math.max(1.2, Math.min(7, 118/span, 150/(span/2 + Math.max(zt, 1))));
     const zoom = m.cat === 'v' ? 3 : 2;
     for (let r = 0; r < 4; r++){
       const big = document.createElement('canvas'), ex = span*s*0.6 + 20; big.width = Math.ceil(span*s + ex*2); big.height = Math.ceil(span*s/2 + Math.max(zt, 1)*s + ex*2);
