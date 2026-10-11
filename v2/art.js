@@ -1116,13 +1116,13 @@ const fireText = (g, txt, x, y, size, opts) => { opts = opts || {}; g.font = LOG
 const textW = (t, size, bold) => { const g = document.createElement('canvas').getContext('2d'); g.font = bold === false ? size + 'px "Silkscreen", monospace' : LOGO_FONT.replace('{s}', size); return Math.ceil(g.measureText(t).width); };
 const LOGOS = {
   // the game wordmark: pixel letters with a stepped dark-red extrusion, a fiery face and a red-orange glow
-  word(scale, stacked){ const lines = stacked ? [['JURA', 22], ['FRACKERS', 22], ['2.0', 14]] : [['JURAFRACKERS', 22]], tw = textW('JURAFRACKERS', 22), fw = textW('FRACKERS', 22), W = stacked ? fw + 20 : tw + 52, Hh = stacked ? 92 : 40;
-    return pixelArt(W, Hh, scale || 3, (g) => { const place = stacked ? [[W/2, 28], [W/2, 56], [W/2, 80]] : [[8, 30]], align = stacked ? 'center' : 'left';
+  word(scale, stacked){ const tw = textW('JURAFRACKERS', 22), fw = textW('FRACKERS', 22), lines = stacked ? [['JURA', 22], ['FRACKERS', 22], ['2.0', 14]] : [['JURAFRACKERS', 22], ['2.0', 14]], W = stacked ? fw + 20 : tw + textW('2.0', 14) + 22, Hh = stacked ? 92 : 40;
+    return pixelArt(W, Hh, scale || 3, (g) => { const place = stacked ? [[W/2, 28], [W/2, 56], [W/2, 80]] : [[8, 30], [tw + 14, 30]], align = stacked ? 'center' : 'left';
       g.drawImage(glowLayer(W, Hh, (q) => { q.fillStyle = '#000'; q.textAlign = align; lines.forEach(([t, s], i) => { q.font = LOGO_FONT.replace('{s}', s); q.fillText(t, place[i][0] + 2, place[i][1] + 2); }); }, '#ff7a1a', '#b81e14'), 0, 0);
       lines.forEach(([t, s], i) => { const [x, y] = place[i]; g.font = LOGO_FONT.replace('{s}', s); g.textAlign = align;
         for (let d = 3; d >= 1; d--){ g.fillStyle = d === 1 ? '#7a140c' : '#4a0c08'; g.fillText(t, x + d, y + d); }
         const gr = g.createLinearGradient(0, y - s*0.8, 0, y); gr.addColorStop(0, '#ffe066'); gr.addColorStop(0.45, '#ff9a1a'); gr.addColorStop(1, '#e0281a'); g.fillStyle = gr; g.fillText(t, x, y); });
-      if (!stacked){ const x = tw + 30, y = 30; g.fillStyle = '#4a0c08'; g.fillRect(x - 13, y - 17, 28, 20); g.fillStyle = '#e0281a'; g.fillRect(x - 15, y - 19, 28, 20); g.font = LOGO_FONT.replace('{s}', 8); g.textAlign = 'center'; g.fillStyle = '#ffe066'; g.fillText('2.0', x - 1, y - 5); } }); },
+}); },
   game(scale){ return LOGOS.word(scale, true); },
   // the association, in its own green: a warm water drop with heat waves, the name in green and grey
   association(scale){ return pixelArt(44 + Math.max(textW('GÉOTHERMIE', 16), textW('HELVETICA ASSOCIATION', 8)), 44, scale || 3, (g) => { const dx = 6, dy = 4;
