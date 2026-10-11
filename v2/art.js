@@ -151,7 +151,7 @@ function draw(g, model, rot, S, ox, oy, post){
     } else if (p.t === 'flat'){
       const pts = p.pts.map(([x, y]) => rp(x, y)); items.push({k:-1e4 + i, i, f(){ poly(pts.map(q => P(q[0], q[1], p.z || 0)), p.c, p.line || null); }});
     } else if (p.t === 'txt'){
-      const q = rp(p.x, p.y); items.push({k:1e4 + i, i, f(){ const s = P(q[0], q[1], p.z); g.font = (p.size || 7) + 'px "Silkscreen", monospace'; g.textAlign = 'center'; const tw = g.measureText(p.txt).width;
+      const q = rp(p.x, p.y); items.push({k:1e4 + i, i, f(){ if (p.post){ const s0 = P(q[0], q[1], p.z); post.push(() => { g.font = (p.size || 7) + 'px "Silkscreen", monospace'; g.textAlign = 'center'; g.fillStyle = p.color || '#1c2225'; g.fillText(p.txt, Math.round(s0[0]), Math.round(s0[1])); }); return; } const s = P(q[0], q[1], p.z); g.font = (p.size || 7) + 'px "Silkscreen", monospace'; g.textAlign = 'center'; const tw = g.measureText(p.txt).width;
         if (p.bg){ g.fillStyle = p.bg; g.fillRect(s[0] - tw/2 - 2, s[1] - (p.size || 7) + 1, tw + 4, (p.size || 7) + 2); } g.fillStyle = p.color || '#1c2225'; g.fillText(p.txt, s[0], s[1]); }});
     }
   });
@@ -167,7 +167,7 @@ const inEll = (p, c, rx, ry, rz) => ((p[0] - c[0])/rx)**2 + ((p[1] - c[1])/ry)**
 const lerpT = (tab, x) => { if (x <= tab[0][0]) return tab[0][1]; for (let i = 1; i < tab.length; i++) if (x <= tab[i][0]){ const [x0, y0] = tab[i - 1], [x1, y1] = tab[i]; return y0 + (y1 - y0)*(x - x0)/(x1 - x0); } return tab[tab.length - 1][1]; };
 
 /* 4×5 pixel letters for plates that must stay readable */
-const GLYPH = {N:['1001', '1101', '1011', '1001', '1001'], O:['0110', '1001', '1001', '1001', '0110'], S:['0111', '1000', '0110', '0001', '1110'], T:['1111', '0110', '0110', '0110', '0110'], P:['1110', '1001', '1110', '1000', '1000']};
+const GLYPH = {N:['1001', '1101', '1011', '1001', '1001'], O:['0110', '1001', '1001', '1001', '0110'], S:['0111', '1000', '0110', '0001', '1110'], T:['1111', '0110', '0110', '0110', '0110'], P:['1110', '1001', '1110', '1000', '1000'], E:['1111', '1000', '1110', '1000', '1111'], A:['0110', '1001', '1111', '1001', '1001'], U:['1001', '1001', '1001', '1001', '0110'], J:['0011', '0001', '0001', '1001', '0110'], R:['1110', '1001', '1110', '1010', '1001']};
 function pixelPlate(g, cx, cy, text, bg, fg, k){ const w = (text.length*5 + 3)*k, h = 9*k, x0 = cx - Math.floor(w/2), y0 = cy - Math.floor(h/2);
   g.fillStyle = '#2a2d33'; g.fillRect(x0 - k, y0 - k, w + 2*k, h + 2*k); g.fillStyle = bg; g.fillRect(x0, y0, w, h); g.fillStyle = fg;
   [...text].forEach((ch, i) => (GLYPH[ch] || []).forEach((row, r) => [...row].forEach((b, cc) => { if (b === '1') g.fillRect(x0 + (2 + i*5 + cc)*k, y0 + (2 + r)*k, k, k); }))); }
@@ -652,18 +652,32 @@ function figure(g, base, S, rot, o){
     g.beginPath(); c.forEach((p, k) => k ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.fillStyle = front ? '#f4f2ec' : '#d9d6cc'; g.fill(); g.strokeStyle = '#8a8478'; g.lineWidth = 1; g.stroke();
     if (front){ const m = U(hu, 2.43), fs = Math.max(6, Math.round(S*0.3)); g.save(); g.translate(m[0], m[1]); g.transform(1, -0.12*dir*2, 0, 1, 0, 0); g.font = fs + 'px "Silkscreen", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#c63a2c'; g.fillText(o.sign || 'NON', 0, 0); g.restore(); } }
 }
-/* People as smooth volumes: rounded limbs, real proportions, no faces. Front at +x. Children and tall people are scaled. */
-const personVol = (o) => { const cx = 0.75, cy = 0.75, k = o.small ? 0.62 : (o.tall || 1), kw = o.small ? 0.78 : 1;
-  const f = (x, y, z) => { const p = [x, y, z], bk = o.bulk || 1; let c = null; const put = (t, col) => { if (t) c = col; };
+/* People as smooth volumes: rounded limbs on simple joints, real proportions, no faces. Front at +x. A pose bends the
+   legs (stand, walk, run) and each arm (down, swing, forward, up, fist, strike, throw, shield, point, eye, ear, carry, hip);
+   what a person carries follows the hand. Children and tall people are scaled. */
+const ARM = { // elbow and hand offsets from the shoulder: [dx, dy outward, z] for elbow, then hand
+  down:[[0, 0.02, 1.15], [0.02, 0.02, 0.88]], swingF:[[0.09, 0.01, 1.16], [0.21, 0.01, 0.94]], swingB:[[-0.09, 0.01, 1.16], [-0.19, 0.01, 0.96]],
+  forward:[[0.2, 0, 1.3], [0.42, -0.04, 1.33]], up:[[0.03, 0.06, 1.7], [0.04, 0.08, 1.97]], fist:[[0.06, 0.13, 1.62], [0.09, 0.08, 1.9]],
+  strike:[[-0.06, 0.06, 1.68], [-0.14, 0.02, 1.93]], throw:[[-0.13, 0.06, 1.6], [-0.27, 0.06, 1.84]], shield:[[0.18, 0.02, 1.2], [0.3, -0.02, 1.22]],
+  point:[[0.21, 0.01, 1.45], [0.46, 0.0, 1.5]], eye:[[0.12, 0.08, 1.45], [0.17, -0.18, 1.66]], ear:[[0.06, 0.12, 1.42], [0.03, -0.12, 1.67]],
+  carry:[[0.12, 0.01, 1.2], [0.26, -0.12, 1.15]], hip:[[-0.02, 0.13, 1.2], [0.04, 0.03, 1.0]], wave:[[0.04, 0.14, 1.66], [0.02, 0.22, 1.93]] };
+const LEG = { stand:[[0.01, 0.5], [0, 0.1]], fwd:[[0.12, 0.52], [0.2, 0.08]], back:[[-0.05, 0.5], [-0.18, 0.12]], runF:[[0.2, 0.6], [0.26, 0.18]], runB:[[-0.08, 0.48], [-0.26, 0.2]] };
+const POSE = {stand:{}, walkA:{legs:['fwd', 'back'], armR:'swingB', armL:'swingF'}, walkB:{legs:['back', 'fwd'], armR:'swingF', armL:'swingB'}, run:{legs:['runF', 'runB'], armR:'swingB', armL:'swingF'}};
+const personVol = (o, pose) => { const cx = 0.75, cy = 0.75, k = o.small ? 0.62 : (o.tall || 1), kw = o.small ? 0.78 : 1, bk = o.bulk || 1, ps = Object.assign({}, POSE.stand, pose || {});
+  const defR = o.item === 'sign' || o.item === 'flag' ? 'up' : 'down', defL = o.item === 'shield' ? 'shield' : 'down';
+  const armR = ps.armR || o.armR || defR, armL = ps.armL || o.armL || defL, legs = ps.legs || ['stand', 'stand'];
+  const J = {}; for (const s of [-1, 1]){ const ay = cy + s*0.235*bk, [e, h] = ARM[s > 0 ? armR : armL]; J[s] = {sh:[cx, ay, 1.42], el:[cx + e[0], ay + s*e[1], e[2]], ha:[cx + h[0], ay + s*h[1], h[2]]}; }
+  const hR = J[1].ha, hL = J[-1].ha, dir = (a, b) => { const v = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], L = Math.hypot(...v) || 1; return v.map(q => q/L); };
+  const f = (x, y, z) => { const p = [x, y, z]; let c = null; const put = (t, col) => { if (t) c = col; };
     // legs (bare under a skirt), shoes or boots
-    for (const s of [-1, 1]){ const ly = cy + s*0.09;
-      put(inCap(p, [cx, ly, 0.92], [cx + 0.01, ly, 0.5], 0.08, 0.06) || inCap(p, [cx + 0.01, ly, 0.5], [cx, ly, 0.1], 0.058, 0.045), o.skirt ? o.skin : o.bot);
-      if (o.legBand && z > o.legBand && z < o.legBand + 0.045) put(inCap(p, [cx + 0.01, ly, 0.5], [cx, ly, 0.1], 0.062, 0.05), o.band);
-      if (o.knee) put(inEll(p, [cx + 0.05, ly, 0.5], 0.06, 0.07, 0.08), o.knee);
-      put(z >= 0 && (inEll(p, [cx + 0.05, ly, 0.045], 0.135, 0.06, 0.07) || (o.boots && inCap(p, [cx, ly, 0.05], [cx, ly, 0.26], 0.06, 0.06))), o.shoe || '#2b2522'); }
+    [-1, 1].forEach((s, i) => { const ly = cy + s*0.09, [kn, ft] = LEG[legs[i]], knee = [cx + kn[0], ly, kn[1]], foot = [cx + ft[0], ly, ft[1]];
+      put(inCap(p, [cx, ly, 0.92], knee, 0.08, 0.06) || inCap(p, knee, foot, 0.058, 0.045), o.skirt ? o.skin : o.bot);
+      if (o.legBand && z > o.legBand && z < o.legBand + 0.045) put(inCap(p, knee, foot, 0.062, 0.05), o.band);
+      if (o.knee) put(inEll(p, [knee[0] + 0.05, ly, knee[2]], 0.06, 0.07, 0.08), o.knee);
+      put(z >= 0 && (inEll(p, [foot[0] + 0.05, ly, foot[2] - 0.055], 0.135, 0.06, 0.07) || (o.boots && inCap(p, [foot[0], ly, foot[2] - 0.05], [foot[0], ly, foot[2] + 0.14], 0.06, 0.06))), o.shoe || '#2b2522'); });
     put(inEll(p, [cx, cy, 0.95], 0.11, 0.17, 0.1), o.bot);
     if (o.skirt) put(z > 0.45 && z < 1.0 && Math.hypot((x - cx)/0.15, (y - cy)/0.2) <= 1 + (1.0 - z)*0.9, o.bot);
-    // torso, belly, shoulders
+    // torso
     const torso = inEll(p, [cx, cy, 1.1], 0.105*bk, 0.155*bk, 0.15) || inEll(p, [cx, cy, 1.3], 0.125*bk, 0.19*bk, 0.17) || inCap(p, [cx, cy - 0.16*bk, 1.42], [cx, cy + 0.16*bk, 1.42], 0.065*bk, 0.065*bk) || (o.belly && inEll(p, [cx + 0.05, cy, 1.1], 0.13, 0.15, 0.14));
     put(torso, o.top);
     if (torso && o.shirt && x > cx + 0.05 && Math.abs(y - cy) < 0.045 && z > 1.2) c = o.shirt;
@@ -671,6 +685,7 @@ const personVol = (o) => { const cx = 0.75, cy = 0.75, k = o.small ? 0.62 : (o.t
     if (torso && o.band && o.topBand && z > o.topBand && z < o.topBand + 0.045) c = o.band;
     if (torso && o.vest && z > 1.0 && z < 1.42) c = (z > 1.18 && z < 1.22) ? '#e8ece4' : o.vest;
     if (torso && o.sash && Math.abs((y - cy) - (z - 1.25)*1.3) < 0.035 && x > cx) c = '#c63a2c';
+    if (torso && o.stripe && z > 1.24 && z < 1.3) c = o.stripe;
     if (o.belt) put(inEll(p, [cx, cy, 0.98], 0.115, 0.175, 0.03), o.belt);
     if (o.armor){ put(inEll(p, [cx + 0.02, cy, 1.25], 0.15, 0.2, 0.22), o.armor); for (const s of [-1, 1]) put(inEll(p, [cx, cy + s*0.22, 1.43], 0.11, 0.1, 0.07), o.armor2); }
     if (o.hood) put(inEll(p, [cx - 0.11, cy, 1.5], 0.07, 0.14, 0.08), o.top);
@@ -685,37 +700,49 @@ const personVol = (o) => { const cx = 0.75, cy = 0.75, k = o.small ? 0.62 : (o.t
     if (o.longHair) put(inCap(p, [cx - 0.07, cy, 1.66], [cx - 0.09, cy, 1.4], 0.085, 0.07) && x < cx - 0.02, o.hair);
     if (o.bun) put(inEll(p, [cx - 0.12, cy, 1.72], 0.06, 0.06, 0.06), o.hair);
     if (o.beard) put(inEll(p, [cx + 0.06, cy, 1.585], 0.06, 0.08, 0.05) && x > cx + 0.02, o.beard);
+    if (o.mask) put(inEll(p, hc, 0.104, 0.089, 0.118) && z < 1.65 && x > cx, o.mask);
     const h = o.hat;
     if (h === 'hard'){ put(inEll(p, [cx + 0.01, cy, 1.73], 0.125, 0.11, 0.12) && z > 1.73, o.hatc); put(z > 1.72 && z < 1.765 && inEll(p, [cx + 0.03, cy, 1.74], 0.16, 0.13, 0.1), o.hatc); }
-    if (h === 'beanie'){ put(inEll(p, [cx + 0.005, cy, 1.72], 0.115, 0.1, 0.12) && z > 1.7, o.hatc); put(inEll(p, [cx, cy, 1.86], 0.035, 0.035, 0.035), '#f4f2ec'); }
+    if (h === 'beanie'){ put(inEll(p, [cx + 0.005, cy, 1.72], 0.115, 0.1, 0.12) && z > 1.7, o.hatc); if (!o.noPom) put(inEll(p, [cx, cy, 1.86], 0.035, 0.035, 0.035), o.pom || '#f4f2ec'); }
     if (h === 'cap'){ put(inEll(p, [cx + 0.005, cy, 1.73], 0.112, 0.098, 0.09) && z > 1.72, o.hatc); put(z > 1.72 && z < 1.745 && x > cx && inEll(p, [cx + 0.1, cy, 1.73], 0.12, 0.08, 0.1), o.hatc); }
-    if (h === 'army'){ put(inEll(p, [cx + 0.01, cy, 1.69], 0.135, 0.12, 0.15) && z > 1.66, ((Math.floor(x*40) + Math.floor(y*40) + Math.floor(z*40)) % 4 === 0) ? '#3a4529' : o.hatc); }
+    if (h === 'hoodup') put(inEll(p, [cx - 0.005, cy, 1.67], 0.125, 0.11, 0.14) && !(x > cx + 0.06 && z < 1.72 && z > 1.56), o.hatc);
+    if (h === 'army') put(inEll(p, [cx + 0.01, cy, 1.69], 0.135, 0.12, 0.15) && z > 1.66, ((Math.floor(x*40) + Math.floor(y*40) + Math.floor(z*40)) % 4 === 0) ? '#3a4529' : o.hatc);
     if (h === 'fedora'){ put(z > 1.74 && z < 1.765 && inEll(p, [cx, cy, 1.75], 0.2, 0.18, 0.1), o.hatc); put(inEll(p, [cx, cy, 1.76], 0.105, 0.095, 0.12) && z > 1.745, z < 1.79 ? o.band2 : o.hatc); }
-    if (h === 'visor'){ put(inEll(p, [cx + 0.01, cy, 1.67], 0.135, 0.12, 0.15), x > cx + 0.06 && z > 1.63 && z < 1.71 ? '#16181b' : o.hatc); }
-    // arms; the right one may be raised
-    for (const s of [-1, 1]){ const ay = cy + s*0.235*bk, armC = o.armor ? o.armor : o.top;
-      if (s > 0 && o.raise){ put(inCap(p, [cx, ay, 1.42], [cx + 0.03, ay + 0.06, 1.7], 0.055, 0.047) || inCap(p, [cx + 0.03, ay + 0.06, 1.7], [cx + 0.04, ay + 0.08, 1.96], 0.045, 0.038), armC); put(inEll(p, [cx + 0.04, ay + 0.08, 2.01], 0.04, 0.035, 0.055), o.hand || o.skin); }
-      else { put(inCap(p, [cx, ay, 1.42], [cx, ay + s*0.02, 1.15], 0.055, 0.047) || inCap(p, [cx, ay + s*0.02, 1.15], [cx + 0.02, ay + s*0.02, 0.9], 0.045, 0.037), armC);
-        if (o.armBand && z > o.armBand && z < o.armBand + 0.04) put(inCap(p, [cx, ay, 1.42], [cx, ay + s*0.02, 1.15], 0.058, 0.05), o.band);
-        put(inEll(p, [cx + 0.02, ay + s*0.02, 0.85], 0.04, 0.032, 0.055), o.hand || o.skin); } }
-    // things carried (right hand at +y unless noted)
-    const ry = cy + 0.255*(o.bulk || 1), it = o.item;
-    if (it === 'wrench'){ put(Math.abs(x - cx - 0.02) < 0.02 && Math.abs(y - ry) < 0.02 && z > 0.5 && z < 0.82, '#b8322a'); put(Math.abs(x - cx - 0.02) < 0.08 && Math.abs(y - ry) < 0.025 && z > 0.44 && z < 0.52, '#8f979e'); }
-    if (it === 'case') put(Math.abs(x - cx - 0.02) < 0.2 && Math.abs(y - ry - 0.02) < 0.05 && z > 0.55 && z < 0.82, '#5a3f2a');
-    if (it === 'board') put(Math.abs(x - cx - 0.17) < 0.02 && Math.abs(y - cy - 0.1) < 0.12 && z > 1.05 && z < 1.38, z > 1.33 ? '#8a6a3a' : '#f4f2ec');
-    if (it === 'bottle') put(Math.hypot(x - cx - 0.03, y - ry) < 0.035 && z > 0.62 && z < 0.82, '#9fd0e8');
-    if (it === 'cup') put(Math.hypot(x - cx - 0.07, y - ry) < 0.04 && z > 0.84 && z < 0.95, '#f4f2ec');
-    if (it === 'laptop') put(x > cx + 0.1 && x < cx + 0.4 && Math.abs(y - cy) < 0.17 && z > 1.0 && z < 1.03, '#3a3f45');
-    if (it === 'camera') put(x > cx + 0.1 && x < cx + 0.24 && Math.abs(y - cy) < 0.08 && z > 1.6 && z < 1.72, '#1c1f22');
-    if (it === 'cane') put(Math.hypot(x - cx - 0.05, y - ry) < 0.018 && z < 0.84, '#6a4a32');
-    if (it === 'fork'){ put(Math.hypot(x - cx - 0.04, y - ry) < 0.02 && z < 2.05, '#8a6a4a'); put(Math.abs(x - cx - 0.04) < 0.02 && Math.abs(y - ry) < 0.12 && z > 2.0 && z < 2.25 && (Math.abs(y - ry) > 0.09 || Math.abs(y - ry) < 0.025 || z < 2.04), '#9aa3ab'); }
-    if (it === 'rifle') put(inCap(p, [cx + 0.17, cy - 0.15, 1.05], [cx + 0.17, cy + 0.18, 1.4], 0.025, 0.025), '#2f3329');
-    if (it === 'shield') put(x > cx + 0.22 && x < cx + 0.26 && y > cy - 0.48 && y < cy + 0.12 && z > 0.25 && z < 1.5, (y < cy - 0.44 || y > cy + 0.08 || z < 0.29 || z > 1.46) ? '#5f7896' : '#a9c7e8');
-    if (it === 'sign'){ const sy = ry + 0.08, sx = cx + 0.04; put(Math.abs(x - sx) < 0.022 && Math.abs(y - sy) < 0.022 && z > 1.7 && z < 2.45, '#8a6a4a'); }
+    if (h === 'visor') put(inEll(p, [cx + 0.01, cy, 1.67], 0.135, 0.12, 0.15), x > cx + 0.06 && z > 1.63 && z < 1.71 ? (o.visorc || '#3a4a5a') : o.hatc);
+    // arms on their joints, hands at the end
+    for (const s of [-1, 1]){ const j = J[s], armC = o.armor ? o.armor : o.top;
+      put(inCap(p, j.sh, j.el, 0.055, 0.047) || inCap(p, j.el, j.ha, 0.045, 0.037), armC);
+      if (o.armBand && z > o.armBand && z < o.armBand + 0.04) put(inCap(p, j.sh, j.el, 0.058, 0.05), o.band);
+      put(inEll(p, j.ha, 0.042, 0.036, 0.05), o.hand || o.skin); }
+    // what they carry follows the hand
+    const it = o.item, up = (a, len, r, col) => put(inCap(p, a, [a[0], a[1], a[2] + len], r, r), col);
+    if (it === 'wrench'){ put(inCap(p, hR, [hR[0], hR[1], hR[2] - 0.32], 0.02, 0.02), '#b8322a'); put(inEll(p, [hR[0], hR[1], hR[2] - 0.36], 0.08, 0.025, 0.04), '#8f979e'); }
+    if (it === 'case') put(Math.abs(x - hR[0]) < 0.2 && Math.abs(y - hR[1] - 0.02) < 0.05 && z > hR[2] - 0.3 && z < hR[2] - 0.04, '#5a3f2a');
+    if (it === 'board') put(Math.abs(x - hR[0] - 0.06) < 0.02 && Math.abs(y - hR[1] + 0.12) < 0.12 && z > hR[2] + 0.05 && z < hR[2] + 0.38, z > hR[2] + 0.33 ? '#8a6a3a' : '#f4f2ec');
+    if (it === 'bottle') up([hR[0] + 0.02, hR[1], hR[2] - 0.05], 0.2, 0.033, '#9fd0e8');
+    if (it === 'cup') up([hR[0] + 0.04, hR[1], hR[2] + 0.02], 0.1, 0.04, '#f4f2ec');
+    if (it === 'laptop') put(x > hR[0] - 0.25 && x < hR[0] + 0.05 && Math.abs(y - cy) < 0.17 && Math.abs(z - hR[2] - 0.04) < 0.02, '#3a3f45');
+    if (it === 'camera') put(armR === 'eye' ? inEll(p, [cx + 0.2, cy, 1.67], 0.07, 0.09, 0.06) : inEll(p, [cx + 0.15, cy, 1.25], 0.05, 0.08, 0.05), '#1c1f22');
+    if (it === 'cane') put(inCap(p, hR, [hR[0] + 0.04, hR[1], 0], 0.035, 0.035), '#6a4a32');
+    if (it === 'fork'){ const top = armR === 'forward' ? [hR[0] + 0.9, hR[1], hR[2] + 0.35] : [hR[0], hR[1], 2.1], bot = armR === 'forward' ? [hR[0] - 0.5, hR[1], hR[2] - 0.2] : [hR[0], hR[1], 0.02];
+      put(inCap(p, bot, top, 0.02, 0.02), '#8a6a4a'); for (const d of [-0.08, 0, 0.08]) put(inCap(p, [top[0], top[1] + d, top[2]], [top[0] + (armR === 'forward' ? 0.2 : 0), top[1] + d, top[2] + (armR === 'forward' ? 0.05 : 0.18)], 0.012, 0.012), '#9aa3ab'); }
+    if (it === 'rifle') put(armR === 'forward' ? inCap(p, [cx + 0.05, cy + 0.12, 1.32], [cx + 0.75, cy + 0.06, 1.36], 0.028, 0.028) : inCap(p, [cx + 0.17, cy - 0.15, 1.05], [cx + 0.17, cy + 0.18, 1.4], 0.025, 0.025), '#2f3329');
+    if (it === 'shield'){ const sx = hL[0] + 0.05; put(x > sx && x < sx + 0.04 && Math.abs(y - hL[1] - 0.06) < 0.3 && z > hL[2] - 0.75 && z < hL[2] + 0.45, (Math.abs(y - hL[1] - 0.06) > 0.26 || z < hL[2] - 0.71 || z > hL[2] + 0.41) ? '#5f7896' : '#a9c7e8'); }
+    if (o.baton){ const d = dir(J[1].el, hR); put(inCap(p, hR, [hR[0] + d[0]*0.55, hR[1] + d[1]*0.55, hR[2] + d[2]*0.55], 0.04, 0.04), '#0c0d0f'); }
+    if (it === 'sign' || it === 'flag') up([hR[0], hR[1], hR[2] - 0.25], it === 'flag' ? 1.3 : 0.62, 0.045, it === 'flag' && o.top === '#1c1f22' ? '#5a5f66' : '#8a6a4a');
+    if (it === 'flag') put(Math.abs(x - hR[0]) < 0.04 && y > hR[1] && y < hR[1] + 0.6 && z > hR[2] + 0.62 && z < hR[2] + 1.02, z > hR[2] + 0.82 ? (o.flagA || '#1c1f22') : (o.flagB || '#c63a2c'));
+    if (it === 'torch'){ up([hR[0], hR[1], hR[2] - 0.05], 0.3, 0.04, '#6a4a32'); if (inEll(p, [hR[0], hR[1], hR[2] + 0.42], 0.09, 0.09, 0.16)) c = '!' + (z > hR[2] + 0.46 ? '#f5a030' : '#ffe08a'); }
+    if (it === 'flare') if (inEll(p, [hR[0], hR[1], hR[2] + 0.08], 0.05, 0.05, 0.07)) c = '!#ff4a3a';
+    if (it === 'stone') put(inEll(p, [hR[0], hR[1], hR[2] + 0.05], 0.045, 0.045, 0.045), '#8a8a84');
+    if (o.jerrycan) put(Math.abs(x - hL[0]) < 0.1 && Math.abs(y - hL[1]) < 0.05 && z > hL[2] - 0.32 && z < hL[2] - 0.02, '#c63a2c');
     return c; };
   return (x, y, z) => f(cx + (x - cx)/kw, cy + (y - cy)/kw, z/k); };
-const volP = (n, o, note) => { const k = o.small ? 0.62 : (o.tall || 1), sign = o.item === 'sign';
-  def('p', n, 1.5, 1.5, ({SD}) => SD(0, 1.5, 0, sign ? 2.1 : 1.5, 0, (sign ? 2.5 : o.item === 'fork' || o.item === 'radio' ? 2.3 : 1.95)*k, personVol(o), {step:0.02, badge:sign ? {x:0.79, y:0.75 + 0.255*(o.bulk || 1) + 0.08, z:2.55*k, text:o.signText || 'NON', bg:o.signBoard || '#f4f2ec', fg:o.signInk || '#c63a2c'} : null}), note); };
+// the sign plate sits on top of the stick
+const signTop = (o, pose) => { const k = o.small ? 0.62 : (o.tall || 1), bk = o.bulk || 1, ps = pose || {}, a = ARM[ps.armR || o.armR || 'up'][1]; return {x:0.75 + a[0], y:0.75 + 0.235*bk + a[1], z:(a[2] + 0.5)*k}; };
+const figure3 = (H, o, dx, dy, pose, lift) => { const k = o.small ? 0.62 : (o.tall || 1), tall = o.item === 'sign' || o.item === 'flag' || o.item === 'fork' || o.item === 'radio' || (pose && (pose.armR === 'up' || pose.armR === 'wave' || pose.armR === 'strike' || pose.armR === 'fist'));
+  const f = personVol(o, pose), st = o.item === 'sign' ? signTop(o, pose) : null;
+  H.SD(dx - (o.item === 'fork' ? 0.1 : 0.45), dx + (o.item === 'fork' || o.item === 'rifle' ? 2.6 : 1.85), dy - 0.1, dy + 1.75, 0, (o.item === 'flag' ? 3.3 : tall ? 2.6 : 1.95)*k, (x, y, z) => f(x - dx, y - dy, z), {step:0.035, badge:st ? {x:st.x + dx, y:st.y + dy, z:st.z + 0.08, text:o.signText || 'NON', bg:o.signBoard || '#f4f2ec', fg:o.signInk || '#c63a2c'} : null}); };
+const volP = (n, o, note) => { def('p', n, 1.5, 1.5, (H) => figure3(H, o, 0, 0), note); M[M.length - 1].o = o; };
 const hi = '#e8ece4';
 volP('The CEO', {top:'#2f343c', bot:'#2f343c', hair:'#9a9590', skin:'#efc9a8', tie:'#b8322a', shirt:'#f4f2ec', item:'case', tall:1.06, shoe:'#1c1f22'}, 'Tall, grey at the temples, dark suit.');
 volP('Suit (woman)', {top:'#1f2329', bot:'#1f2329', hair:'#3a2b20', longHair:1, bun:1, skin:'#f2d2b6', item:'case', skirt:1, shirt:'#f4f2ec', shoe:'#1c1f22'}, 'Lent by the association.');
@@ -736,7 +763,7 @@ volP('Mayor', {top:'#3a3f45', bot:'#3a3f45', hair:'#c9c4b6', bun:1, skin:'#f2d2b
 volP('Protester with sign', {skin:'#f2d2b6', top:'#3f7a4a', bot:'#3a4a63', shoe:'#5a4632', hair:'#9a4a2a', longHair:1, hat:'beanie', hatc:'#c63a2c', scarf:'#e8b730', hood:1, bulk:1.12, raise:1, item:'sign'}, 'Green parka, red beanie, yellow scarf, sign held up.');
 volP('Protester with sign (2)', {top:'#c9622a', bot:'#4a4f55', hair:'#2b2522', beard:'#2b2522', skin:'#a8704a', raise:1, item:'sign', signText:'STOP', signBoard:'#e8b730', signInk:'#1c1f22'}, 'Yellow STOP sign.');
 volP('Police officer', {top:'#2a4fa0', bot:'#1f2a44', hair:'#2b2522', skin:'#e8c09c', hat:'cap', hatc:'#1f2a44', belt:'#1c1f22', shoe:'#1c1f22'}, '');
-volP('Riot police', {top:'#2d3440', bot:'#2d3440', hair:'#1f2a44', skin:'#e8c09c', hat:'visor', hatc:'#8f9aa8', armor:'#6f7c8c', armor2:'#b9c3ce', knee:'#b9c3ce', hand:'#1c1f22', shoe:'#16181b', boots:1, bulk:1.3, tall:1.06, item:'shield'}, 'Full armour, closed helmet with a black visor, shoulder plates, a big shield.');
+volP('Riot police', {top:'#2d3440', bot:'#2d3440', hair:'#1f2a44', skin:'#e8c09c', hat:'visor', hatc:'#16181b', visorc:'#3a4a5a', armor:'#4a5463', armor2:'#7d8796', knee:'#7d8796', hand:'#1c1f22', shoe:'#16181b', boots:1, bulk:1.3, tall:1.06, item:'shield', baton:1}, 'Full armour, black helmet with visor, shoulder plates, shield and baton.');
 volP('Journalist (La Feuille)', {top:'#c9a24a', bot:'#3a3f45', hair:'#3a2b20', longHair:1, skin:'#f2d2b6', item:'camera', pack:'#5a4632'}, '');
 volP('Banker', {top:'#3a4a63', bot:'#3a4a63', hair:'#5a4632', skin:'#e8c09c', shirt:'#f4f2ec', tie:'#c9a23a', item:'case', belly:1, shoe:'#1c1f22'}, '');
 volP('The lender', {top:'#f4f2ec', bot:'#f4f2ec', hair:'#1c1f22', skin:'#d9a882', shirt:'#1c1f22', hat:'fedora', hatc:'#f4f2ec', band2:'#1c1f22', bulk:1.1, shoe:'#f4f2ec'}, 'White suit, white hat with a black band.');
@@ -855,6 +882,73 @@ const placeModel = (H, name, dx, dy) => { const m = M.find(q => q.n === name), m
   for (const [q, c] of map) if (q.par) c.par = map.get(q.par); };
 def('x', 'Scale check: F-35 flying low over a house, a car, a driller and cows', 40, 22, (H) => { grass(H.F, 40, 22); placeModel(H, 'House, small', 2, 9); placeModel(H, 'Company car (old 911)', 14, 15); placeModel(H, 'Driller', 19, 15.5); placeModel(H, 'Cow (Simmental)', 22, 16); f35At(H, 16, 2, 12); }, 'All at the same scale. The jet at 12 m: its shadow on the ground, the jet above it.');
 def('x', 'F-35 formation (four, close)', 52, 46, (H) => { for (const [dx, dy] of [[30, 13], [19, 0], [19, 26], [8, 39]]) f35At(H, dx, dy, 9); for (const [x, y] of [[47, 16], [47, 21]]) H.SD(x, x + 3.4, y, y + 0.4, 9.5, 11, (px, py, pz) => inCap([px, py, pz], [x + 0.3, y + 0.2, 10.4], [x + 3.2, y + 0.2, 10.2], 0.1, 0.1) ? '#c9ced3' : null, {step:0.04}); }, 'Fly once across the map, low, firing at every rig. As many as needed.');
+
+/* ---------------------------------------------------------------- crowds, variations, poses */
+const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0)/4294967296; };
+const pick = (r, a) => a[Math.floor(r()*a.length)];
+const SKIN = ['#f2d2b6', '#e8c09c', '#d9a882', '#c98e66', '#a8704a', '#8a5a3a', '#f4dcc8'], HAIR = ['#2b2522', '#3a2b20', '#5a4632', '#7a4a2a', '#9a4a2a', '#c9a24a', '#d9d4c8', '#9a9590', '#1c1f22', '#c94c3a'];
+const TOPS = ['#3f7a4a', '#c9622a', '#2c5f93', '#b8322a', '#e8b730', '#6a5a8a', '#3a4a63', '#7a8f6e', '#2c8a8a', '#b05a6a', '#4a4f55', '#8a6a4a', '#d9d4c8', '#5a7aa0'];
+const BOTS = ['#3a4a63', '#2b2f36', '#4a4f55', '#5a4632', '#2f3a52', '#6b5a44', '#7a7468'], SHOES = ['#2b2522', '#5a4632', '#3a3f45', '#d9d4c8', '#7a3a2a'];
+// a figure 180° turned (facing -x), for police facing a crowd
+const turned = (H, o, dx, dy, pose) => { const f = personVol(o, pose); H.SD(dx - 0.35, dx + 1.95, dy - 0.25, dy + 1.6, 0, 2.6*(o.tall || 1), (x, y, z) => f(1.5 - (x - dx), 1.5 - (y - dy), z), {step:0.035}); };
+const label = (H, x, y, txt) => H.T(x, y, 0, txt, {size:8, color:'#2a2d33', post:1});
+const sheet = (n, W, D, fn, note, views) => { def('c', n, W, D, fn, note); M[M.length - 1].views = views || [0]; };
+const protester = (r, i) => { const fem = r() < 0.55, old = r() < 0.15, o = {skin:pick(r, SKIN), top:pick(r, TOPS), bot:pick(r, BOTS), shoe:pick(r, SHOES), hair:old ? pick(r, ['#d9d4c8', '#9a9590', '#e6e2da']) : pick(r, HAIR), longHair:fem && r() < 0.75, bun:fem && r() < 0.15, beard:!fem && r() < 0.35 ? pick(r, ['#2b2522', '#5a4632', '#9a9590']) : null, bulk:0.95 + r()*0.2, tall:old ? 0.95 : 0.96 + r()*0.08};
+  const hat = r(); if (hat < 0.3){ o.hat = 'beanie'; o.hatc = pick(r, ['#c63a2c', '#2c5f93', '#e8b730', '#3f7a4a', '#4a4f55']); } else if (hat < 0.42){ o.hat = 'cap'; o.hatc = pick(r, ['#2b2f36', '#c63a2c', '#d9d4c8']); } else if (hat < 0.5){ o.hat = 'hoodup'; o.hatc = o.top; }
+  if (r() < 0.35) o.scarf = pick(r, ['#e8b730', '#c63a2c', '#f4f2ec', '#2c5f93']); if (r() < 0.25) o.hood = 1; if (r() < 0.2) o.pack = pick(r, ['#5a4632', '#3a4a63', '#c9622a']); if (fem && r() < 0.15) o.skirt = 1;
+  const what = r(); if (what < 0.55){ o.item = 'sign'; o.signText = pick(r, ['NON', 'NON', 'NON', 'STOP', 'EAU', 'JURA']); const sc = pick(r, [['#f4f2ec', '#c63a2c'], ['#e8b730', '#1c1f22'], ['#f4f2ec', '#1c1f22'], ['#c63a2c', '#f4f2ec']]); o.signBoard = sc[0]; o.signInk = sc[1]; }
+  else if (what < 0.7){ o.item = 'flag'; o.flagA = '#c63a2c'; o.flagB = '#f4f2ec'; } else if (what < 0.85) o.armR = 'fist'; else if (old) o.item = 'cane';
+  return o; };
+const villager = (r, i) => { const fem = r() < 0.55, old = r() < 0.3, o = {skin:pick(r, SKIN), top:pick(r, TOPS), bot:pick(r, BOTS), shoe:pick(r, SHOES), hair:old ? pick(r, ['#d9d4c8', '#9a9590', '#e6e2da']) : pick(r, HAIR), longHair:fem && r() < 0.6, bun:fem && old && r() < 0.5, beard:!fem && r() < 0.25 ? pick(r, ['#2b2522', '#9a9590']) : null, bulk:0.95 + r()*0.22, belly:!fem && r() < 0.25, tall:old ? 0.94 : 0.96 + r()*0.08, skirt:fem && r() < 0.35};
+  const hat = r(); if (hat < 0.25){ o.hat = 'cap'; o.hatc = pick(r, ['#5a4632', '#3a3f45', '#2c5f93', '#7a7468']); } else if (hat < 0.32 && !old){ o.hat = 'beanie'; o.hatc = pick(r, ['#c63a2c', '#2c5f93', '#4a4f55']); }
+  const what = r(); if (old && what < 0.5) o.item = 'cane'; else if (what < 0.3) o.item = 'case'; else if (what < 0.4) o.item = 'cup'; if (r() < 0.2) o.vest = pick(r, ['#4a4f55', '#7a8f6e']);
+  return o; };
+const blackBloc = (r, i) => { const o = {skin:pick(r, SKIN), top:'#1c1f22', bot:'#1c1f22', shoe:'#141517', hair:'#1c1f22', hat:'hoodup', hatc:'#1c1f22', mask:'#1c1f22', bulk:0.98 + r()*0.15, tall:0.97 + r()*0.07, hand:'#1c1f22'};
+  if (r() < 0.4) o.pack = '#2b2f33'; const what = i % 5; if (what === 0){ o.item = 'flag'; o.flagA = '#1c1f22'; o.flagB = '#c63a2c'; } else if (what === 1){ o.item = 'flare'; o.armR = 'up'; } else if (what === 2){ o.item = 'stone'; o.armR = 'throw'; } else if (what === 3){ o.item = 'sign'; o.signText = 'NON'; o.signBoard = '#1c1f22'; o.signInk = '#f4f2ec'; } else o.armR = 'fist';
+  return o; };
+// rows run straight across the screen: along (1, -1) in the ground plane; the next row sits lower on the screen
+const gridOf = (H, list, cols, sx, sy, poseOf) => list.forEach((o, i) => { const c = i % cols, r = Math.floor(i/cols), x = 0.6 + c*sx + r*sy, y = 0.6 + (cols - 1 - c)*sx + r*sy; figure3(H, o, x, y, poseOf ? poseOf(o, i) : null); label(H, x + 1.75, y + 1.75, String(i + 1)); });
+const gridWD = (n, cols, sx, sy) => { const rows = Math.ceil(n/cols); return [cols*sx + rows*sy + 1.5, cols*sx + rows*sy + 1.5]; };
+const PROT = Array.from({length:20}, (_, i) => protester(rng(1000 + i*7), i)), VILL = Array.from({length:20}, (_, i) => villager(rng(5000 + i*13), i)), BLOC = Array.from({length:10}, (_, i) => blackBloc(rng(9000 + i*5), i));
+const GOON = [{skin:'#d9a882', top:'#2a2522', bot:'#1c1f22', shoe:'#141517', hair:'#1c1f22', hat:'cap', hatc:'#1c1f22', bulk:1.15, item:'torch', armR:'throw'}, {skin:'#e8c09c', top:'#2a2522', bot:'#2b2f36', shoe:'#141517', hair:'#5a4632', bulk:1.2, belly:1, item:'torch', armR:'up', jerrycan:1},
+  {skin:'#c98e66', top:'#3a2f2a', bot:'#1c1f22', shoe:'#141517', hair:'#1c1f22', beard:'#1c1f22', bulk:1.1, jerrycan:1, armR:'forward'}, {skin:'#f2d2b6', top:'#2a2522', bot:'#1c1f22', shoe:'#141517', hair:'#9a9590', hat:'cap', hatc:'#2a2522', bulk:1.1, item:'torch', armR:'throw'}];
+sheet('Protesters: 20 variations', ...gridWD(20, 10, 1.6, 3.6), (H) => gridOf(H, PROT, 10, 1.6, 3.6), 'Mixed ages and clothes; signs NON, STOP, EAU, JURA; Jura flags; raised fists.');
+sheet('Villagers: 20 variations', ...gridWD(20, 10, 1.3, 2.6), (H) => gridOf(H, VILL, 10, 1.3, 2.6), 'Everyday people for the villages and the town.');
+sheet('Black bloc: 10 variations', ...gridWD(10, 10, 1.6, 2.6), (H) => gridOf(H, BLOC, 10, 1.6, 2.6), 'Only in the riots before the secret ending: hoods, masks, flags, flares, stones.');
+sheet('The lender\'s men: 4 variations', ...gridWD(4, 4, 1.4, 2.6), (H) => gridOf(H, GOON, 4, 1.4, 2.6), 'They set buildings ablaze: torches and jerrycans.');
+// poses: idle, walk, walk, activity for every person
+const ACT = {'The CEO':{armR:'point'}, 'Suit (woman)':{armR:'forward'}, 'Suit (man)':{armR:'forward'}, 'Geologist':{armR:'carry'}, 'Driller':{armR:'strike'}, 'Driller (woman)':{armR:'strike'}, 'Mud engineer':{armR:'eye'},
+  'Water officer':{armR:'forward'}, 'Community liaison':{armR:'forward'}, 'Security guard':{armR:'hip', armL:'hip'}, 'Seismologist':{armR:'carry', armL:'carry'}, 'Plant operator':{armR:'point'}, 'Villager (woman)':{armR:'wave'},
+  'Villager (man), elderly':{legs:['fwd', 'back']}, 'Farmer':{armR:'forward', legs:['fwd', 'back']}, 'Mayor':{armR:'wave'}, 'Protester with sign':{legs:['fwd', 'back']}, 'Protester with sign (2)':{armR:'fist'},
+  'Police officer':{armR:'forward'}, 'Riot police':{armR:'strike', legs:['fwd', 'back']}, 'Journalist (La Feuille)':{armR:'eye', armL:'eye'}, 'Banker':{armR:'forward'}, 'The lender':{armR:'point'}, 'Association presenter':{armR:'point'},
+  'Soldier':{armR:'forward'}, 'Soldier with radio':{armR:'ear'}, 'Officer':{armR:'carry', armL:'carry'}, 'Soldier (woman)':{armR:'point'}, 'Child':{legs:['runF', 'runB'], armR:'swingB', armL:'swingF'}};
+const ACT_NAME = {'Riot police':'baton', 'Protester with sign':'marching', 'Farmer':'pitchfork', 'Journalist (La Feuille)':'photo', 'Child':'running', 'Mayor':'speech', 'Soldier':'aiming'};
+const walkPose = (o, ab) => { const p = ab ? {legs:['fwd', 'back'], armR:'swingB', armL:'swingF'} : {legs:['back', 'fwd'], armR:'swingF', armL:'swingB'}; if (o.item === 'sign' || o.item === 'flag') p.armR = 'up'; if (o.item === 'shield') p.armL = 'shield'; if (o.item === 'cane') p.armR = 'down'; return p; };
+for (const m of M.filter(q => q.cat === 'p' && q.o)){ const o = m.o, act = ACT[m.n] || {};
+  sheet('Poses: ' + m.n, 9, 9, (H) => { [null, walkPose(o, 1), walkPose(o, 0), act].forEach((ps, i) => { const x = 0.6 + i*1.8, y = 0.6 + (3 - i)*1.8; figure3(H, o, x, y, ps); label(H, x + 1.75, y + 1.75, ['stand', 'walk', 'walk', ACT_NAME[m.n] || 'activity'][i]); }); }, '');
+ }
+for (const [n, o, act] of [['Black bloc', BLOC[2], {armR:'throw'}], ['The lender\'s men', GOON[0], {armR:'throw'}]])
+  sheet('Poses: ' + n, 9, 9, (H) => { [{armR:o.armR}, walkPose(o, 1), walkPose(o, 0), act].forEach((ps, i) => { const x = 0.6 + i*1.8, y = 0.6 + (3 - i)*1.8; figure3(H, o, x, y, ps); label(H, x + 1.75, y + 1.75, ['stand', 'walk', 'walk', 'throw'][i]); }); }, '');
+// lines and scenes
+const RIOT = M.find(q => q.n === 'Riot police').o;
+sheet('Riot police line: holding', 4, 7, (H) => { for (let i = 0; i < 7; i++) figure3(H, RIOT, 1, 0.3 + i*0.85, {armR:'down'}); }, 'Shoulder to shoulder, shields in front.', [0, 1]);
+sheet('Riot police line: advancing', 4, 7, (H) => { for (let i = 0; i < 7; i++) figure3(H, RIOT, 1 + (i % 2)*0.25, 0.3 + i*0.85, i % 2 ? {legs:['fwd', 'back'], armR:'swingF'} : {legs:['back', 'fwd'], armR:'swingB'}); }, '', [0, 1]);
+sheet('Riot police line: batons', 4, 7, (H) => { for (let i = 0; i < 7; i++) figure3(H, RIOT, 1 + (i % 3 === 1 ? 0.4 : 0), 0.3 + i*0.85, i % 3 === 1 ? {armR:'strike', legs:['runF', 'runB']} : {armR:'strike'}); }, 'Batons raised; some step out of the line.', [0, 1]);
+sheet('Riot police: two rows', 5.5, 7, (H) => { for (let i = 0; i < 7; i++){ figure3(H, RIOT, 2.4, 0.3 + i*0.85, {armR:'down'}); if (i % 2 === 0) figure3(H, RIOT, 0.9, 0.7 + i*0.85, {armR:'strike'}); } }, 'A second row behind with batons ready.', [0, 1]);
+const barricade = (H, X, y0, y1, fire) => H.SD(X - 0.8, X + 0.8, y0, y1, 0, fire ? 2.8 : 1.4, (x, y, z) => { const p = [x, y, z];
+  if (fire){ const fl = flame(x, y, z, X, (y0 + y1)/2, 0.9, 0.7, 1.8) || flame(x, y, z, X, y0 + (y1 - y0)*0.25, 0.9, 0.5, 1.2); if (fl) return fl; }
+  for (let yy = y0 + 0.4; yy < y1 - 0.2; yy += 0.75) if (Math.hypot(x - X, y - yy) < 0.38 && Math.hypot(x - X, y - yy) > 0.14 && z < 0.5) return '#2b2b2b';
+  if (rbx(X - 0.45, X + 0.45, y0 + 0.1, y1 - 0.1, 0.5, 0.95, 0.04)(p) && ((Math.floor(z*8) % 2) || Math.abs(y - (y0 + y1)/2) < 0.1)) return '#a07a4a';
+  if (inEll(p, [X + 0.1, y0 + (y1 - y0)*0.7, 1.05], 0.5, 0.35, 0.35)) return '#7a828a'; return null; }, {step:0.03});
+sheet('Protesters at a barricade', 9, 8, (H) => { barricade(H, 6.6, 0.4, 7.6, false); [0, 3, 5, 7, 9, 11, 14, 16, 18, 19].forEach((k, i) => figure3(H, PROT[k], 3.6 - (i % 3)*1.0 - (i % 2)*0.3, 0.2 + i*0.72, i % 4 === 3 ? {legs:['fwd', 'back']} : null)); }, 'Behind tyres, pallets and a bin.', [0, 2]);
+sheet('Black bloc at a burning barricade', 9, 8, (H) => { barricade(H, 6.6, 0.4, 7.6, true); BLOC.slice(0, 9).forEach((o, i) => figure3(H, o, 3.8 - (i % 3)*1.1, 0.3 + i*0.8, o.armR === 'throw' ? {armR:'throw', legs:['back', 'fwd']} : null)); for (const [z, r] of [[3.2, 0.9], [4.2, 1.2]]) H.S(6.8, 4, z, r, 'rgba(140,140,140,.85)'); }, '', [0, 2]);
+sheet('Stand-off: crowd, barricade, police', 14, 8, (H) => { [1, 2, 4, 6, 8, 10, 12, 13].forEach((k, i) => figure3(H, PROT[k], 2.4 - (i % 2)*1.0, 0.3 + i*0.9, null)); BLOC.slice(5, 8).forEach((o, i) => figure3(H, o, 3.6, 1.2 + i*2.2, o.armR === 'throw' ? {armR:'throw'} : null));
+  barricade(H, 6.4, 0.4, 7.6, true); for (let i = 0; i < 8; i++) turned(H, RIOT, 9.4, 0.2 + i*0.88, i % 3 === 1 ? {armR:'strike'} : {armR:'down'}); for (let i = 0; i < 4; i++) turned(H, RIOT, 11.2, 0.6 + i*1.7, {armR:'down'}); }, 'For the riot before the secret ending.', [0, 1]);
+sheet('The lender\'s men set a house ablaze', 16, 12, (H) => { grass(H.F, 16, 12); placeModel(H, 'House, small', 1, 1);
+  H.SD(1, 11, 1, 10, 3, 9, firstOf((x, y, z) => flame(x, y, z, 4, 4.5, 4.4, 1.4, 4.2), (x, y, z) => flame(x, y, z, 7, 5, 3.6, 1.2, 3.4), (x, y, z) => flame(x, y, z, 8.6, 6.4, 0.2, 0.7, 1.8)));
+  for (const [x, z, r] of [[5, 9, 1.4], [6, 10.5, 1.8], [7.5, 12, 2.2]]) H.S(x, 4.5, z, r, 'rgba(120,120,120,.85)');
+  GOON.forEach((o, i) => figure3(H, o, 11 + (i % 2)*1.5, 3 + i*1.7, i % 2 ? {legs:['fwd', 'back'], armR:o.armR} : {armR:o.armR})); placeModel(H, 'Black van (the lender)', 11, 9.5); }, 'Late at night. The vans wait with the engines running.', [0, 1]);
+M[M.length - 1].s = 6;
 
 function outline(c, col){ const g = c.getContext('2d'), W = c.width, Hh = c.height, d = g.getImageData(0, 0, W, Hh), a = d.data, o = new Uint8Array(W*Hh), rgb = hex(col || '#2a2d33');
   for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++){ const i = (y*W + x)*4; if (a[i + 3]) continue; if ((x > 0 && a[i - 1]) || (x < W - 1 && a[i + 7]) || (y > 0 && a[i - W*4 + 3]) || (y < Hh - 1 && a[i + W*4 + 3])) o[y*W + x] = 1; }
