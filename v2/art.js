@@ -19,6 +19,9 @@ function build(fn){
     R(x, y, z, w, d, h, c, ax, side, ov){ ov = ov ?? 0.4; const o = {side:side || c, roof:1, kx:x + w/2, ky:y + d/2};
       if ((ax || 'x') === 'x'){ push(Object.assign({t:'blk', x:x - 0.1, y:y - ov, z, w:w + 0.2, d:d/2 + ov, h:[0, 0, h, h], c}, o)); push(Object.assign({t:'blk', x:x - 0.1, y:y + d/2, z, w:w + 0.2, d:d/2 + ov, h:[h, h, 0, 0], c}, o)); }
       else { push(Object.assign({t:'blk', x:x - ov, y:y - 0.1, z, w:w/2 + ov, d:d + 0.2, h:[0, h, h, 0], c}, o)); push(Object.assign({t:'blk', x:x + w/2, y:y - 0.1, z, w:w/2 + ov, d:d + 0.2, h:[h, 0, 0, h], c}, o)); } },
+    X:(pts, z, h, c, o) => push(Object.assign({t:'prism', pts, z, h, c}, o || {})),                  // extruded outline: wings, rounded bodies
+    O:(cx, cy, z, rx, ry, h, c, o) => { const pts = []; for (let i = 0; i < 8; i++){ const a = (i + 0.5)/8*Math.PI*2; pts.push([cx + Math.cos(a)*rx, cy + Math.sin(a)*ry]); } return push(Object.assign({t:'prism', pts, z, h, c}, o || {})); },   // octagon: round things
+    S:(x, y, z, r, c) => push({t:'puff', x, y, z, r, c:c || 'rgba(120,120,120,.55)'}),               // smoke puff
     W:(x, y, r, w, o) => push(Object.assign({t:'whl', x, y, r, w:w || r*0.6}, o || {})),              // wheel, axle along y
     Y:(x, y, z, w, d, h, c, o) => push(Object.assign({t:'pyr', x, y, z, w, d, h, c}, o || {})),       // pyramid (spires, hip caps)
     C:(x, y, z, r, h, c, o) => push(Object.assign({t:'cyl', x, y, z, r, h, c}, o || {})),          // vertical cylinder centred on x,y
@@ -30,8 +33,9 @@ function build(fn){
   };
   fn(H, PAL);
   // anything standing on top of a block is drawn after the ground-level parts
-  for (const p of parts){ if (p.z === undefined || p.z <= 0 || p.t === 'ln' || p.t === 'txt') continue; const cx = p.kx ?? (p.t === 'cyl' ? p.x : p.x + (p.w || 0)/2), cy = p.ky ?? (p.t === 'cyl' ? p.y : p.y + (p.d || 0)/2);
-    for (const q of parts){ if (q === p || q.t !== 'blk') continue; const top = q.z + Math.max(...q.h); if (Math.abs(top - p.z) < 0.35 && cx >= q.x - 0.01 && cx <= q.x + q.w + 0.01 && cy >= q.y - 0.01 && cy <= q.y + q.d + 0.01){ p.up = (q.up || 0) + 1; break; } } }
+  for (const p of parts){ if (p.z === undefined || p.z <= 0 || p.t === 'ln' || p.t === 'txt' || p.t === 'puff') continue; const pc = p.pts ? [p.pts.reduce((a, q) => a + q[0], 0)/p.pts.length, p.pts.reduce((a, q) => a + q[1], 0)/p.pts.length] : null;
+    const cx = p.kx ?? (pc ? pc[0] : p.t === 'cyl' ? p.x : p.x + (p.w || 0)/2), cy = p.ky ?? (pc ? pc[1] : p.t === 'cyl' ? p.y : p.y + (p.d || 0)/2);
+    for (const q of parts){ if (q === p || (q.t !== 'blk' && q.t !== 'prism')) continue; const top = q.z + (q.t === 'prism' ? q.h : Math.max(...q.h)); if (q.t === 'prism'){ const xs = q.pts.map(v => v[0]), ys = q.pts.map(v => v[1]); if (Math.abs(top - p.z) < 0.2 && cx >= Math.min(...xs) && cx <= Math.max(...xs) && cy >= Math.min(...ys) && cy <= Math.max(...ys)){ p.up = (q.up || 0) + 1; break; } continue; } if (Math.abs(top - p.z) < 0.35 && cx >= q.x - 0.01 && cx <= q.x + q.w + 0.01 && cy >= q.y - 0.01 && cy <= q.y + q.d + 0.01){ p.up = (q.up || 0) + 1; break; } } }
   return parts;
 }
 
@@ -50,7 +54,7 @@ function draw(g, model, rot, S, ox, oy, post){
       const hAt = (x, y) => L.find(q => Math.abs(q[0] - x) < 1e-6 && Math.abs(q[1] - y) < 1e-6)[2];
       const kc = p.kx !== undefined ? rp(p.kx, p.ky) : [(x0 + x1)/2, (y0 + y1)/2];
       items.push({k:kc[0] + kc[1] + (p.up || 0)*1000 + (p.roof ? 0.01 : 0) + (p.k || 0) + ((x0 + x1)/2 + (y0 + y1)/2)*0.001, i, f(){
-        const z = p.z, c = p.c, line = p.noline ? null : 'rgba(20,24,28,.38)';
+        const z = p.z, c = p.c, line = p.noline || model.cat === 'p' ? null : 'rgba(20,24,28,.38)';
         const h00 = hAt(x0, y0), h10 = hAt(x1, y0), h11 = hAt(x1, y1), h01 = hAt(x0, y1);
         const sideS = p.side || c, sideE = p.side || c;
         if (p.bv){ const b = p.bv, zt = z + h00, zb = zt - b;
@@ -64,14 +68,21 @@ function draw(g, model, rot, S, ox, oy, post){
         else {
         if (h01 > 0 || h11 > 0) poly([P(x0, y1, z), P(x1, y1, z), P(x1, y1, z + h11), P(x0, y1, z + h01)], sh(sideS, 0.9), line);
         if (h10 > 0 || h11 > 0) poly([P(x1, y0, z), P(x1, y1, z), P(x1, y1, z + h11), P(x1, y0, z + h10)], sh(sideE, 0.74), line);
+        if (model.cat === 'b' && z === 0 && h00 >= 2.4 && !p.roof && h00 === h11){ const pb = 0.45; poly([P(x0, y1, 0), P(x1, y1, 0), P(x1, y1, pb), P(x0, y1, pb)], sh(sideS, 0.72), null); poly([P(x1, y0, 0), P(x1, y1, 0), P(x1, y1, pb), P(x1, y0, pb)], sh(sideE, 0.6), null); }
         const sx = (h10 + h11) - (h00 + h01), sy = (h01 + h11) - (h00 + h10), top = p.top || (sx + sy < -1e-6 ? sh(c, 1.1) : sx + sy > 1e-6 ? sh(c, 0.72) : sh(c, 1.1));
         poly([P(x0, y0, z + h00), P(x1, y0, z + h10), P(x1, y1, z + h11), P(x0, y1, z + h01)], top, line);
-        if (p.roof){ g.strokeStyle = sh(c, 0.55); g.lineWidth = Math.max(1, S*0.22); const lo = [[x0, y0, h00], [x1, y0, h10], [x1, y1, h11], [x0, y1, h01]].filter(q => q[2] < 1e-6); if (lo.length === 2){ g.beginPath(); const a = P(lo[0][0], lo[0][1], z), b = P(lo[1][0], lo[1][1], z); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); } }
+        if (p.roof){ const cr = [[x0, y0, h00], [x1, y0, h10], [x1, y1, h11], [x0, y1, h01]]; for (let e = 0; e < 4; e++) if (cr[e][2] < 1e-6 && cr[(e + 1) % 4][2] < 1e-6){ const a0 = cr[e], a1 = cr[(e + 1) % 4], b1 = cr[(e + 2) % 4], b0 = cr[(e + 3) % 4], nL = Math.max(2, Math.round(Math.hypot(b0[0] - a0[0], b0[1] - a0[1], b0[2] - a0[2])/0.55));
+            g.strokeStyle = sh(c, 0.82); g.lineWidth = Math.max(0.6, S*0.08); for (let t = 1; t < nL; t++){ const u = t/nL, pA = P(a0[0] + (b0[0] - a0[0])*u, a0[1] + (b0[1] - a0[1])*u, z + b0[2]*u), pB = P(a1[0] + (b1[0] - a1[0])*u, a1[1] + (b1[1] - a1[1])*u, z + b1[2]*u); g.beginPath(); g.moveTo(pA[0], pA[1]); g.lineTo(pB[0], pB[1]); g.stroke(); } break; }
+          g.strokeStyle = sh(c, 0.55); g.lineWidth = Math.max(1, S*0.22); const lo = [[x0, y0, h00], [x1, y0, h10], [x1, y1, h11], [x0, y1, h01]].filter(q => q[2] < 1e-6); if (lo.length === 2){ g.beginPath(); const a = P(lo[0][0], lo[0][1], z), b = P(lo[1][0], lo[1][1], z); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); } }
         }
         for (const wv of p.win || []){ const [f, a, wz, ww, wh, wc, txt, tc] = wv, fr = rf(f); if (fr !== 'E' && fr !== 'S') continue;
           const lp = f === 'E' ? [[p.x + p.w, p.y + a], [p.x + p.w, p.y + a + ww]] : f === 'W' ? [[p.x, p.y + p.d - a], [p.x, p.y + p.d - a - ww]] : f === 'S' ? [[p.x + a, p.y + p.d], [p.x + a + ww, p.y + p.d]] : [[p.x + p.w - a, p.y], [p.x + p.w - a - ww, p.y]];
           const A = rp(...lp[0]), Bq = rp(...lp[1]), col = wc || PAL.glass, base = z + wz;
           poly([P(A[0], A[1], base), P(Bq[0], Bq[1], base), P(Bq[0], Bq[1], base + wh), P(A[0], A[1], base + wh)], fr === 'E' ? sh(col, 0.85) : col, txt ? 'rgba(20,24,28,.5)' : null);
+          if (!txt && model.cat === 'b' && wh > 0.7 && ww > 0.6 && wh < 4){ const M2 = (u, v) => P(A[0] + (Bq[0] - A[0])*u, A[1] + (Bq[1] - A[1])*u, base + wh*v); g.strokeStyle = 'rgba(40,44,50,.55)'; g.lineWidth = Math.max(0.7, S*0.1);
+            g.beginPath(); const c1 = M2(0, 0), c2 = M2(1, 0), c3 = M2(1, 1), c4 = M2(0, 1); g.moveTo(c1[0], c1[1]); g.lineTo(c2[0], c2[1]); g.lineTo(c3[0], c3[1]); g.lineTo(c4[0], c4[1]); g.closePath(); g.stroke();
+            if (ww > 0.9 && col === PAL.glass || col === '#9fc3d6' || col === '#7fa6c4' || col === '#8fb0c4'){ g.beginPath(); const m1 = M2(0.5, 0), m2 = M2(0.5, 1), m3 = M2(0, 0.55), m4 = M2(1, 0.55); g.moveTo(m1[0], m1[1]); g.lineTo(m2[0], m2[1]); g.moveTo(m3[0], m3[1]); g.lineTo(m4[0], m4[1]); g.stroke(); }
+            if (wz > 0.4){ g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = Math.max(1, S*0.16); g.beginPath(); const s1 = M2(-0.06, -0.04), s2 = M2(1.06, -0.04); g.moveTo(s1[0], s1[1]); g.lineTo(s2[0], s2[1]); g.stroke(); } }
           if (txt){ const m1 = P((A[0] + Bq[0])/2, (A[1] + Bq[1])/2, base + wh/2), len = Math.hypot(Bq[0] - A[0], Bq[1] - A[1])*S*1.12, fs = Math.max(6, Math.round(S*wh*0.8)), skew = fr === 'S' ? 0.5 : -0.5;
             post.push(() => { g.save(); g.fillStyle = tc || '#fff'; g.font = fs + 'px "Silkscreen", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; const tw = g.measureText(txt).width, fit = Math.min(1, (len*0.9)/tw);
               g.translate(m1[0], m1[1]); g.transform(1, skew, 0, 1, 0, 0); g.scale(fit, 1); g.fillText(txt, 0, 0.5); g.restore(); }); } }
@@ -86,6 +97,15 @@ function draw(g, model, rot, S, ox, oy, post){
     } else if (p.t === 'ln'){
       const pts = p.pts.map(([x, y, z]) => { const q = rp(x, y); return [q[0], q[1], z]; }), ax = pts.reduce((a, q) => a + q[0] + q[1], 0)/pts.length;
       items.push({k:ax + (p.k || 0), i, f(){ g.beginPath(); pts.forEach((q, j) => { const s = P(q[0], q[1], q[2]); j ? g.lineTo(s[0], s[1]) : g.moveTo(s[0], s[1]); }); g.strokeStyle = p.c; g.lineWidth = Math.max(0.8, S*0.18*p.lw); g.stroke(); }});
+    } else if (p.t === 'prism'){
+      const pts = p.pts.map(q => rp(q[0], q[1])), n = pts.length; let area = 0; for (let j = 0; j < n; j++){ const a = pts[j], b = pts[(j + 1) % n]; area += a[0]*b[1] - b[0]*a[1]; }
+      const sg = area > 0 ? 1 : -1, cx = pts.reduce((a, q) => a + q[0], 0)/n, cy = pts.reduce((a, q) => a + q[1], 0)/n;
+      items.push({k:cx + cy + (p.up || 0)*1000 + (p.k || 0), i, f(){ const z = p.z, zt = p.z + p.h, ln = p.noline || model.cat === 'p' ? null : 'rgba(20,24,28,.38)', sides = [];
+        for (let j = 0; j < n; j++){ const a = pts[j], b = pts[(j + 1) % n], dx = b[0] - a[0], dy = b[1] - a[1], nx = sg*dy, ny = -sg*dx; if (nx + ny <= 1e-9) continue; const L2 = Math.hypot(nx, ny), f = 0.74 + 0.16*(ny/L2 + 1 - nx/L2)/2; sides.push({a, b, f, d:a[0] + a[1] + b[0] + b[1]}); }
+        if (p.h > 0) sides.sort((u, v) => u.d - v.d).forEach(sd => poly([P(sd.a[0], sd.a[1], z), P(sd.b[0], sd.b[1], z), P(sd.b[0], sd.b[1], zt), P(sd.a[0], sd.a[1], zt)], sh(p.side || p.c, sd.f), ln));
+        poly(pts.map(q => P(q[0], q[1], zt)), p.top || sh(p.c, 1.1), ln); }});
+    } else if (p.t === 'puff'){
+      const q = rp(p.x, p.y); items.push({k:9000 + p.z, i, f(){ const c0 = P(q[0], q[1], p.z); g.beginPath(); g.arc(c0[0], c0[1], p.r*S, 0, Math.PI*2); g.fillStyle = p.c; g.fill(); }});
     } else if (p.t === 'pyr'){
       const cs = [[p.x, p.y], [p.x + p.w, p.y], [p.x + p.w, p.y + p.d], [p.x, p.y + p.d]].map(q => rp(q[0], q[1])), ap = rp(p.x + p.w/2, p.y + p.d/2);
       const xs = cs.map(q => q[0]), ys = cs.map(q => q[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), A = P(ap[0], ap[1], p.z + p.h);
@@ -232,6 +252,22 @@ const church = (state) => ({B, R, F, L, Y}, c) => { F([[0, 0], [18, 0], [18, 12]
 def('b', 'Church', 18, 12, church('ok'), 'Nave and bell tower.');
 def('b', 'Church after a quake', 18, 12, church('broken'), 'Cracked walls, half the nave roof and the top of the tower gone, rubble, tape around it.');
 def('b', 'Church under repair', 18, 12, church('repair'), 'Scaffolding around the tower while it is rebuilt.');
+const ruinModel = (kind) => ({B, R, F, L, S, X}, c) => { const big = kind !== 'small', W0 = kind === 'farm' ? 24 : 10, D0 = kind === 'farm' ? 18 : big ? 10 : 9; F([[0, 0], [W0, 0], [W0, D0], [0, D0]], '#9a9584');
+  const wall = kind === 'farm' ? '#efe6d4' : '#e6dccb', roof = kind === 'farm' ? '#6e4b38' : c.roof, char = '#3a332c';
+  if (kind === 'farm'){ B(2, 3, 0, 4, 9, [3.6, 1.2, 0.6, 2.8], wall); B(2, 11.5, 0, 14, 0.5, [2.4, 0.8, 0.4, 3], wall); B(15.4, 3, 0, 0.6, 9, [1.4, 2.6, 0.5, 0.3], wall);
+    X([[3, 4], [13, 3.5], [14.5, 9], [5, 11]], 0, 1.6, roof, {top:'#5a3e2e'}); X([[8, 6], [14, 5.5], [15, 10], [9, 10.5]], 1.6, 0.9, '#4a3528');
+    for (const [x, y, a] of [[6, 5, 1], [9, 4, 0], [12, 7, 1]]) L([[x, y, 0.3], [x + (a ? 3 : 2), y + (a ? 2 : 3), 2.6]], char, 1.6);
+    B(17.5, 3.4, 0, 3.6, 3.6, [5, 2.2, 1.4, 3.4], '#cfd3d6'); for (const [x, y, z, r] of [[9, 7, 3, 1.4], [8.4, 6.4, 5, 1.8], [9.4, 5.6, 7.4, 2.2], [8.6, 5, 10, 2.6], [12, 9, 2.6, 1], [11.6, 8.6, 4.4, 1.4]]) S(x, y, z, r); }
+  else { const hh = big ? 5.6 : 3.2;
+    B(1.5, 1.5, 0, 0.5, 6, [hh, hh*0.4, 0.6, hh*0.8], wall, {win:[['E', 1, 1, 1, 1.2, '#2b2f33']]}); B(1.5, 1.5, 0, 7, 0.5, [hh, hh*0.9, hh*0.3, hh*0.6], wall, {win:[['S', 1.2, 1, 1.1, 1.3, '#2b2f33'], ['S', 4, 1, 1.1, 1.3, '#2b2f33']]});
+    B(8, 1.5, 0, 0.5, 2.5, [hh*0.9, 1, 0.4, hh*0.5], wall); B(2, 7, 0, 3, 0.5, [1.4, 0.6, 0.3, 1.1], wall);
+    X([[2.5, 2.5], [8, 3], [8.6, 7.8], [3.2, 7.4]], 0, 0.9, '#bdb3a0', {top:'#a39886'}); X([[3, 3.5], [7.5, 2.8], [8.2, 6.5], [4, 7]], 0.9, 0.5, roof, {top:sh(roof, 0.8)});
+    for (const [x, y, w, d, h] of [[1, 7.6, 1.4, 1, 0.5], [6.6, 7.8, 1.6, 1.1, 0.6], [8.6, 4.2, 1, 1.4, 0.4], [4.2, 8, 1.2, 0.8, 0.35]]) B(x, y, 0, w, d, h, '#cfc8b8', {bv:0.15});
+    for (const [x, y, a] of [[3, 3, 1], [5, 4.5, 0], [6.5, 3.5, 1]]) L([[x, y, 1.3], [x + (a ? 2.2 : 1.4), y + (a ? 1.4 : 2.2), 2.8]], char, 1.5);
+    for (const [x, y, z, r] of [[5, 5, 2.2, 0.9], [4.6, 4.6, 3.6, 1.2], [5.4, 4, 5.2, 1.5], [4.8, 3.6, 7.2, 1.8], [5.8, 3.2, 9.4, 2]]) S(x, y, z, r); } };
+def('b', 'House, collapsed', 10, 9, ruinModel('small'), 'After a very big quake: walls down, the roof on the floor, charred beams, smoke.');
+def('b', 'House, two storeys, collapsed', 10, 10, ruinModel('big'), 'One corner still standing; the rest is rubble, smoking.');
+def('b', 'Farm, collapsed', 24, 18, ruinModel('farm'), 'The big roof came down on the barn; the silo broke; smoke for days.');
 def('b', 'Chapel', 9, 7, ({B, R, F, L}, c) => { F([[0, 0], [9, 0], [9, 7], [0, 7]], '#a7b98b');
   B(1.5, 1.5, 0, 6, 4, 3.4, '#f2efe8', {win:[['S', 2.5, 0, 1, 2, c.wood], ['E', 1.5, 1.2, 0.8, 1.4]]}); R(1.5, 1.5, 3.4, 6, 4, 2.6, c.roof2, 'x', '#f2efe8', 0.3);
   B(6.4, 3.1, 6, 0.9, 0.9, 1.6, '#f2efe8'); L([[6.85, 3.55, 7.6], [6.85, 3.55, 8.8]], '#3a3a3a', 0.6); L([[6.45, 3.55, 8.3], [7.25, 3.55, 8.3]], '#3a3a3a', 0.6);
@@ -279,10 +315,13 @@ def('b', 'Villa', 18, 14, ({B, F, L, row}, c) => { F([[0, 0], [18, 0], [18, 14],
   B(2, 2, 0, 12, 6, 3.6, '#f6f3ea', {win:[...row('S', 0.6, 10, 2.4, 0.3, 2, 2.8), ['E', 0.8, 0.4, 4, 2.6]]}); B(1.6, 1.6, 3.6, 12.8, 6.8, 0.5, '#3b3b44'); B(5, 2, 4.1, 7, 5, 2.8, '#f6f3ea', {win:[...row('S', 0.4, 6, 1.8, 0.4, 1.4, 2)]}); B(4.6, 1.6, 6.9, 7.8, 5.8, 0.4, '#3b3b44');
   for (let i = 0; i < 4; i++) L([[1, 9 + i*1.2, 0], [1, 9 + i*1.2, 1.6]], '#2b3036', 0.5);
 }, 'On the knoll above the town. The lender lives here; his three black vans leave from here.');
-def('b', 'Committee office', 11, 9, ({B, R, F, L, row}, c) => { F([[0, 0], [11, 0], [11, 9], [0, 9]], '#c9c4b6');
-  B(1.5, 1.5, 0, 8, 5.5, 3.6, '#e6dccb', {win:[['S', 0.6, 0.3, 3, 2.2, '#f4f2ec', 'NON', '#b8322a'], ['S', 4.2, 0, 1.2, 2.4, '#5a4632'], ['S', 5.8, 0.6, 1.6, 1.6]]});
-  R(1.5, 1.5, 3.6, 8, 5.5, 2.2, c.roof, 'x', '#e6dccb', 0.4); B(1.5, 7.05, 2.9, 8, 0.05, 0.7, '#f4f2ec', {noline:1, win:[['S', 0.2, 0.05, 7.6, 0.6, '#f4f2ec', 'JURA SANS FRACKING', '#b8322a']]});
-}, 'The opposition\'s office. Debates take place here; the CEO drives over.');
+def('b', 'Committee office', 13, 11, ({B, R, F, L, row}, c) => { F([[0, 0], [13, 0], [13, 11], [0, 11]], '#c9c4b6'); F([[1, 8.5], [12, 8.5], [12, 10.5], [1, 10.5]], '#b3ab98'); const w = '#e6dccb', red = '#c63a2c';
+  B(1.5, 1.5, 0, 9, 6.5, 3.8, w, {win:[['S', 0.5, 0.4, 3, 2.3, '#f4f2ec', 'NON', red], ['S', 4.2, 0, 1.2, 2.5, '#5a4632'], ['S', 5.9, 0.5, 2.6, 1.8, '#f4f2ec', 'STOP', red], ['E', 0.6, 0.6, 2.4, 1.6, '#f4f2ec', 'NON', red], ['E', 3.6, 0.6, 2.4, 1.6, red, '!', '#fff'], ['S', 0, 3.1, 9, 0.5, red, 'COMITÉ RÉFÉRENDAIRE', '#fff'], ['N', 0.5, 0.6, 3, 1.6, '#f4f2ec', 'NON', red], ['W', 0.6, 0.6, 2.4, 1.6, '#f4f2ec', 'NON', red]]});
+  R(1.5, 1.5, 3.8, 9, 6.5, 2.4, '#9c4a3e', 'x', w, 0.4);
+  for (const x of [1.8, 10.2]) L([[x, 4.75, 6.2], [x, 4.75, 9.4]], '#6a4a32', 1.3); B(1.8, 4.7, 7.2, 8.4, 0.1, 2.1, '#f4f2ec', {noline:1, win:[['S', 0, 0, 8.4, 2.1, '#f4f2ec', 'LE JURA SANS FRACKING', red], ['N', 0, 0, 8.4, 2.1, '#f4f2ec', 'LE JURA SANS FRACKING', red]]});
+  L([[1.8, 4.75, 9.4], [10.2, 4.75, 9.4]], '#6a4a32', 0.8);
+  for (const [x, t] of [[11.2, 'NON'], [12.2, 'STOP']]){ L([[x, 9.6, 0], [x, 9.6, 2.6]], '#8a6a4a', 0.8); B(x - 0.5, 9.55, 1.8, 1, 0.1, 0.8, '#f4f2ec', {noline:1, win:[['S', 0, 0, 1, 0.8, '#f4f2ec', t, red]]}); }
+  B(2, 9, 0, 2.2, 0.8, 0.8, red, {bv:0.1}); for (let i = 0; i < 4; i++) B(5 + i*1.2, 9.1, 0, 0.9, 0.6, 0.5 + (i % 2)*0.3, '#c9b48a', {bv:0.08}); }, 'The opposition\'s office, plastered with NON and STOP, a huge LE JURA SANS FRACKING banner on the roof. Debates take place here.');
 def('b', 'University field station (gift)', 14, 10, ({B, F, C, L, row}, c) => { gravelPad(F, 14, 10, '#c9c4b6');
   B(1.5, 2, 0, 9, 5, 3, '#eef1f3', {win:[...row('S', 0.8, 7.4, 2.2, 0.9, 1.4, 1.2), ['S', 3.6, 0, 1.2, 2.3, '#5a6066'], ['S', 0.5, 2.3, 8, 0.6, '#7a2c5a', 'UNIVERSITÉ · STATION', '#fff']]});
   B(1.5, 2, 3, 9, 5, 0.3, '#c5ccd2'); C(12, 4, 0, 0.2, 3, '#9aa3ab'); C(12, 4, 3, 1, 0.3, '#f0f2f4');
@@ -315,13 +354,20 @@ const allGlass = (len, wid, z, h) => [['E', 0.14, z, wid - 0.28, h, GL], ['W', 0
 const lamps = (wid, z) => [['E', 0.12, z, 0.3, 0.2, '#fff4b8'], ['E', wid - 0.42, z, 0.3, 0.2, '#fff4b8'], ['W', 0.12, z, 0.3, 0.2, '#e8473a'], ['W', wid - 0.42, z, 0.3, 0.2, '#e8473a']];
 const wheels = (W, xs, D, r) => { for (const x of xs){ W(x, 0.18, r); W(x, D - 0.18, r); } };
 const sides = (a, z, w, h, col, txt, tc) => [['S', a, z, w, h, col, txt, tc], ['N', a, z, w, h, col, txt, tc]];
-def('v', 'Company car (old 911)', 3.8, 1.8, ({B, W}, c) => { const col = '#4f7349'; wheels(W, [0.85, 2.95], 1.8, 0.4);
-  B(0.1, 0.15, 0.32, 3.6, 1.5, 0.5, col, {bv:0.24, win:[...lamps(1.5, 0.2)]});
-  B(0.45, 0.3, 0.82, 1, 1.2, [0.04, 0.5, 0.5, 0.04], col); B(1.45, 0.3, 0.82, 1.05, 1.2, 0.5, col, {bv:0.15, win:[...sides(0.12, 0.08, 0.8, 0.3, GL)]});
-  B(2.5, 0.3, 0.82, 0.55, 1.2, [0.5, 0.04, 0.04, 0.5], GL); }, 'Never named. Drives the CEO to debates, interviews and crises.');
-def('v', 'Geologist\'s pickup', 4.6, 1.9, ({B, W}, c) => { wheels(W, [1, 3.6], 1.9, 0.48);
-  B(0.1, 0.15, 0.42, 4.4, 1.6, 0.68, '#f6f5f0', {bv:0.22, win:[...lamps(1.6, 0.3), ...sides(0.4, 0.2, 1.3, 0.3, c.co, 'ÉG', '#fff')]});
-  B(2.3, 0.25, 1.1, 1.6, 1.4, 0.72, '#f6f5f0', {bv:0.22, win:allGlass(1.6, 1.4, 0.1, 0.4)}); B(0.15, 0.2, 1.1, 2.05, 1.5, 0.22, '#d6d4cc', {bv:0.06}); }, 'Plants the prospect flags.');
+def('v', 'Company car (old 911)', 4.3, 1.8, ({B, X, W}, c) => { const ag = '#d9dde1', ch = '#f6f7f8'; wheels(W, [0.95, 3.35], 1.8, 0.36);
+  B(0.1, 0.18, 0.28, 4.1, 1.44, 0.34, ag, {bv:0.14, win:[['W', 0.2, 0.12, 0.3, 0.14, '#e8473a'], ['W', 1.0, 0.12, 0.3, 0.14, '#e8473a']]});
+  for (const y of [0.1, 1.22]){ B(3.05, y, 0.58, 1.05, 0.48, 0.22, ag, {bv:0.12, win:[['E', 0.1, 0.03, 0.28, 0.17, '#fff4b8']]}); B(0.35, y, 0.58, 1.25, 0.48, 0.26, ag, {bv:0.12}); }
+  B(3.05, 0.55, 0.58, 1.1, 0.7, [0.16, 0.02, 0.02, 0.16], ag);
+  B(1.35, 0.3, 0.62, 1.25, 1.2, 0.52, ag, {bv:0.18, win:[['S', 0.12, 0.08, 1, 0.3, GL], ['N', 0.12, 0.08, 1, 0.3, GL]]});
+  B(2.6, 0.3, 0.62, 0.5, 1.2, [0.52, 0.03, 0.03, 0.52], GL); B(0.45, 0.3, 0.62, 0.9, 1.2, [0.03, 0.52, 0.52, 0.03], ag);
+  B(4.18, 0.25, 0.3, 0.07, 1.3, 0.1, ch); B(0.03, 0.25, 0.3, 0.07, 1.3, 0.1, ch); }, 'Silver, round lamps, the sloping back. Never named. Drives the CEO to debates, interviews and crises.');
+def('v', 'Geologist\'s pickup', 5.4, 1.9, ({B, W, L}, c) => { const wh = '#f4f3ee', bk = '#2b2f33'; wheels(W, [1.05, 4.35], 1.9, 0.5);
+  B(0.1, 0.17, 0.5, 5.15, 1.56, 0.6, wh, {bv:0.12, win:[['E', 0.45, 0.22, 0.66, 0.3, bk], ['E', 0.08, 0.25, 0.3, 0.18, '#fff4b8'], ['E', 1.18, 0.25, 0.3, 0.18, '#fff4b8'], ...lamps(1.56, 0.25).slice(2), ...sides(2.3, 0.15, 1.2, 0.3, c.co, 'ÉG', '#fff')]});
+  B(5.2, 0.2, 0.42, 0.14, 1.5, 0.28, bk, {bv:0.04}); B(0.0, 0.2, 0.42, 0.1, 1.5, 0.24, bk);
+  B(3.95, 0.2, 1.1, 1.2, 1.5, [0.14, 0.03, 0.03, 0.14], wh);
+  B(1.95, 0.22, 1.1, 2.05, 1.46, 0.8, wh, {bv:0.16, win:[...sides(0.12, 0.14, 0.82, 0.48, GL), ...sides(1.05, 0.14, 0.82, 0.48, GL), ['E', 0.12, 0.12, 1.22, 0.55, GL], ['W', 0.18, 0.2, 1.1, 0.4, GL]]});
+  B(0.12, 0.2, 1.1, 1.8, 1.5, 0.42, wh, {top:'#41464c', bv:0.04}); L([[1.75, 0.3, 1.52], [1.75, 0.3, 2.0], [1.75, 1.6, 2.0], [1.75, 1.6, 1.52]], bk, 1.1);
+  for (const y of [0.1, 1.62]){ B(0.65, y, 0.62, 0.85, 0.18, 0.42, bk, {bv:0.05}); B(3.95, y, 0.62, 0.85, 0.18, 0.42, bk, {bv:0.05}); } }, 'Toyota-style double cab: four doors, black grille and arches, a roll bar over the bed. Plants the prospect flags.');
 def('v', 'Supply lorry', 6.6, 2.4, ({B, W}, c) => { wheels(W, [1.1, 2.4, 5.4], 2.4, 0.55);
   B(4.6, 0.2, 0.6, 1.9, 2, 2.2, c.co, {bv:0.38, win:[...allGlass(1.9, 2, 1.1, 0.75), ...lamps(2, 0.3)]}); B(0.2, 0.2, 0.75, 4.3, 2, 2.3, '#f2f2ee', {bv:0.22, win:sides(0.5, 0.8, 3.3, 0.6, c.co, 'ÉNERGIE-GÉO', '#fff')}); }, 'Brings drilling supplies from the depot.');
 def('v', 'Low-loader with rig', 11, 2.6, ({B, W}, c) => { wheels(W, [1, 2.1, 3.2, 9.8], 2.6, 0.48);
@@ -355,77 +401,110 @@ def('v', 'Fire engine', 7.8, 2.5, ({B, W, L}, c) => { wheels(W, [1.5, 5.6, 6.7],
   B(0.2, 0.2, 0.45, 7.4, 2.1, 2.4, '#d02a20', {bv:0.42, win:[['E', 0.2, 1.1, 1.7, 0.8, GL], ...sides(6, 1.1, 1.2, 0.8, GL), ...sides(0.4, 0.38, 5.2, 0.2, '#f2f0ea'), ...sides(1, 0.8, 3.6, 0.42, '#d02a20', 'POMPIERS', '#fff'), ...lamps(2.1, 0.3)]}); L([[0.6, 1.25, 2.95], [6.2, 1.25, 2.95]], '#c9ccd0', 1.6); }, '');
 def('v', 'Army truck', 6.8, 2.5, ({B, W}, c) => { wheels(W, [1.1, 2.3, 5.6], 2.5, 0.58);
   B(4.8, 0.2, 0.7, 1.8, 2.1, 2, '#5b6b45', {bv:0.36, win:[...allGlass(1.8, 2.1, 1.05, 0.65), ...lamps(2.1, 0.3)]}); B(0.2, 0.2, 0.8, 4.5, 2.1, 2.3, '#6b7a52', {bv:0.55}); }, 'Only in the secret ending.');
-def('v', 'Police helicopter', 9, 2.4, ({B, L}, c) => { B(3.8, 0.2, 0.7, 4.4, 2, 2.1, '#f6f6f3', {bv:0.8, win:[['E', 0.25, 0.7, 1.5, 1, GL], ...sides(2.4, 0.7, 1.6, 0.85, GL), ...sides(0.3, 0.25, 2, 0.3, '#2a4fa0')]});
-  B(0.6, 1, 1.6, 3.4, 0.4, 0.42, '#f6f6f3', {bv:0.14}); B(0.3, 0.95, 1.5, 0.6, 0.5, 1.2, '#2a4fa0', {bv:0.18}); B(5.6, 1.05, 2.6, 0.5, 0.3, 0.3, '#3a3f45');
-  L([[5.85, 1.2, 2.9], [5.85, 1.2, 3.1]], '#3a3f45', 1.2); L([[1.6, 1.2, 3.1], [10.1, 1.2, 3.1]], '#2b2f33', 0.9); L([[5.85, -3.2, 3.1], [5.85, 5.6, 3.1]], '#2b2f33', 0.9);
-  for (const y of [0.45, 1.95]){ L([[4.2, y, 0.25], [7.8, y, 0.25]], '#3a3f45', 0.9); L([[4.8, y, 0.25], [5, y, 0.9]], '#3a3f45', 0.6); L([[7, y, 0.25], [6.8, y, 0.9]], '#3a3f45', 0.6); } }, 'The last resort.');
-def('v', 'F-35', 12, 9, ({B}, c) => { const g = '#8a9198';
-  B(0.3, 3.7, 1.2, 11.2, 1.6, 1.1, g, {bv:0.4}); B(10.4, 3.9, 1.3, 1.3, 1.2, 0.8, g, {bv:0.4, h:[0.8, 0.3, 0.3, 0.8]});
-  B(3.5, 0.3, 1.45, 4.2, 8.4, 0.22, g, {bv:0.08}); B(0.4, 2.2, 1.6, 2.4, 4.6, 0.18, g, {bv:0.06});
-  B(0.8, 3.7, 2.0, 1.5, 0.25, 1.4, g, {bv:0.08}); B(0.8, 5.05, 2.0, 1.5, 0.25, 1.4, g, {bv:0.08}); B(7.4, 4.05, 2.1, 2.2, 0.9, 0.55, '#d4a83a', {bv:0.25}); }, 'Only in the secret ending.');
+def('v', 'Armoured vehicle (8×8)', 7.6, 2.8, ({B, X, W, O, L}, c) => { const ol = '#5b6b45'; wheels(W, [1.1, 2.4, 5.0, 6.3], 2.8, 0.55);
+  X([[0.2, 0.3], [5.9, 0.3], [7.4, 0.8], [7.5, 1.4], [7.4, 2.0], [5.9, 2.5], [0.2, 2.5]], 0.5, 1.15, ol); X([[0.4, 0.45], [5.6, 0.45], [6.6, 0.9], [6.6, 1.9], [5.6, 2.35], [0.4, 2.35]], 1.65, 0.35, '#677a4f');
+  O(3.4, 1.4, 2.0, 0.75, 0.65, 0.42, ol); L([[4.0, 1.4, 2.25], [6.0, 1.4, 2.3]], '#3a3f45', 1.2); B(6.5, 1.0, 1.4, 0.06, 0.8, 0.25, GL, {noline:1}); }, 'Eight wheels, a small turret. Only in the secret ending.');
+def('v', 'Police helicopter', 10.5, 2.6, ({B, X, O, L}, c) => { const wh = '#f6f6f3', bl = '#2a4fa0';
+  const pod = (z, h, col, sc) => X([[3.0, 1.3 - 0.8*sc], [6.2, 1.3 - 0.85*sc], [7.4, 1.3 - 0.55*sc], [7.9, 1.3], [7.4, 1.3 + 0.55*sc], [6.2, 1.3 + 0.85*sc], [3.0, 1.3 + 0.8*sc], [2.7, 1.3]], z, h, col);
+  pod(0.75, 0.3, wh, 0.95); pod(1.05, 0.18, bl, 1); pod(1.23, 0.55, wh, 1);
+  X([[5.9, 0.6], [7.0, 0.75], [7.75, 1.3], [7.0, 1.85], [5.9, 2.0]], 1.23, 0.62, GL, {k:0.5});
+  O(4.4, 1.3, 1.78, 1.1, 0.62, 0.42, wh); O(4.4, 1.3, 2.2, 0.15, 0.15, 0.3, '#3a3f45');
+  X([[0.4, 1.18], [3.0, 1.0], [3.0, 1.6], [0.4, 1.42]], 1.45, 0.32, wh); B(0.15, 1.12, 1.25, 0.7, 0.36, 1.25, bl, {bv:0.15}); B(0.6, 0.55, 1.6, 0.5, 1.5, 0.08, wh);
+  for (const a of [0, 1, 2, 3]){ const an = a*Math.PI/2 + 0.4; L([[4.4, 1.3, 2.52], [4.4 + Math.cos(an)*5, 1.3 + Math.sin(an)*5, 2.6]], '#2b2f33', 1); }
+  for (const y of [0.45, 2.15]){ L([[3.1, y, 0.15], [6.9, y, 0.15], [7.2, y, 0.32]], '#3a3f45', 1); L([[3.9, y, 0.15], [4.1, y, 0.78]], '#3a3f45', 0.7); L([[6.0, y, 0.15], [5.8, y, 0.78]], '#3a3f45', 0.7); } }, 'Rounded pod with a blue band, glass nose, tail fin, skids, four blades. The last resort.');
+def('v', 'F-35', 15.6, 11, ({X, B, W}, c) => { const g = '#8d949b', g2 = '#7a8188';
+  X([[15.4, 5.5], [13.2, 4.95], [9, 4.55], [2.2, 4.6], [0.8, 4.9], [0.8, 6.1], [2.2, 6.4], [9, 6.45], [13.2, 6.05]], 0.9, 0.85, g);
+  X([[9.6, 4.6], [5.6, 0.4], [4.2, 0.4], [4.1, 4.6]], 1.25, 0.16, g2); X([[9.6, 6.4], [5.6, 10.6], [4.2, 10.6], [4.1, 6.4]], 1.25, 0.16, g2);
+  X([[2.6, 4.7], [1.0, 2.7], [0.2, 2.7], [0.4, 4.7]], 1.35, 0.12, g2); X([[2.6, 6.3], [1.0, 8.3], [0.2, 8.3], [0.4, 6.3]], 1.35, 0.12, g2);
+  X([[2.9, 4.7], [1.4, 4.4], [1.0, 4.4], [1.6, 4.7]], 1.75, 1.3, g2); X([[2.9, 6.3], [1.4, 6.6], [1.0, 6.6], [1.6, 6.3]], 1.75, 1.3, g2);
+  X([[12.6, 5.5], [11.2, 5.05], [9.6, 5.05], [9.6, 5.95], [11.2, 5.95]], 1.75, 0.38, '#c9a54a'); B(0.3, 5.05, 1.0, 0.6, 0.9, 0.6, '#3a3f45', {bv:0.15});
+  W(12.6, 5.35, 0.3); W(12.6, 5.65, 0.3); W(5.2, 4.3, 0.36); W(5.2, 6.7, 0.36); }, 'Grey, delta wings, twin canted tails, gold canopy. Only in the secret ending.');
 def('v', 'Regional train', 20, 3, ({B, W}, c) => { for (const x0 of [0.3, 10.2]){ wheels(W, [x0 + 1.4, x0 + 8], 3, 0.45);
   B(x0, 0.25, 0.6, 9.5, 2.5, 2.8, '#dfe2e5', {bv:0.5, win:[...[0.6, 2.3, 4, 5.7, 7.4].flatMap(a => sides(a, 1.3, 1.3, 0.85, GL)), ...sides(0.3, 0.45, 8.9, 0.26, '#b8322a'), ['E', 0.3, 1.2, 1.9, 0.9, GL], ['W', 0.3, 1.2, 1.9, 0.9, GL]]}); } }, 'Along the top of the valley.');
 
-/* People, built in 3D: front at +x. Big rounded head, short body. */
-const personModel = (p) => ({B, L}, c) => { const k = p.small ? 0.74 : 1, cx = 0.5, cy = 0.5, legH = 0.42*k, bodyH = 0.48*k, hs = 0.6*k, hz = legH + bodyH, bw = 0.5*k, bd = 0.32*k;
-  const SH = '#2b2522';
-  if (p.skirt){ B(cx - 0.1*k, cy - 0.18*k, 0, 0.16*k, 0.14*k, legH, p.skin); B(cx - 0.1*k, cy + 0.04*k, 0, 0.16*k, 0.14*k, legH, p.skin); }
-  else { B(cx - 0.1*k, cy - 0.2*k, 0, 0.2*k, 0.17*k, legH, p.bot, {bv:0.03}); B(cx - 0.1*k, cy + 0.03*k, 0, 0.2*k, 0.17*k, legH, p.bot, {bv:0.03}); }
-  B(cx - 0.08*k, cy - 0.21*k, 0, 0.3*k, 0.19*k, 0.09*k, SH, {bv:0.03}); B(cx - 0.08*k, cy + 0.02*k, 0, 0.3*k, 0.19*k, 0.09*k, SH, {bv:0.03});
-  const front = [], all4 = (z, h, col) => [['E', 0, z, bw, h, col], ['W', 0, z, bw, h, col], ['S', 0, z, bd, h, col], ['N', 0, z, bd, h, col]];
-  if (p.tie) front.push(['E', bw/2 - 0.05*k, bodyH - 0.34*k, 0.1*k, 0.3*k, p.tie], ['E', bw/2 - 0.08*k, bodyH - 0.08*k, 0.16*k, 0.07*k, '#f4f2ec']);
-  if (p.vest) front.push(...all4(bodyH*0.45, 0.06*k, '#f2e23a'));
-  if (p.sash) front.push(['E', 0.06*k, bodyH*0.3, bw - 0.12*k, 0.08*k, '#c63a2c']);
-  B(cx - bd/2, cy - bw/2, legH, bd, bw, bodyH, p.top, {bv:0.07*k, win:front});
-  if (p.skirt) B(cx - 0.2*k, cy - 0.28*k, legH - 0.22*k, 0.4*k, 0.56*k, 0.3*k, p.bot, {bv:0.06*k});
-  B(cx - 0.08*k, cy - bw/2 - 0.11*k, legH + 0.06*k, 0.16*k, 0.11*k, bodyH - 0.08*k, p.top, {bv:0.03}); B(cx - 0.08*k, cy + bw/2, legH + 0.06*k, 0.16*k, 0.11*k, bodyH - 0.08*k, p.top, {bv:0.03});
-  B(cx - 0.07*k, cy - bw/2 - 0.1*k, legH - 0.04*k, 0.14*k, 0.1*k, 0.1*k, p.skin); B(cx - 0.07*k, cy + bw/2, legH - 0.04*k, 0.14*k, 0.1*k, 0.1*k, p.skin);
-  const face = [['E', hs*0.24, hs*0.4, 0.07*k, 0.11*k, '#2a2d33'], ['E', hs*0.64, hs*0.4, 0.07*k, 0.11*k, '#2a2d33'], ['E', hs*0.12, hs*0.26, 0.09*k, 0.05*k, '#f2a3a3'], ['E', hs*0.76, hs*0.26, 0.09*k, 0.05*k, '#f2a3a3']];
-  if (p.glasses) face.push(['E', hs*0.16, hs*0.38, hs*0.68, 0.06*k, '#1c1f22']);
-  B(cx - hs/2, cy - hs/2, hz, hs, hs, hs, p.skin, {bv:0.13*k, win:face});
-  B(cx - hs/2 - 0.02, cy - hs/2 - 0.02, hz + hs - 0.08*k, hs + 0.04, hs + 0.04, 0.16*k, p.hair, {bv:0.07*k});
-  B(cx - hs/2 - 0.03, cy - hs/2 - 0.02, hz + (p.long ? -0.1*k : hs*0.35), 0.17*k, hs + 0.04, p.long ? hs + 0.04*k : hs*0.6, p.hair, {bv:0.05*k});
-  if (p.long){ B(cx - hs/2, cy - hs/2 - 0.04, hz - 0.08*k, hs*0.6, 0.08*k, hs*0.85, p.hair); B(cx - hs/2, cy + hs/2 - 0.04, hz - 0.08*k, hs*0.6, 0.08*k, hs*0.85, p.hair); }
-  if (p.hat){ const ht = hz + hs + 0.06*k; if (p.helmet) B(cx - hs/2 - 0.04, cy - hs/2 - 0.04, hz + hs*0.55, hs + 0.08, hs + 0.08, hs*0.6, p.hat, {bv:0.12*k});
-    else if (p.cap){ B(cx - hs/2, cy - hs/2, ht - 0.06*k, hs, hs, 0.14*k, p.hat, {bv:0.05*k}); B(cx + hs/2 - 0.04, cy - 0.17*k, ht - 0.06*k, 0.22*k, 0.34*k, 0.05*k, p.hat); }
-    else { B(cx - hs/2 - 0.08, cy - hs/2 - 0.08, ht - 0.06*k, hs + 0.16, hs + 0.16, 0.05*k, p.hat); B(cx - hs/2 + 0.04, cy - hs/2 + 0.04, ht, hs - 0.08, hs - 0.08, 0.2*k, p.hat, {bv:0.06}); } }
-  const hy = cy + bw/2 + 0.1*k, hx = cx + 0.04*k;   // right hand
-  if (p.item === 'case') B(hx - 0.14*k, hy - 0.02, 0.06*k, 0.28*k, 0.1*k, 0.24*k, '#6a4a32', {bv:0.03});
-  if (p.item === 'board') B(hx, hy - 0.04, legH, 0.06*k, 0.26*k, 0.34*k, '#c9a24a', {win:[['E', 0.03, 0.05, 0.2*k, 0.22*k, '#f4f2ec']]});
-  if (p.item === 'bottle') B(hx, hy - 0.02, legH - 0.1*k, 0.1*k, 0.1*k, 0.22*k, '#9fd0e8');
-  if (p.item === 'cup') B(hx + 0.06*k, hy - 0.02, legH + 0.02, 0.12*k, 0.12*k, 0.13*k, '#f4f2ec');
-  if (p.item === 'laptop') B(hx - 0.05*k, hy - 0.02, legH + 0.06*k, 0.32*k, 0.22*k, 0.05*k, '#3a3f45');
-  if (p.item === 'camera') B(cx + bd/2, cy - 0.12*k, hz + hs*0.25, 0.18*k, 0.24*k, 0.18*k, '#1c1f22');
-  if (p.item === 'fork'){ L([[hx, hy + 0.04, 0.02], [hx, hy + 0.04, hz + hs + 0.3*k]], '#8a6a4a', 1.2); L([[hx - 0.12*k, hy + 0.04, hz + hs + 0.3*k], [hx + 0.12*k, hy + 0.04, hz + hs + 0.3*k]], '#9aa3ab', 1); }
-  if (p.item === 'shield') B(cx + bd/2 + 0.06*k, cy - 0.4*k, 0.12*k, 0.06*k, 0.62*k, 0.9*k, '#a9c7e8', {bv:0.03});
-  if (p.item === 'sign'){ L([[hx, hy + 0.04, legH], [hx, hy + 0.04, hz + hs + 0.55*k]], '#8a6a4a', 1.2); B(hx - 0.03, hy - 0.42*k, hz + hs + 0.35*k, 0.06*k, 0.92*k, 0.55*k, '#f4f2ec', {win:[['E', 0.05, 0.08, 0.82*k, 0.38*k, '#f4f2ec', p.sign || 'NON', '#c63a2c'], ['W', 0.05, 0.08, 0.82*k, 0.38*k, '#f4f2ec', p.sign || 'NON', '#c63a2c']]}); } };
+/* People, built in 3D from octagons: rounded heads and bodies, front at +x. Each type has its own silhouette. */
+const personModel = (p) => ({B, O, X, L}, c) => {
+  const k = (p.small ? 0.72 : 1)*(p.tall || 1), gw = p.wide || 1, cx = 0.75, cy = 0.75, legH = 0.42*k, bodyH = 0.5*k, hs = 0.56*(p.small ? 0.85 : 1), hz = legH + bodyH, bw = 0.27*gw*(p.small ? 0.8 : 1), bd = 0.17*gw*(p.small ? 0.8 : 1);
+  const SH = p.boots || '#2b2522';
+  // legs and shoes
+  for (const sy of [-1, 1]){ const ly = cy + sy*0.1*gw; if (p.skirt) O(cx, ly, 0, 0.06, 0.06, legH, p.skin); else O(cx, ly, 0, 0.085*gw, 0.085*gw, legH, p.bot);
+    B(cx - 0.07, ly - 0.08, 0, 0.26, 0.16, p.boots ? 0.18 : 0.09, SH, {bv:0.04}); if (p.knee) O(cx + 0.05, ly, legH*0.45, 0.07, 0.08, 0.12, p.knee); }
+  // body
+  if (p.skirt) O(cx, cy, legH*0.45, bd + 0.06, bw + 0.04, legH*0.6, p.bot);
+  O(cx, cy, legH, bd, bw, bodyH, p.top); if (p.belly) O(cx + 0.04, cy, legH + 0.05, bd + 0.05, bw - 0.02, bodyH*0.55, p.top);
+  if (p.vest) O(cx, cy, legH + bodyH*0.42, bd + 0.012, bw + 0.012, 0.07, '#f2e23a', {noline:1});
+  if (p.armor){ O(cx, cy, legH + bodyH*0.35, bd + 0.03, bw + 0.03, bodyH*0.55, p.armor); for (const sy of [-1, 1]) O(cx, cy + sy*(bw + 0.03), hz - 0.08, 0.13, 0.12, 0.13, p.armor2 || p.armor); }
+  if (p.tie) B(cx + bd - 0.02, cy - 0.035, legH + bodyH*0.3, 0.04, 0.07, bodyH*0.6, p.tie);
+  if (p.bow) B(cx + bd - 0.02, cy - 0.07, hz - 0.1, 0.04, 0.14, 0.06, p.bow);
+  if (p.sash) X([[cx + bd + 0.01, cy - bw], [cx + bd + 0.01, cy - bw + 0.08], [cx + bd + 0.015, cy + bw], [cx + bd + 0.015, cy + bw - 0.08]], legH + bodyH*0.3, 0.12, '#c63a2c', {noline:1});
+  if (p.chain) B(cx + bd - 0.01, cy - 0.06, hz - 0.18, 0.03, 0.12, 0.05, '#e3c05a');
+  if (p.pack) B(cx - bd - 0.16, cy - 0.15, legH + 0.08, 0.16, 0.3, bodyH*0.8, p.pack, {bv:0.04});
+  if (p.lanyard) B(cx + bd - 0.02, cy - 0.04, legH + bodyH*0.35, 0.03, 0.08, 0.1, '#f4f2ec');
+  // arms and hands
+  for (const sy of [-1, 1]){ const ay = cy + sy*(bw + 0.06*gw); O(cx, ay, legH + 0.1*k, 0.06*gw, 0.06*gw, bodyH - 0.08*k, p.armor && p.armor2 ? p.armor : p.top); O(cx, ay, legH + 0.04*k, 0.06, 0.06, 0.08, p.gloves || p.skin); }
+  // head
+  if (p.visor){ O(cx, cy, hz, hs/2 + 0.02, hs/2 + 0.02, hs*0.95, p.hat); X([[cx + hs/2 - 0.02, cy - hs*0.38], [cx + hs/2 + 0.035, cy - hs*0.3], [cx + hs/2 + 0.035, cy + hs*0.3], [cx + hs/2 - 0.02, cy + hs*0.38]], hz + hs*0.38, hs*0.22, '#16181b', {noline:1}); O(cx, cy, hz + hs*0.95, hs*0.38, hs*0.38, 0.06, p.hat); }
+  else {
+    O(cx, cy, hz, hs/2, hs/2, hs*0.82, p.skin); O(cx, cy, hz + hs*0.82, hs*0.36, hs*0.36, 0.07, p.skin);
+    const fx = cx + hs/2 - 0.03, ez = hz + hs*0.42;
+    for (const sy of [-1, 1]){ B(fx, cy + sy*hs*0.17 - 0.03, ez, 0.05, 0.06, 0.08, '#2a2d33', {noline:1}); B(fx, cy + sy*hs*0.27 - 0.03, ez - 0.09, 0.04, 0.07, 0.04, '#f0a0a0', {noline:1}); }
+    B(fx, cy - 0.04, ez - 0.14, 0.04, 0.08, 0.025, '#a8584e', {noline:1});
+    if (p.glasses){ B(fx + 0.01, cy - hs*0.3, ez - 0.01, 0.03, hs*0.6, 0.06, '#16181b', {noline:1}); }
+    if (p.beard) X([[fx - 0.02, cy - hs*0.32], [fx + 0.04, cy - hs*0.25], [fx + 0.04, cy + hs*0.25], [fx - 0.02, cy + hs*0.32]], hz + 0.02, hs*0.28, p.beard, {noline:1});
+    // hair: cap and back
+    if (!(p.hat && (p.helmet || p.full))){ O(cx - 0.01, cy, hz + hs*0.72, hs/2 + 0.025, hs/2 + 0.025, hs*0.2, p.hair); }
+    const back = []; for (let i = 0; i < 8; i++){ const a = (i + 0.5)/8*Math.PI*2; if (Math.cos(a) <= 0.2) back.push([cx - 0.02 + Math.cos(a)*(hs/2 + 0.03), cy + Math.sin(a)*(hs/2 + 0.03)]); }
+    X(back, hz + (p.long ? -0.12 : hs*0.3), p.long ? hs*0.95 : hs*0.55, p.hair);
+    if (p.bun) O(cx - hs/2 + 0.02, cy, hz + hs*0.7, 0.1, 0.1, 0.16, p.hair);
+    if (p.hat){ const ht = hz + hs*0.82;
+      if (p.helmet){ O(cx, cy, hz + hs*0.5, hs/2 + 0.05, hs/2 + 0.05, hs*0.42, p.hat); O(cx, cy, hz + hs*0.92, hs*0.4, hs*0.4, 0.07, p.hat); if (p.camo) for (const [dx, dy] of [[0.1, -0.12], [-0.08, 0.1], [0.02, 0.18]]) O(cx + dx, cy + dy, hz + hs*0.93, 0.06, 0.07, 0.07, p.camo, {noline:1}); }
+      else if (p.cap){ O(cx, cy, ht - 0.02, hs/2 + 0.01, hs/2 + 0.01, 0.12, p.hat); B(cx + hs/2 - 0.04, cy - 0.12, ht - 0.02, 0.18, 0.24, 0.04, p.hat); }
+      else if (p.beanie){ O(cx, cy, ht - 0.06, hs/2 + 0.02, hs/2 + 0.02, 0.18, p.hat); O(cx, cy, ht + 0.12, 0.06, 0.06, 0.06, p.hat); }
+      else { O(cx, cy, ht - 0.02, hs/2 + 0.12, hs/2 + 0.12, 0.04, p.hat); if (p.band) O(cx, cy, ht + 0.02, hs/2 - 0.03, hs/2 - 0.03, 0.06, p.band, {noline:1}); O(cx, cy, ht + 0.02, hs/2 - 0.04, hs/2 - 0.04, 0.2, p.hat); } } }
+  // items in the right hand (+y side)
+  const hy = cy + bw + 0.12, hx = cx + 0.04;
+  if (p.item === 'case') B(hx - 0.14, hy - 0.03, 0.06, 0.28, 0.08, 0.24, '#6a4a32', {bv:0.03});
+  if (p.item === 'board') B(hx + 0.02, hy - 0.05, legH, 0.05, 0.26, 0.34, '#c9a24a', {win:[['E', 0.03, 0.05, 0.2, 0.22, '#f4f2ec']]});
+  if (p.item === 'bottle') O(hx + 0.04, hy, legH - 0.12, 0.05, 0.05, 0.22, '#9fd0e8');
+  if (p.item === 'cup') O(hx + 0.08, hy, legH + 0.02, 0.06, 0.06, 0.13, '#f4f2ec');
+  if (p.item === 'laptop') B(hx - 0.05, hy - 0.05, legH + 0.06, 0.32, 0.24, 0.05, '#3a3f45');
+  if (p.item === 'camera') B(cx + bd, cy - 0.12, hz + hs*0.28, 0.2, 0.24, 0.18, '#1c1f22', {bv:0.03});
+  if (p.item === 'cane') L([[hx + 0.08, hy, 0], [hx + 0.08, hy, legH + 0.05]], '#6a4a32', 1.4);
+  if (p.item === 'fork'){ L([[hx, hy + 0.04, 0.02], [hx, hy + 0.04, hz + hs + 0.3]], '#8a6a4a', 1.3); L([[hx - 0.12, hy + 0.04, hz + hs + 0.3], [hx + 0.12, hy + 0.04, hz + hs + 0.3]], '#9aa3ab', 1); }
+  if (p.item === 'rifle') L([[hx + 0.05, hy, legH], [hx + 0.05, hy, hz + 0.25]], '#2f3329', 1.6);
+  if (p.item === 'radio') B(cx - bd - 0.17, cy - 0.15, legH + 0.08, 0.17, 0.3, bodyH*0.85, '#4a5838', {bv:0.04});
+  if (p.item === 'shield') X([[cx + bd + 0.1, cy - 0.5], [cx + bd + 0.16, cy - 0.45], [cx + bd + 0.16, cy + 0.45], [cx + bd + 0.1, cy + 0.5]], 0.1, 1.05*k, '#a9c7e8', {top:'#d6e6f4'});
+  if (p.item === 'sign'){ L([[hx, hy + 0.04, legH], [hx, hy + 0.04, hz + hs + 0.55]], '#8a6a4a', 1.3); B(hx - 0.03, hy - 0.42, hz + hs + 0.35, 0.06, 0.92, 0.55, '#f4f2ec', {win:[['E', 0.05, 0.08, 0.82, 0.38, '#f4f2ec', p.sign || 'NON', '#c63a2c'], ['W', 0.05, 0.08, 0.82, 0.38, '#f4f2ec', p.sign || 'NON', '#c63a2c']]}); } };
 
-const person = (n, o, note) => def('p', n, 1, 1, personModel(o), note);
-person('The CEO', {top:'#2b2f36', bot:'#2b2f36', hair:'#5a4632', skin:'#efc9a8', tie:'#b8322a', item:'case'}, 'Grey at the temples, dark suit. Drives the 911.');
-person('Suit (woman)', {top:'#1f2329', bot:'#1f2329', hair:'#3a2b20', long:1, skin:'#f2d2b6', tie:'#f4f2ec', item:'case', skirt:1}, 'Lent by the association.');
+const person = (n, o, note) => def('p', n, 1.5, 1.5, personModel(o), note);
+person('The CEO', {top:'#2f343c', bot:'#2f343c', hair:'#9a9590', skin:'#efc9a8', tie:'#b8322a', item:'case', tall:1.1, glasses:1}, 'Tall, grey at the temples, dark suit, glasses.');
+person('Suit (woman)', {top:'#1f2329', bot:'#1f2329', hair:'#3a2b20', long:1, skin:'#f2d2b6', item:'case', skirt:1, bun:1}, 'Lent by the association.');
 person('Suit (man)', {top:'#1f2329', bot:'#1f2329', hair:'#2b2522', skin:'#e8c09c', tie:'#2c5f93', item:'case'}, '');
-person('Geologist', {top:'#e07a2c', bot:'#3a4a63', hair:'#7a4a2a', long:1, skin:'#f2d2b6', hat:'#f4f4f2', item:'board', vest:1}, 'White helmet, clipboard. Drives the pickup.');
-person('Driller', {top:'#e07a2c', bot:'#e07a2c', hair:'#3a2b20', skin:'#d9a882', hat:'#f2c230', vest:1}, 'Orange overalls.');
-person('Driller (woman)', {top:'#e07a2c', bot:'#e07a2c', hair:'#c9a24a', long:1, skin:'#f2d2b6', hat:'#f2c230', vest:1}, '');
-person('Mud engineer', {top:'#3a5f8a', bot:'#3a4a63', hair:'#2b2522', skin:'#c98e66', hat:'#f4f4f2', item:'bottle'}, '');
-person('Water officer', {top:'#2c8a8a', bot:'#3a4a63', hair:'#8a5a3a', long:1, skin:'#f2d2b6', item:'bottle'}, 'Samples springs.');
+person('Geologist', {top:'#e07a2c', bot:'#3a4a63', hair:'#7a4a2a', long:1, skin:'#f2d2b6', hat:'#f4f4f2', helmet:1, item:'board', vest:1}, 'White helmet, clipboard. Drives the pickup.');
+person('Driller', {top:'#e07a2c', bot:'#e07a2c', hair:'#3a2b20', skin:'#d9a882', hat:'#f2c230', helmet:1, vest:1, wide:1.15, beard:'#3a2b20', boots:'#3a2b20', gloves:'#c9a24a'}, 'Orange overalls, beard, work boots.');
+person('Driller (woman)', {top:'#e07a2c', bot:'#e07a2c', hair:'#c9a24a', long:1, skin:'#f2d2b6', hat:'#f2c230', helmet:1, vest:1, boots:'#3a2b20', gloves:'#c9a24a'}, '');
+person('Mud engineer', {top:'#3a5f8a', bot:'#3a4a63', hair:'#2b2522', skin:'#c98e66', hat:'#f4f4f2', helmet:1, item:'bottle'}, '');
+person('Water officer', {top:'#2c8a8a', bot:'#3a4a63', hair:'#8a5a3a', long:1, skin:'#f2d2b6', item:'bottle', boots:'#2f5f3a'}, 'Samples springs; green rubber boots.');
 person('Community liaison', {top:'#b05a6a', bot:'#4a4f55', hair:'#2b2522', long:1, skin:'#a8704a', item:'cup'}, 'Coffee with the neighbours.');
-person('Security guard', {top:'#2b2f36', bot:'#2b2f36', hair:'#2b2522', skin:'#e8c09c', hat:'#2b2f36', vest:1}, '');
-person('Seismologist', {top:'#6a5a8a', bot:'#4a4f55', hair:'#c9c4b6', skin:'#f2d2b6', item:'laptop'}, 'From the university station.');
-person('Plant operator', {top:'#3a5f8a', bot:'#3a5f8a', hair:'#5a4632', long:1, skin:'#e8c09c', hat:'#f4f4f2'}, '');
+person('Security guard', {top:'#2b2f36', bot:'#2b2f36', hair:'#2b2522', skin:'#e8c09c', hat:'#2b2f36', cap:1, vest:1, wide:1.2}, '');
+person('Seismologist', {top:'#6a5a8a', bot:'#4a4f55', hair:'#d9d4c8', skin:'#f2d2b6', item:'laptop', glasses:1, beard:'#d9d4c8'}, 'From the university station.');
+person('Plant operator', {top:'#3a5f8a', bot:'#3a5f8a', hair:'#5a4632', long:1, skin:'#e8c09c', hat:'#f4f4f2', helmet:1}, '');
 person('Villager (woman)', {top:'#7a8f6e', bot:'#4a4f55', hair:'#8a5a3a', long:1, skin:'#f2d2b6', skirt:1}, '');
-person('Villager (man)', {top:'#8a6a4a', bot:'#3a4a63', hair:'#c9c4b6', skin:'#e8c09c', hat:'#5a4632', cap:1}, '');
-person('Farmer', {top:'#2c5f93', bot:'#2c5f93', hair:'#5a4632', skin:'#d9a882', hat:'#3a3f45', cap:1, item:'fork'}, 'Blue work jacket.');
-person('Mayor', {top:'#3a3f45', bot:'#3a3f45', hair:'#c9c4b6', long:1, skin:'#f2d2b6', sash:1}, 'With the sash on fête days.');
-person('Protester with sign', {top:'#3f7a4a', bot:'#3a4a63', hair:'#c94c3a', long:1, skin:'#f2d2b6', item:'sign', sign:'NON'}, 'In a march.');
-person('Protester with sign (2)', {top:'#c9622a', bot:'#4a4f55', hair:'#2b2522', skin:'#a8704a', item:'sign', sign:'STOP'}, '');
+person('Villager (man), elderly', {top:'#8a6a4a', bot:'#3a4a63', hair:'#e6e2da', skin:'#e8c09c', hat:'#5a4632', cap:1, item:'cane', tall:0.92}, 'With a cane and a flat cap.');
+person('Farmer', {top:'#2c5f93', bot:'#2c5f93', hair:'#5a4632', skin:'#d9a882', hat:'#3a3f45', cap:1, item:'fork', wide:1.25, belly:1, boots:'#2f5f3a'}, 'Blue work jacket, rubber boots, a belly.');
+person('Mayor', {top:'#3a3f45', bot:'#3a3f45', hair:'#c9c4b6', long:1, skin:'#f2d2b6', sash:1, wide:1.15, bun:1}, 'With the sash on fête days.');
+person('Protester with sign', {top:'#3f7a4a', bot:'#3a4a63', hair:'#c94c3a', long:1, skin:'#f2d2b6', item:'sign', sign:'NON', hat:'#c63a2c', beanie:1}, 'In a march.');
+person('Protester with sign (2)', {top:'#c9622a', bot:'#4a4f55', hair:'#2b2522', skin:'#a8704a', item:'sign', sign:'STOP', beard:'#2b2522'}, '');
 person('Police officer', {top:'#2a4fa0', bot:'#1f2a44', hair:'#2b2522', skin:'#e8c09c', hat:'#1f2a44', cap:1}, '');
-person('Riot police', {top:'#1f2a44', bot:'#1f2a44', hair:'#1f2a44', skin:'#e8c09c', hat:'#2b2f36', helmet:1, item:'shield'}, '');
-person('Journalist (La Feuille)', {top:'#c9a24a', bot:'#3a3f45', hair:'#3a2b20', long:1, skin:'#f2d2b6', item:'camera'}, '');
-person('Banker', {top:'#3a4a63', bot:'#3a4a63', hair:'#5a4632', skin:'#e8c09c', tie:'#c9a23a', item:'case'}, '');
-person('The lender', {top:'#f4f2ec', bot:'#f4f2ec', hair:'#1c1f22', skin:'#d9a882', tie:'#1c1f22', hat:'#f4f2ec', cap:1, glasses:1}, 'White suit, dark glasses.');
-person('Association presenter', {top:'#3d6b45', bot:'#4a4f55', hair:'#7a4a2a', long:1, skin:'#f2d2b6', item:'board'}, 'Gives the slide show.');
-person('Soldier', {top:'#5b6b45', bot:'#5b6b45', hair:'#2b2522', skin:'#e8c09c', hat:'#4a5838', helmet:1}, 'Only in the secret ending.');
+person('Riot police', {top:'#2d3440', bot:'#2d3440', hair:'#1f2a44', skin:'#e8c09c', hat:'#3b4352', visor:1, armor:'#4a5466', armor2:'#7d8796', knee:'#7d8796', gloves:'#1c1f22', boots:'#16181b', wide:1.4, tall:1.12, item:'shield'}, 'Full armour, closed helmet with a black visor, shoulder plates, a big shield.');
+person('Journalist (La Feuille)', {top:'#c9a24a', bot:'#3a3f45', hair:'#3a2b20', long:1, skin:'#f2d2b6', item:'camera', pack:'#5a4632'}, '');
+person('Banker', {top:'#3a4a63', bot:'#3a4a63', hair:'#5a4632', skin:'#e8c09c', bow:'#c9a23a', item:'case', glasses:1, belly:1}, 'Bow tie.');
+person('The lender', {top:'#f4f2ec', bot:'#f4f2ec', hair:'#1c1f22', skin:'#d9a882', tie:'#1c1f22', hat:'#f4f2ec', band:'#1c1f22', glasses:1, chain:1, wide:1.1}, 'White suit, white hat with a black band, dark glasses, a gold chain.');
+person('Association presenter', {top:'#3d6b45', bot:'#4a4f55', hair:'#7a4a2a', long:1, skin:'#f2d2b6', item:'board', lanyard:1}, 'Gives the slide show.');
+person('Soldier', {top:'#5b6b45', bot:'#5b6b45', hair:'#2b2522', skin:'#e8c09c', hat:'#4a5838', helmet:1, camo:'#3a4529', boots:'#2b2a22', item:'rifle', pack:'#4a5838'}, 'Helmet, pack, rifle. Only in the secret ending.');
+person('Soldier with radio', {top:'#5b6b45', bot:'#5b6b45', hair:'#5a4632', skin:'#d9a882', hat:'#4a5838', helmet:1, camo:'#3a4529', boots:'#2b2a22', item:'radio'}, '');
+person('Officer', {top:'#4f5d3c', bot:'#4f5d3c', hair:'#9a9590', skin:'#efc9a8', hat:'#4a5838', helmet:1, camo:'#3a4529', boots:'#2b2a22', item:'board', tall:1.05}, 'Reads the evacuation order.');
+person('Soldier (woman)', {top:'#5b6b45', bot:'#5b6b45', hair:'#3a2b20', long:1, skin:'#f2d2b6', hat:'#4a5838', helmet:1, camo:'#3a4529', boots:'#2b2a22', pack:'#4a5838'}, '');
 person('Child', {top:'#e8b730', bot:'#3a4a63', hair:'#8a5a3a', skin:'#f2d2b6', small:1}, '');
 
 function outline(c, col){ const g = c.getContext('2d'), W = c.width, Hh = c.height, d = g.getImageData(0, 0, W, Hh), a = d.data, o = new Uint8Array(W*Hh), rgb = hex(col || '#2a2d33');

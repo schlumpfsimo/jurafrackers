@@ -111,6 +111,8 @@ The CEO: listed at the Bureau. Travels in the 911 only for things done in person
 
 **Opposition** (carried over, adjusted): committee with its own office; rumours (?), banners, stands, manure blockades, burning barricades, torches, camps that burn a site after a warning. Marches: **fewer people, walking slower**, from town to a rig; work stops while they stand there; riot police can walk them back. Police come from the police station.
 
+**A very big quake** (the result of doing everything wrong) collapses ordinary houses and farms, which smoke for days. Mood drops immensely, and the valley most likely slides into the violence spiral that leads to the secret ending.
+
 Carried over: moods per village, voter groups (higher/lower educated, farmers), wishes, the fête de la géothermie, gifts (university station, sports hall, fountain, bus, benches), water contamination, anhydrite swelling, quakes, the church, the referendum committee, the campaign, the late deciders.
 
 ---
