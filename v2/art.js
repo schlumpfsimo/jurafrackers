@@ -1113,37 +1113,28 @@ const LOGO_FONT = 'bold {s}px "Silkscreen", monospace';
 const fireText = (g, txt, x, y, size, opts) => { opts = opts || {}; g.font = LOGO_FONT.replace('{s}', size); g.textAlign = opts.align || 'center'; g.textBaseline = 'alphabetic';
   const gr = g.createLinearGradient(0, y - size, 0, y); gr.addColorStop(0, '#ffe066'); gr.addColorStop(0.5, '#ff8a1a'); gr.addColorStop(1, '#d81e12');
   g.lineJoin = 'round'; g.strokeStyle = '#1a0e0a'; g.lineWidth = Math.max(2, size/4); g.strokeText(txt, x, y); g.fillStyle = gr; g.fillText(txt, x, y); };
+const textW = (t, size, bold) => { const g = document.createElement('canvas').getContext('2d'); g.font = bold === false ? size + 'px "Silkscreen", monospace' : LOGO_FONT.replace('{s}', size); return Math.ceil(g.measureText(t).width); };
 const LOGOS = {
-  // the game emblem: arched title on a dark ring, a rig over the Jura ridges on a glowing disc
-  game(scale){ const W = 170, H = 150, cx = 85, cy = 78, R = 56; return pixelArt(W, H, scale || 3, (g) => {
-    const shape = (q) => { q.beginPath(); q.arc(cx, cy, R + 9, 0, Math.PI*2); q.fill(); };
-    g.drawImage(glowLayer(W, H, (q) => { q.fillStyle = '#000'; shape(q); }, '#ff7a1a', '#c8281a'), 0, 0);
-    g.fillStyle = '#1a0e0a'; g.beginPath(); g.arc(cx, cy, R + 8, 0, Math.PI*2); g.fill();
-    const rg = g.createRadialGradient(cx, cy - 6, 4, cx, cy, R - 6); rg.addColorStop(0, '#ffd25a'); rg.addColorStop(0.45, '#ff8a1a'); rg.addColorStop(1, '#a8180e'); g.fillStyle = rg; g.beginPath(); g.arc(cx, cy, R - 6, 0, Math.PI*2); g.fill();
-    g.save(); g.beginPath(); g.arc(cx, cy, R - 6, 0, Math.PI*2); g.clip(); g.fillStyle = '#1a0e0a';
-    g.beginPath(); g.moveTo(cx - 60, cy + 30); for (let i = 0; i <= 12; i++){ const x = cx - 60 + i*10; g.lineTo(x, cy + 22 - Math.sin(i*0.9)*5 - (i % 3)*2); } g.lineTo(cx + 60, cy + 60); g.lineTo(cx - 60, cy + 60); g.fill();
-    g.strokeStyle = '#1a0e0a'; g.lineWidth = 3; const top = [cx, cy - 34], l = [cx - 13, cy + 20], r = [cx + 13, cy + 20];
-    g.beginPath(); g.moveTo(l[0], l[1]); g.lineTo(top[0], top[1]); g.lineTo(r[0], r[1]); g.stroke(); g.lineWidth = 2;
-    for (let k = 1; k < 5; k++){ const t = k/5, y = top[1] + (l[1] - top[1])*t, hw = 13*t; g.beginPath(); g.moveTo(cx - hw, y); g.lineTo(cx + hw*(k % 2 ? 1 : -1)*-1, y + (l[1] - top[1])/5); g.stroke(); g.beginPath(); g.moveTo(cx - hw, y); g.lineTo(cx + hw, y); g.stroke(); }
-    g.fillRect(cx - 5, cy - 39, 10, 5); g.fillRect(cx - 18, cy + 16, 36, 6); g.fillRect(cx - 1, cy + 22, 2, 30); g.restore();
-    // arched title on the ring
-    const txt = 'JURAFRACKERS', a0 = -Math.PI*0.86, a1 = -Math.PI*0.14; g.font = LOGO_FONT.replace('{s}', 11);
-    [...txt].forEach((ch, i) => { const a = a0 + (a1 - a0)*(i + 0.5)/txt.length; g.save(); g.translate(cx + Math.cos(a)*(R + 1), cy + Math.sin(a)*(R + 1)); g.rotate(a + Math.PI/2); fireText(g, ch, 0, 4, 11); g.restore(); });
-    g.save(); g.translate(cx, cy + R + 5); fireText(g, '2.0', 0, 0, 11); g.restore(); }); },
-  // the wordmark for the header
-  word(scale){ return pixelArt(250, 26, scale || 2, (g) => { g.drawImage(glowLayer(250, 26, (q) => { q.font = LOGO_FONT.replace('{s}', 16); q.textAlign = 'left'; q.fillStyle = '#000'; q.fillText('JURAFRACKERS 2.0', 6, 20); }, '#ff7a1a', '#c8281a'), 0, 0); fireText(g, 'JURAFRACKERS 2.0', 6, 20, 16, {align:'left'}); }); },
-  // the association, after the style of the national geothermal association: bold red name, orange line under it, a red-to-orange loop
-  association(scale){ return pixelArt(150, 46, scale || 3, (g) => { g.textAlign = 'left'; g.font = LOGO_FONT.replace('{s}', 16); g.fillStyle = '#d8262a'; g.fillText('GÉOTHERMIE', 4, 18);
-    g.font = '8px "Silkscreen", monospace'; g.fillStyle = '#ee8a3a'; g.fillText('HELVETICA', 5, 28);
-    const gr = g.createLinearGradient(4, 0, 146, 0); gr.addColorStop(0, '#d8262a'); gr.addColorStop(1, '#ee8a3a'); g.strokeStyle = gr; g.lineWidth = 3; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(6, 38); g.bezierCurveTo(20, 30, 30, 46, 44, 38); g.bezierCurveTo(58, 30, 68, 46, 82, 38); g.lineTo(144, 38); g.stroke(); }); },
-  // the company, after the style of the deep geothermal developer: a blue and red crescent, the name stacked in navy
-  company(scale, jura){ return pixelArt(150, 50, scale || 3, (g) => { const cx = 20, cy = 25;
-    g.lineCap = 'round'; g.strokeStyle = '#1f3a8f'; g.lineWidth = 7; g.beginPath(); g.arc(cx, cy, 14, Math.PI*0.35, Math.PI*1.75); g.stroke();
-    g.strokeStyle = '#e0303a'; g.lineWidth = 4; g.beginPath(); g.arc(cx + 3, cy + 2, 8, Math.PI*1.1, Math.PI*1.95); g.stroke();
-    g.textAlign = 'left'; g.fillStyle = '#1f3a8f'; g.font = LOGO_FONT.replace('{s}', 12); g.fillText('ÉNERGIE', 40, 16); g.fillText('GÉO', 40, 30);
-    if (jura){ g.fillStyle = '#e0303a'; g.fillText('JURA', 40, 44); for (let i = 0; i < 3; i++) g.fillRect(92, 35 + i*3, 54, 2); }
-    else { g.font = '8px "Silkscreen", monospace'; g.fillText('SWITZERLAND SA', 41, 43); } }); }
+  // the game wordmark: pixel letters with a stepped dark-red extrusion, a fiery face and a red-orange glow
+  word(scale, stacked){ const lines = stacked ? [['JURA', 22], ['FRACKERS', 22], ['2.0', 14]] : [['JURAFRACKERS', 22]], tw = textW('JURAFRACKERS', 22), fw = textW('FRACKERS', 22), W = stacked ? fw + 20 : tw + 52, Hh = stacked ? 92 : 40;
+    return pixelArt(W, Hh, scale || 3, (g) => { const place = stacked ? [[W/2, 28], [W/2, 56], [W/2, 80]] : [[8, 30]], align = stacked ? 'center' : 'left';
+      g.drawImage(glowLayer(W, Hh, (q) => { q.fillStyle = '#000'; q.textAlign = align; lines.forEach(([t, s], i) => { q.font = LOGO_FONT.replace('{s}', s); q.fillText(t, place[i][0] + 2, place[i][1] + 2); }); }, '#ff7a1a', '#b81e14'), 0, 0);
+      lines.forEach(([t, s], i) => { const [x, y] = place[i]; g.font = LOGO_FONT.replace('{s}', s); g.textAlign = align;
+        for (let d = 3; d >= 1; d--){ g.fillStyle = d === 1 ? '#7a140c' : '#4a0c08'; g.fillText(t, x + d, y + d); }
+        const gr = g.createLinearGradient(0, y - s*0.8, 0, y); gr.addColorStop(0, '#ffe066'); gr.addColorStop(0.45, '#ff9a1a'); gr.addColorStop(1, '#e0281a'); g.fillStyle = gr; g.fillText(t, x, y); });
+      if (!stacked){ const x = tw + 30, y = 30; g.fillStyle = '#4a0c08'; g.fillRect(x - 13, y - 17, 28, 20); g.fillStyle = '#e0281a'; g.fillRect(x - 15, y - 19, 28, 20); g.font = LOGO_FONT.replace('{s}', 8); g.textAlign = 'center'; g.fillStyle = '#ffe066'; g.fillText('2.0', x - 1, y - 5); } }); },
+  game(scale){ return LOGOS.word(scale, true); },
+  // the association, in its own green: a warm water drop with heat waves, the name in green and grey
+  association(scale){ return pixelArt(44 + Math.max(textW('GÉOTHERMIE', 16), textW('HELVETICA ASSOCIATION', 8)), 44, scale || 3, (g) => { const dx = 6, dy = 4;
+    g.fillStyle = '#3d6b45'; g.beginPath(); g.moveTo(dx + 14, dy); g.bezierCurveTo(dx + 4, dy + 16, dx, dy + 22, dx + 4, dy + 30); g.bezierCurveTo(dx + 8, dy + 38, dx + 20, dy + 38, dx + 24, dy + 30); g.bezierCurveTo(dx + 28, dy + 22, dx + 24, dy + 16, dx + 14, dy); g.fill();
+    g.strokeStyle = '#f0c040'; g.lineWidth = 2; for (const yy of [dy + 20, dy + 26, dy + 32]){ g.beginPath(); g.moveTo(dx + 6, yy); g.bezierCurveTo(dx + 10, yy - 3, dx + 14, yy + 3, dx + 22, yy - 1); g.stroke(); }
+    g.textAlign = 'left'; g.font = LOGO_FONT.replace('{s}', 16); g.fillStyle = '#2f5a3a'; g.fillText('GÉOTHERMIE', 38, 22); g.font = LOGO_FONT.replace('{s}', 8); g.fillStyle = '#7a7f78'; g.fillText('HELVETICA ASSOCIATION', 39, 36); }); },
+  // the company, in its blue and orange: a drill going down through three rock layers, the name in one line
+  company(scale, jura){ return pixelArt(64 + textW('ÉNERGIE', 16) + textW('GÉO', 16), 44, scale || 3, (g) => { const x0 = 6, y0 = 6;
+    [['#e8b730', 0], ['#e07a2c', 10], ['#a8473a', 20]].forEach(([c, o]) => { g.fillStyle = c; g.fillRect(x0, y0 + o, 30, 8); });
+    g.fillStyle = '#2c5f93'; g.fillRect(x0 + 13, y0 - 4, 4, 30); g.beginPath(); g.moveTo(x0 + 10, y0 + 26); g.lineTo(x0 + 20, y0 + 26); g.lineTo(x0 + 15, y0 + 32); g.fill();
+    g.textAlign = 'left'; g.font = LOGO_FONT.replace('{s}', 16); g.fillStyle = '#2c5f93'; g.fillText('ÉNERGIE', 44, 22); const w = g.measureText('ÉNERGIE').width; g.fillStyle = '#e07a2c'; g.fillRect(46 + w, 15, 5, 4); g.fillStyle = '#2c5f93'; g.fillText('GÉO', 54 + w, 22);
+    g.font = LOGO_FONT.replace('{s}', 8); g.fillStyle = jura ? '#e07a2c' : '#6b7178'; g.fillText(jura ? 'JURA' : 'SWITZERLAND SA', 45, 36); }); }
 };
 
 function outline(c, col){ const g = c.getContext('2d'), W = c.width, Hh = c.height, d = g.getImageData(0, 0, W, Hh), a = d.data, o = new Uint8Array(W*Hh), rgb = hex(col || '#2a2d33');

@@ -78,7 +78,7 @@ function renderAll(){
   }
 }
 function renderLogos(){ const host = document.getElementById('glogo'), add = (cv, txt, dark) => { const d = document.createElement('div'); if (dark) d.className = 'dark'; d.appendChild(cv); d.appendChild(document.createTextNode(txt)); host.appendChild(d); };
-  add(ART.logos.game(3), 'Game emblem', true); add(ART.logos.game(3), 'Game emblem on light'); add(ART.logos.word(2), 'Wordmark (header)', true); add(ART.logos.association(3), 'Géothermie-Helvetica (association)'); add(ART.logos.company(3), 'Énergie-Géo Switzerland SA (company)'); add(ART.logos.company(3, true), 'Énergie-Géo, Jura site sign');
+  add(ART.logos.word(3), 'Game logo', true); add(ART.logos.word(3), 'Game logo on light'); add(ART.logos.game(3), 'Stacked (square spots)', true); add(ART.logos.association(3), 'Géothermie-Helvetica (association)'); add(ART.logos.company(3), 'Énergie-Géo Switzerland SA (company)'); add(ART.logos.company(3, true), 'Énergie-Géo, Jura site sign');
   const hl = document.querySelector('header .logo'); hl.textContent = ''; hl.style.textShadow = 'none'; const w = ART.logos.word(2); w.style.display = 'block'; w.style.height = '40px'; w.style.width = 'auto'; hl.appendChild(w); }
 (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => { renderLogos(); renderAll(); });
 </script>

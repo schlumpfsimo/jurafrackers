@@ -12,7 +12,7 @@ Phase 1 (look) is approved. All art lives in `v2/art.js` (`window.ART`): every m
 - **F-35:** after the user's three-view and photo: wide flat chined body, short light cone nose, big tinted bubble canopy with a hump behind, bulging intakes, trapezoid wings from mid-body, tailplanes past the nozzle, broad tails leaning out, sawtooth panels. It flies low (about 9–14 m) with its shadow and is not much bigger than a house on the map. A close formation of four crosses the map once, firing rockets at every rig; as many as needed.
 - **Lender's vans:** black Mercedes Vito style (short sloping bonnet, raked windscreen, flat roof, tinted glass, sliding door), three of them.
 - **Animals and trees move:** cows walk, graze, swish; sheep walk and graze; chickens walk and peck (three pixels); horses stand, walk, gallop, graze; dogs run; cats sit and walk; deer graze and leap; crows fly and land; trees sway in three frames. Winter: bare broadleaf trees, snow on spruces, bushes and ground.
-- **Logos:** pixel art, drawn small and scaled with hard pixels. Game: Jurassic-Park-like emblem (arched fiery JURAFRACKERS on a dark ring, rig over Jura ridges on a glowing red-orange disc, 2.0) and a glowing wordmark. Association Géothermie-Helvetica: bold red GÉOTHERMIE, orange HELVETICA, red-to-orange wave (in the style of the national geothermal association). Company Énergie-Géo Switzerland SA: navy crescent with red swoosh, stacked navy name; Jura site-sign variant with red JURA and stripes (in the style of the deep-geothermal developer). Real marks are not copied one to one.
+- **Logos:** pixel art, drawn small and scaled with hard pixels. Game: the original pixel wordmark JURAFRACKERS (no circle) with fiery red-orange letters, a stepped dark-red extrusion and a red-orange glow, a red 2.0 tag; stacked JURA / FRACKERS / 2.0 for square spots. Association Géothermie-Helvetica in its own green: a green water drop with warm heat waves, GÉOTHERMIE in green, HELVETICA ASSOCIATION in grey. Company Énergie-Géo in the company blue and orange: a blue drill going down through three rock layers (yellow, orange, red-brown), ÉNERGIE·GÉO in blue with an orange dot, SWITZERLAND SA in grey; Jura site sign with orange JURA. Deliberately far from the real organisations' logos.
 
 ## Approved corrections, for reference
 
@@ -277,4 +277,4 @@ B02 depot fine; B03 glass pavilion and B28 farm without overlaps; B26/B29 brutal
 
 ### Logos
 
-- Game emblem, game wordmark, association, company, company Jura site sign — `ART.logos.game / word / association / company(scale, jura)`.
+- Game logo, stacked game logo, association, company, company Jura site sign — `ART.logos.word(scale) / game(scale) / association(scale) / company(scale, jura)`.
