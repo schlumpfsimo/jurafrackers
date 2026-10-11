@@ -457,26 +457,27 @@ def('v', 'Police helicopter', 10.5, 2.6, ({B, X, C, L, Q}, c) => { const wh = '#
   for (const [y, f] of [[m + 0.13, 'S'], [m - 0.13, 'N']]){ const ring = []; for (let i = 0; i < 12; i++){ const a = i/12*Math.PI*2; ring.push([0.48 + Math.cos(a)*0.3, y, 1.72 + Math.sin(a)*0.3]); } Q(ring, '#22252a', {face:f}); }
   for (let i = 0; i < 4; i++){ const a = i*Math.PI/2 + 0.4, ca = Math.cos(a), sa = Math.sin(a), w = 0.13; Q([[4.6 - sa*w, m + ca*w, 2.76], [4.6 + ca*5.2 - sa*w, m + sa*5.2 + ca*w, 2.76], [4.6 + ca*5.2 + sa*w, m + sa*5.2 - ca*w, 2.76], [4.6 + sa*w, m - ca*w, 2.76]], '#2b2f33', {k:8000}); }
 }, 'Cabin with a glass nose and a blue band, engine and rotor mast on the roof, tail boom, ducted tail rotor, skids. The last resort.');
-def('v', 'F-35', 15.6, 11, ({VF, W, L}, c) => { const m = 5.5, g = '#8b8d87', gt = '#9a9c96', gb = '#70726d', dk = '#2c2d2b';
-  for (const [x, y] of [[12.6, 0], [6.4, -1.5], [6.4, 1.5]]){ L([[x, m + y, 0.3], [x, m + y*0.85, 0.95]], '#3a3c38', 0.9); W(x, m + y, x > 10 ? 0.28 : 0.36); }
-  const wT = [[-0.2, 0.55], [1.5, 1.2], [4, 1.75], [9.6, 1.75], [11, 1.3], [13.5, 0.55], [15.6, 0.03]], huT = [[-0.2, 0.3], [2, 0.55], [5, 0.85], [9.6, 0.85], [11, 0.6], [13.4, 0.42], [15.6, 0.03]], hlT = [[-0.2, 0.3], [2, 0.45], [9, 0.5], [12, 0.35], [15.6, 0.03]];
-  VF(0.14, -0.9, 15.7, 0, 11, 0.6, 4.6, (x, y, z) => { const ay = Math.abs(y - m), zc = 1.35;
-    // canopy: a long bubble, tinted gold
-    if (inEll([x, y, z], [12.0, m, zc + 0.62], 1.55, 0.46, 0.45) && z > zc + 0.55) return '#6a5a30';
-    // fuselage: chined section, sharp edge at the widest line
-    if (x >= -0.2 && x <= 15.6){ const w = lerpT(wT, x), r = ay/w; if (r <= 1){ const top = zc + lerpT(huT, x)*(1 - r**1.6), bot = zc - lerpT(hlT, x)*(1 - r*r);
-      if (z <= top && z >= bot){ if (x > 10.15 && x < 10.55 && ay > 1.05 && z < zc + 0.35 && z > zc - 0.3) return dk; return z > zc + 0.12 ? gt : z < zc - 0.1 ? gb : g; } } }
-    // intake bumps beside the cockpit
-    if (inEll([x, y, z], [11.0, m + Math.sign(y - m)*1.25, zc + 0.05], 0.75, 0.32, 0.3)) return g;
-    // wings and tailplanes: thin trapezoids at the chine
-    if (Math.abs(z - zc) < 0.08 && ay >= 1.5 && ay <= 5.35){ const f = (ay - 1.6)/3.75, le = 10.2 - f*3.2, te = 3.9 + f*1.8; if (x <= le && x >= te) return g; }
-    if (Math.abs(z - zc - 0.05) < 0.07 && ay >= 1.0 && ay <= 3.65){ const f = (ay - 1.0)/2.65, le = 3.9 - f*2.3, te = -0.4 + f*1.05; if (x <= le && x >= te) return g; }
-    // twin tails, leaning outwards
-    if (z >= 1.9 && z <= 4.4){ const t = (z - 1.9)/2.5, yc = 1.25 + t*0.45, le = 5.0 - t*2.4, te = 1.4 - t*0.35; if (Math.abs(ay - yc) < 0.15 && x <= le && x >= te) return t > 0.92 ? gb : g; }
-    // engine nozzle
-    if (x >= -0.85 && x < 0.2 && (y - m)**2 + (z - zc)**2 <= 0.55**2) return x < -0.7 && (y - m)**2 + (z - zc)**2 <= 0.35**2 ? '#1e1f1d' : '#5a5c57';
+def('v', 'F-35', 15.6, 11, ({VF, W, L}, c) => { const m = 5.5, g = '#8b8d87', gt = '#9a9c96', gb = '#70726d', dk = '#2c2d2b', zc = 1.45;
+  // proportions read off a three-view drawing: x from the tailplane tips (0) to the nose (15.6), half-widths and heights in metres
+  for (const [x, y] of [[13.2, 0], [7.0, -1.6], [7.0, 1.6]]){ L([[x, m + y, 0.3], [x, m + y*0.85, 0.75]], '#3a3c38', 0.9); W(x, m + y, x > 10 ? 0.28 : 0.38); }
+  const wT = [[0.5, 0.65], [1.4, 0.85], [2.5, 1.45], [3.6, 1.8], [7.6, 1.95], [10.3, 1.45], [10.7, 1.2], [11.0, 1.35], [12.0, 1.0], [13.0, 0.7], [14.4, 0.35], [15.6, 0.02]];
+  const huT = [[0.5, 0.35], [1.5, 0.5], [4, 0.7], [8, 0.85], [10.5, 0.85], [13.3, 0.75], [14.2, 0.45], [15.6, 0.02]];
+  const hlT = [[0.5, 0.4], [2, 0.6], [5, 0.85], [9, 0.85], [12, 0.7], [14, 0.35], [15.6, 0.02]];
+  VF(0.14, -0.3, 15.7, 0, 11, 0.5, 5.0, (x, y, z) => { const ay = Math.abs(y - m);
+    if (inEll([x, y, z], [12.05, m, zc + 0.78], 1.35, 0.46, 0.55) && z > zc + 0.7) return '#5e5133';          // canopy
+    // engine nozzle behind the body
+    if (x >= 0.55 && x < 2.4 && (y - m)**2 + (z - zc - 0.1)**2 <= 0.62**2) return x < 0.85 ? '#3a3b38' : '#5a5c57';
+    // fuselage: chined section, widest at the chine, intake openings in the notches
+    if (x >= 0.5 && x <= 15.6){ const w = lerpT(wT, x), r = ay/w; if (r <= 1){ const top = zc + lerpT(huT, x)*(1 - r**1.8), bot = zc - lerpT(hlT, x)*(1 - r**2.2);
+      if (z <= top && z >= bot){ if (x > 10.45 && x < 11.0 && ay > 0.95 && z < zc + 0.15 && z > zc - 0.55) return dk; return z > zc + 0.15 ? gt : z < zc - 0.15 ? gb : g; } } }
+    // wings: leading edge from mid-body, short tip chord, trailing edge swept slightly forward
+    if (Math.abs(z - zc) < 0.08 && ay >= 1.8 && ay <= 5.35){ const f = (ay - 1.9)/3.45, le = 7.6 - f*2.0, te = 3.0 + f*0.75; if (x <= le && x >= te) return g; }
+    // tailplanes reaching past the nozzle, square tips
+    if (Math.abs(z - zc - 0.05) < 0.07 && ay >= 1.0 && ay <= 3.66){ const f = Math.max(0, (ay - 1.3)/2.36), le = 4.06 - f*3.2; if (x <= le && x >= -0.07) return g; }
+    // twin tails set inside the body edge, leaning out about 18 degrees
+    const zb = zc + 0.6; if (z >= zb && z <= zb + 2.37){ const t = (z - zb)/2.37, yc = 1.35 + t*0.77, le = 4.0 - t*1.8, te = 1.35 - t*0.55; if (Math.abs(ay - yc) < 0.21 && x <= le && x >= te) return t > 0.93 ? gb : g; }
     return null; });
-}, 'Warm grey, thick chined body, long pointed nose, long tinted canopy set forward, side intakes with bumps, trapezoid wings, big tailplanes, twin tails leaning outwards, one big nozzle. Only in the secret ending.');
+}, 'After a three-view drawing: long pointed nose, high canopy set forward, angled intakes, wide chined body, wings from mid-body with short tips, tailplanes past the nozzle, twin tails leaning out. Only in the secret ending.');
 M[M.length - 1].big = 2.4;
 def('v', 'Regional train', 20, 3, ({B, W}, c) => { for (const x0 of [0.3, 10.2]){ wheels(W, [x0 + 1.4, x0 + 8], 3, 0.45);
   B(x0, 0.25, 0.6, 9.5, 2.5, 2.8, '#dfe2e5', {bv:0.5, win:[...[0.6, 2.3, 4, 5.7, 7.4].flatMap(a => sides(a, 1.3, 1.3, 0.85, GL)), ...sides(0.3, 0.45, 8.9, 0.26, '#b8322a'), ['E', 0.3, 1.2, 1.9, 0.9, GL], ['W', 0.3, 1.2, 1.9, 0.9, GL]]}); } }, 'Along the top of the valley.');
