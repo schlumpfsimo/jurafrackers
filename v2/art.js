@@ -32,6 +32,7 @@ function build(fn){
     // a row of windows on a face: face, from, to, step, z, w, h
     Q:(pts, c, o) => push(Object.assign({t:'q', pts, c}, o || {})),                                // flat 3D polygon: fins, blades; o.face shows it only from that side
     V:(x, y, z, w, d, h, c) => { for (let i = x; i < x + w; i++) for (let j = y; j < y + d; j++) for (let k = z; k < z + h; k++) vox.set(i + ',' + j + ',' + k, c); },   // voxels (people), 0.1 m cubes
+    SD:(x0, x1, y0, y1, z0, z1, fn, o) => push(Object.assign({t:'sdf', b:[x0, x1, y0, y1, z0, z1], fn, zt:z1}, o || {})),   // smooth volume, rendered per pixel
     VF:(u, x0, x1, y0, y1, z0, z1, fn) => { const cells = []; for (let i = Math.floor(x0/u); i*u < x1; i++) for (let j = Math.floor(y0/u); j*u < y1; j++) for (let k = Math.floor(z0/u); k*u < z1; k++){ const c = fn((i + 0.5)*u, (j + 0.5)*u, (k + 0.5)*u); if (c) cells.push([i, j, k, c]); }
       return push({t:'vox', u, cells, zt:(Math.max(...cells.map(q => q[2])) + 1)*u}); },
     row:(f, a0, a1, step, z, w, h, c) => { const r = []; for (let a = a0; a <= a1 + 1e-6; a += step) r.push([f, a, z, w, h, c]); return r; },
@@ -124,6 +125,8 @@ function draw(g, model, rot, S, ox, oy, post){
         if (!set.has(x + ',' + (y + 1) + ',' + z)) poly([P(X0, Y1, Z0), P(X1, Y1, Z0), P(X1, Y1, Z1), P(X0, Y1, Z1)], sh(c, fl ? 0.9 : 0.86));
         if (!set.has((x + 1) + ',' + y + ',' + z)) poly([P(X1, Y0, Z0), P(X1, Y1, Z0), P(X1, Y1, Z1), P(X1, Y0, Z1)], sh(c, fl ? 0.9 : 0.7));
         if (!set.has(x + ',' + y + ',' + (z + 1))) poly([P(X0, Y0, Z1), P(X1, Y0, Z1), P(X1, Y1, Z1), P(X0, Y1, Z1)], sh(c, fl ? 0.9 : 1.06)); } }});
+    } else if (p.t === 'sdf'){
+      const [x0, x1, y0, y1] = p.b, c0 = rp(x0, y0), c1 = rp(x1, y1); items.push({k:(c0[0] + c1[0])/2 + (c0[1] + c1[1])/2 + (p.k || 0), i, f(){ volume(g, p, rot, S, ox, oy, W, D); }});
     } else if (p.t === 'fig'){
       const q = rp(p.x, p.y); items.push({k:q[0] + q[1] + (p.k || 0), i, f(){ figure(g, P(q[0], q[1], 0), S, rot, p.o); }});
     } else if (p.t === 'puff'){
@@ -155,6 +158,38 @@ const segD = (p, a, b) => { const ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], 
 const inCap = (p, a, b, r1, r2) => { const [d, t] = segD(p, a, b); return d <= r1 + (r2 - r1)*t; };                     // tapered capsule
 const inEll = (p, c, rx, ry, rz) => ((p[0] - c[0])/rx)**2 + ((p[1] - c[1])/ry)**2 + ((p[2] - c[2])/rz)**2 <= 1;
 const lerpT = (tab, x) => { if (x <= tab[0][0]) return tab[0][1]; for (let i = 1; i < tab.length; i++) if (x <= tab[i][0]){ const [x0, y0] = tab[i - 1], [x1, y1] = tab[i]; return y0 + (y1 - y0)*(x - x0)/(x1 - x0); } return tab[tab.length - 1][1]; };
+
+/* Smooth volumes drawn pixel by pixel: for every screen pixel find the nearest surface along the view, shade it from the
+   surface direction with the buildings' light (top bright, south face mid, east face dark), in a few tone steps. */
+function volume(g, p, rot, S, ox, oy, W, D){
+  const [bx0, bx1, by0, by1, z0, z1] = p.b, inv = rot === 0 ? (X, Y) => [X, Y] : rot === 1 ? (X, Y) => [Y, D - X] : rot === 2 ? (X, Y) => [W - X, D - Y] : (X, Y) => [W - Y, X];
+  const rpp = (x, y) => rot === 0 ? [x, y] : rot === 1 ? [D - y, x] : rot === 2 ? [W - x, D - y] : [y, W - x];
+  const cs = [rpp(bx0, by0), rpp(bx1, by1)], RX0 = Math.min(cs[0][0], cs[1][0]), RX1 = Math.max(cs[0][0], cs[1][0]), RY0 = Math.min(cs[0][1], cs[1][1]), RY1 = Math.max(cs[0][1], cs[1][1]);
+  const P = (x, y, z) => [ox + (x - y)*S, oy + (x + y)*S/2 - z*S], pts = []; for (const x of [RX0, RX1]) for (const y of [RY0, RY1]) for (const z of [z0, z1]) pts.push(P(x, y, z));
+  const sx0 = Math.floor(Math.min(...pts.map(q => q[0]))), sx1 = Math.ceil(Math.max(...pts.map(q => q[0]))), sy0 = Math.floor(Math.min(...pts.map(q => q[1]))), sy1 = Math.ceil(Math.max(...pts.map(q => q[1])));
+  const w = sx1 - sx0 + 1, h = sy1 - sy0 + 1, dz = p.step || Math.min(0.04, 0.5/S), hit = new Float32Array(w*h*3), col = new Array(w*h).fill(null);
+  const at = (X, Y, z) => { const [x, y] = inv(X, Y); return p.fn(x, y, z); };
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++){ const a = (sx0 + i + 0.5 - ox)/S, b = (sy0 + j + 0.5 - oy)/S;
+    const zt = Math.min(z1, RX1 - a/2 - b, RY1 - b + a/2), zb = Math.max(z0, RX0 - a/2 - b, RY0 - b + a/2); if (zt < zb) continue;
+    let zp = zt + dz, found = null;
+    for (let z = zt; z >= zb; z -= dz){ const c = at(a/2 + b + z, b + z - a/2, z); if (c){ let lo = z, hi = Math.min(zp, zt); for (let k = 0; k < 5; k++){ const m = (lo + hi)/2; if (at(a/2 + b + m, b + m - a/2, m)) lo = m; else hi = m; } found = [lo, c]; break; } zp = z; }
+    if (!found) continue; const z = found[0], o = (j*w + i)*3; hit[o] = a/2 + b + z; hit[o + 1] = b + z - a/2; hit[o + 2] = z; col[j*w + i] = found[1]; }
+  const img = g.createImageData(w, h), d = img.data, Lx = 0.345, Ly = 0.636, Lz = 1;
+  const pt = (i, j) => (i < 0 || j < 0 || i >= w || j >= h || !col[j*w + i]) ? null : [hit[(j*w + i)*3], hit[(j*w + i)*3 + 1], hit[(j*w + i)*3 + 2]];
+  const depth = q => q[0] + q[1] + q[2];
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++){ const c0 = col[j*w + i]; if (!c0) continue; const q = pt(i, j), dq = depth(q);
+    const near = (n) => n && Math.abs(depth(n) - dq) < 0.35 ? n : null;
+    const r = near(pt(i + 1, j)), l = near(pt(i - 1, j)), dn = near(pt(i, j + 1)), up = near(pt(i, j - 1));
+    const ex = r && l ? [r[0] - l[0], r[1] - l[1], r[2] - l[2]] : r ? [r[0] - q[0], r[1] - q[1], r[2] - q[2]] : l ? [q[0] - l[0], q[1] - l[1], q[2] - l[2]] : null;
+    const ey = dn && up ? [dn[0] - up[0], dn[1] - up[1], dn[2] - up[2]] : dn ? [dn[0] - q[0], dn[1] - q[1], dn[2] - q[2]] : up ? [q[0] - up[0], q[1] - up[1], q[2] - up[2]] : null;
+    let n = [0, 0, 1]; if (ex && ey){ n = [ex[1]*ey[2] - ex[2]*ey[1], ex[2]*ey[0] - ex[0]*ey[2], ex[0]*ey[1] - ex[1]*ey[0]]; if (n[0] + n[1] + n[2] < 0) n = n.map(v => -v); const L = Math.hypot(...n) || 1; n = n.map(v => v/L); }
+    const flat = c0[0] === '!', c = flat ? c0.slice(1) : c0;
+    let f = flat ? 0.9 : Math.max(0.5, Math.min(1.14, 0.55 + 0.55*(n[0]*Lx + n[1]*Ly + n[2]*Lz))); f = Math.round(f*10)/10;
+    // a darker pixel where something nearer covers this part: reads as a contour
+    for (const nb of [pt(i + 1, j), pt(i - 1, j), pt(i, j + 1), pt(i, j - 1)]) if (nb && depth(nb) - dq > 0.35){ f *= 0.72; break; }
+    const [R, G, B] = hex(c), k = v => Math.max(0, Math.min(255, Math.round(f > 1 ? v + (255 - v)*(f - 1) : v*f))), o = (j*w + i)*4; d[o] = k(R); d[o + 1] = k(G); d[o + 2] = k(B); d[o + 3] = 255; }
+  const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h; tmp.getContext('2d').putImageData(img, 0, 0); g.drawImage(tmp, sx0, sy0);
+}
 
 /* ---------------------------------------------------------------- models */
 const M = [];
@@ -385,13 +420,24 @@ const allGlass = (len, wid, z, h) => [['E', 0.14, z, wid - 0.28, h, GL], ['W', 0
 const lamps = (wid, z) => [['E', 0.12, z, 0.3, 0.2, '#fff4b8'], ['E', wid - 0.42, z, 0.3, 0.2, '#fff4b8'], ['W', 0.12, z, 0.3, 0.2, '#e8473a'], ['W', wid - 0.42, z, 0.3, 0.2, '#e8473a']];
 const wheels = (W, xs, D, r) => { for (const x of xs){ W(x, 0.18, r); W(x, D - 0.18, r); } };
 const sides = (a, z, w, h, col, txt, tc) => [['S', a, z, w, h, col, txt, tc], ['N', a, z, w, h, col, txt, tc]];
-def('v', 'Company car (old 911)', 4.3, 1.8, ({B, X, W}, c) => { const ag = '#d9dde1', ch = '#f6f7f8'; wheels(W, [0.95, 3.35], 1.8, 0.36);
-  B(0.1, 0.18, 0.28, 4.1, 1.44, 0.34, ag, {bv:0.14, win:[['W', 0.2, 0.12, 0.3, 0.14, '#e8473a'], ['W', 1.0, 0.12, 0.3, 0.14, '#e8473a']]});
-  for (const y of [0.1, 1.22]){ B(3.05, y, 0.58, 1.05, 0.48, 0.22, ag, {bv:0.12, win:[['E', 0.1, 0.03, 0.28, 0.17, '#fff4b8']]}); B(0.35, y, 0.58, 1.25, 0.48, 0.26, ag, {bv:0.12}); }
-  B(3.05, 0.55, 0.58, 1.1, 0.7, [0.16, 0.02, 0.02, 0.16], ag);
-  B(1.35, 0.3, 0.62, 1.25, 1.2, 0.52, ag, {bv:0.18, win:[['S', 0.12, 0.08, 1, 0.3, GL], ['N', 0.12, 0.08, 1, 0.3, GL]]});
-  B(2.6, 0.3, 0.62, 0.5, 1.2, [0.52, 0.03, 0.03, 0.52], GL); B(0.45, 0.3, 0.62, 0.9, 1.2, [0.03, 0.52, 0.52, 0.03], ag);
-  B(4.18, 0.25, 0.3, 0.07, 1.3, 0.1, ch); B(0.03, 0.25, 0.3, 0.07, 1.3, 0.1, ch); }, 'Silver, round lamps, the sloping back. Never named. Drives the CEO to debates, interviews and crises.');
+def('v', 'Company car (old 911)', 4.3, 1.8, ({SD}, c) => { const ag = '#c9ced3', cy = 0.9;
+  const topT = [[0, 0.6], [0.3, 0.84], [0.8, 0.92], [1.25, 1.02], [1.9, 1.27], [2.3, 1.31], [2.6, 1.26], [2.98, 0.97], [3.8, 0.86], [4.3, 0.62]];
+  SD(0, 4.3, 0, 1.8, 0, 1.35, (x, y, z) => { const ay = Math.abs(y - cy);
+    // wheels: dark tyres, light hubs, under round arches
+    for (const wx of [0.85, 3.35]){ const rr = Math.hypot(x - wx, z - 0.32); if (rr < 0.32 && ay > 0.55 && ay < 0.9) return rr < 0.16 && ay > 0.82 ? '#aab1b8' : '#1f2226'; if (rr < 0.41 && ay > 0.55) return null; }
+    if (z < 0.2) return null;
+    // fenders: round hips over the wheels, wider at the back
+    const hip = Math.max(0, 1 - ((x - 0.85)/0.75)**2)*0.07 + Math.max(0, 1 - ((x - 3.35)/0.7)**2)*0.04;
+    const hw = 0.8 + hip, top = lerpT(topT, x);
+    if (z > 0.95){ // glasshouse: narrower, glass sides, silver roof
+      const cw = 0.66 - (z - 0.95)*0.55; if (ay > cw || z > top) return null;
+      return z > top - 0.05 || (x > 2.32 && x < 2.42) ? ag : '#3c4954'; }
+    const r = ay/hw; if (r > 1 || z > top - 0.08*r**4) return null;
+    for (const s2 of [-1, 1]) if ((x - 4.12)**2 + (y - cy - s2*0.55)**2 < 0.03 && z > 0.7) return '#f4f0d8';           // round headlights
+    if (x < 0.1 && z > 0.62 && z < 0.72) return '#b8322a';                                                         // tail light band
+    if (z < 0.34 && (x < 0.12 || x > 4.18)) return '#9aa1a8';                                                       // bumpers
+    return ag; }, {step:0.02});
+}, 'The CEO\'s old silver 911: round headlights, sloping roof, wide hips. Not mentioned anywhere.');
 def('v', 'Geologist\'s pickup', 5.4, 1.9, ({B, W, L}, c) => { const wh = '#f4f3ee', bk = '#2b2f33'; wheels(W, [1.05, 4.35], 1.9, 0.5);
   B(0.1, 0.17, 0.5, 5.15, 1.56, 0.6, wh, {bv:0.12, win:[['E', 0.45, 0.22, 0.66, 0.3, bk], ['E', 0.08, 0.25, 0.3, 0.18, '#fff4b8'], ['E', 1.18, 0.25, 0.3, 0.18, '#fff4b8'], ...lamps(1.56, 0.25).slice(2), ...sides(2.3, 0.15, 1.2, 0.3, c.co, 'ÉG', '#fff')]});
   B(5.2, 0.2, 0.42, 0.14, 1.5, 0.28, bk, {bv:0.04}); B(0.0, 0.2, 0.42, 0.1, 1.5, 0.24, bk);
@@ -457,7 +503,7 @@ def('v', 'Police helicopter', 10.5, 2.6, ({B, X, C, L, Q}, c) => { const wh = '#
   for (const [y, f] of [[m + 0.13, 'S'], [m - 0.13, 'N']]){ const ring = []; for (let i = 0; i < 12; i++){ const a = i/12*Math.PI*2; ring.push([0.48 + Math.cos(a)*0.3, y, 1.72 + Math.sin(a)*0.3]); } Q(ring, '#22252a', {face:f}); }
   for (let i = 0; i < 4; i++){ const a = i*Math.PI/2 + 0.4, ca = Math.cos(a), sa = Math.sin(a), w = 0.13; Q([[4.6 - sa*w, m + ca*w, 2.76], [4.6 + ca*5.2 - sa*w, m + sa*5.2 + ca*w, 2.76], [4.6 + ca*5.2 + sa*w, m + sa*5.2 - ca*w, 2.76], [4.6 + sa*w, m - ca*w, 2.76]], '#2b2f33', {k:8000}); }
 }, 'Cabin with a glass nose and a blue band, engine and rotor mast on the roof, tail boom, ducted tail rotor, skids. The last resort.');
-def('v', 'F-35', 15.6, 11, ({VF, W, L}, c) => { const m = 5.5, g = '#80827e', gt = '#8c8e8a', gb = '#6c6e6a', lt = '#a9aba6', dk = '#262725', zc = 1.45;
+def('v', 'F-35', 15.6, 11, ({SD, W, L}, c) => { const m = 5.5, g = '#80827e', gt = '#8c8e8a', gb = '#6c6e6a', lt = '#a9aba6', dk = '#262725', zc = 1.45;
   // after a three-view drawing and photos: wide flat body blending into the wings, short cone nose, big bubble canopy with a hump behind,
   // bulging intakes under the canopy, broad trapezoid tails leaning out, lighter sawtooth panel edges on top
   for (const [x, y] of [[13.0, 0], [7.0, -1.7], [7.0, 1.7]]){ L([[x, m + y, 0.3], [x, m + y*0.85, 0.75]], '#3a3c38', 0.9); W(x, m + y, x > 10 ? 0.28 : 0.38); }
@@ -465,7 +511,7 @@ def('v', 'F-35', 15.6, 11, ({VF, W, L}, c) => { const m = 5.5, g = '#80827e', gt
   const huT = [[0.5, 0.4], [1.5, 0.6], [4, 0.85], [8, 1.0], [10.6, 1.05], [12.6, 0.8], [13.6, 0.5], [14.6, 0.28], [15.6, 0.03]];
   const hlT = [[0.5, 0.4], [2, 0.6], [5, 0.85], [9, 0.9], [12, 0.7], [13.6, 0.45], [15.6, 0.03]];
   const saw = (x, ay) => { const step = Math.floor(ay/0.35) % 2 ? 0.28 : 0; for (const xs of [3.4, 5.6, 8.0]) if (Math.abs(x - xs - step) < 0.09 && ay < 1.6) return true; return Math.abs(ay - 0.95 - (Math.floor(x/0.5) % 2)*0.2) < 0.08 && x > 3 && x < 9.6; };
-  VF(0.14, -0.3, 15.7, 0, 11, 0.5, 5.4, (x, y, z) => { const ay = Math.abs(y - m);
+  SD(-0.3, 15.7, 0, 11, 0.5, 5.4, (x, y, z) => { const ay = Math.abs(y - m);
     // big one-piece canopy, dark smoky, with a light frame line; hump behind it
     if (inEll([x, y, z], [11.95, m, zc + 1.0], 1.5, 0.55, 0.58) && z > zc + 0.95) return Math.abs(x - 11.1) < 0.08 ? '#b5b7b2' : '#3b3a33';
     if (inEll([x, y, z], [9.6, m, zc + 0.95], 1.9, 0.75, 0.3) && z > zc + 0.9) return gt;
@@ -573,11 +619,10 @@ const volPerson = (o) => (x, y, z) => { const cx = 0.75, cy = 0.75, p = [x, y, z
   if (o.item === 'wrench'){ put(Math.abs(x - cx - 0.02) < 0.02 && Math.abs(y - ry) < 0.02 && z > 0.5 && z < 0.82, '#b8322a'); put(Math.abs(x - cx - 0.02) < 0.08 && Math.abs(y - ry) < 0.025 && z > 0.44 && z < 0.52, '#8f979e'); }
   if (o.item === 'sign'){ const sy = ry + 0.08, sx = cx + 0.04; put(Math.abs(x - sx) < 0.02 && Math.abs(y - sy) < 0.02 && z > 1.7 && z < 2.2, '#8a6a4a');
     if (Math.abs(y - sy) < 0.66 && z > 2.15 && z < 2.68 && x > sx - 0.04 && x < sx + 0.04){ let col = '#f4f2ec';
-      if (x > sx){ const gx = Math.floor((sy + 0.6 - y)*14), gz = Math.floor((2.6 - z)*14), L = {N:['10001', '11001', '10101', '10011', '10001'], O:['01110', '10001', '10001', '10001', '01110']};
-        const word = 'NON', ci = Math.floor(gx/6), cx2 = gx % 6; if (gx >= 0 && ci < 3 && cx2 < 5 && gz >= 0 && gz < 5 && L[word[ci]][gz][cx2] === '1') col = '#c63a2c'; }
+      if (x > sx && z > 2.3 && z < 2.5 && Math.abs(y - sy) < 0.5) col = '#c63a2c';
       c = col; } }
   return c; };
-const volP = (n, o, note) => def('p', n, 1.5, 1.5, ({VF}) => VF(1/28, 0, 1.5, 0, o.item === 'sign' ? 2 : 1.5, 0, o.item === 'sign' ? 2.7 : 1.95, volPerson(o)), note);
+const volP = (n, o, note) => def('p', n, 1.5, 1.5, ({SD}) => SD(0, 1.5, 0, o.item === 'sign' ? 2 : 1.5, 0, o.item === 'sign' ? 2.7 : 1.95, volPerson(o), {step:0.02}), note);
 volP('Driller', {skin:'#d9a882', top:'#e07a2c', bot:'#e07a2c', shoe:'#4a3626', boots:1, hand:'#c9a24a', hair:'#3a2b20', beard:'#3a2b20', hat:'hard', hatc:'#f2c230', belt:'#2b2522', band:'#e8ece4', topBand:[1.12, 0.04], legBand:[0.3, 0.04], armBand:[1.24, 0.035], bulk:1.08, item:'wrench'}, 'Trial, volumetric: orange coveralls with reflective bands, hard hat, beard, gloves, boots, pipe wrench.');
 volP('Protester', {skin:'#f2d2b6', top:'#3f7a4a', bot:'#3a4a63', shoe:'#5a4632', hair:'#9a4a2a', longHair:1, hat:'beanie', hatc:'#c63a2c', scarf:'#e8b730', hood:1, bulk:1.12, raise:1, item:'sign'}, 'Trial, volumetric: green parka with a hood, jeans, red beanie, yellow scarf, long red hair, sign held up.');
 
