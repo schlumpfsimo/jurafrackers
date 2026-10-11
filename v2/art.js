@@ -1083,7 +1083,7 @@ frames('Cat: sit, walk', 0.7, 0.3, 0.45, [(x, y, z) => inEll([x, y, z], [0.3, 0.
   (x, y, z) => inEll([x, y, z], [0.3, 0.15, 0.2], 0.2, 0.07, 0.07) || inEll([x, y, z], [0.52, 0.15, 0.26], 0.07, 0.06, 0.06) || inCap([x, y, z], [0.12, 0.15, 0.22], [0.02, 0.15, 0.4], 0.02, 0.02) || [0.18, 0.42].some(lx => inCap([x, y, z], [lx, 0.12, 0.18], [lx, 0.12, 0], 0.02, 0.02) || inCap([x, y, z], [lx, 0.18, 0.18], [lx, 0.18, 0], 0.02, 0.02)) ? (cell(x, y, z, 0.06) > 0.5 ? '#8a8a84' : '#6a6a64') : null], null, '');
 frames('Deer at the forest edge: stand, graze, leap', 2.0, 0.6, 1.8, [deerFn({}), deerFn({graze:1}), deerFn({leap:1})], null, 'Leave when the rigs come.');
 frames('Crows: flying, flying, on the ground', 0.7, 0.6, 0.6, [crowFn(true), crowFn(false), (x, y, z) => inEll([x, y, z], [0.3, 0.3, 0.15], 0.14, 0.06, 0.08) || inEll([x, y, z], [0.45, 0.3, 0.22], 0.05, 0.045, 0.045) ? '#1c1f22' : null], null, 'A flock lifts off when a survey truck shakes the ground.');
-def('a', 'Stork on a chimney', 3, 3, ({B, SD}) => { B(0, 0, 0, 3, 3, 1.6, '#a8473a', {h:[0.4, 1.6, 1.6, 0.4]}); B(1.15, 1.15, 1.0, 0.7, 0.7, 1.2, '#8d6e5a'); SD(0.5, 2.5, 0.5, 2.5, 2.2, 3.4, (x, y, z) => { const p = [x, y, z]; if (Math.hypot(x - 1.5, y - 1.5) < 0.6 && z < 2.45) return (cell(x, y, z, 0.08) > 0.5 ? '#8a6a4a' : '#6a4a32');
+def('a', 'Stork on a chimney', 3, 3, ({B, SD}) => { B(0, 0, 0, 3, 3, 1.6, '#a8473a', {h:[0.4, 1.6, 1.6, 0.4]}); B(1.25, 1.25, 1.3, 0.5, 0.5, 0.9, '#8d6e5a'); SD(0.5, 2.5, 0.5, 2.5, 2.2, 3.4, (x, y, z) => { const p = [x, y, z]; if (Math.hypot(x - 1.5, y - 1.5) < 0.6 && z < 2.45) return (cell(x, y, z, 0.08) > 0.5 ? '#8a6a4a' : '#6a4a32');
   for (const ly of [1.45, 1.55]) if (inCap(p, [1.5, ly, 2.45], [1.5, ly, 2.75], 0.015, 0.015)) return '#c8322a'; if (inCap(p, [1.7, 1.5, 3.2], [2.0, 1.5, 3.1], 0.015, 0.012)) return '#c8322a';
   if (inEll(p, [1.65, 1.5, 3.2], 0.06, 0.05, 0.06) || inCap(p, [1.55, 1.5, 2.95], [1.65, 1.5, 3.18], 0.04, 0.03)) return '#f4f2ec'; if (inEll(p, [1.45, 1.5, 2.9], 0.22, 0.1, 0.12)) return z < 2.88 || x < 1.3 ? '#1c1f22' : '#f4f2ec'; return null; }, {step:0.015}); }, 'Storks nest on village chimneys in spring.');
 
@@ -1101,8 +1101,53 @@ def('n', 'Bare fruit tree in snow', 4, 4, ({F, SD}) => { winterGround(F, 4, 4); 
 def('n', 'Bush in snow', 2.6, 2.6, ({F, SD}) => { winterGround(F, 2.6, 2.6); SD(0, 2.6, 0, 2.6, 0, 1.5, (x, y, z) => inEll([x, y, z], [1.3, 1.3, 0.55], 1.15, 1.1, 0.8) && z > 0 ? (z > 0.75 && cell(x, y, z, 0.3) > 0.25 ? SNOW : leafy('#4a6a3a', x, y, z)) : null, {step:0.05}); }, '');
 def('n', 'Forest patch in snow', 16, 14, ({F, SD}) => { winterGround(F, 16, 14); SD(0, 16, 0, 14, 0, 11, firstOf(at(snowy(spruce), 3, 3, 0.9), at(snowy(spruce), 8, 2.5, 1.05), at(snowy(bareBeech, 0.6), 12.5, 4, 0.85), at(snowy(spruce), 4, 9, 1.1), at(snowy(spruce), 9, 8, 0.95), at(snowy(bareBeech, 0.6), 13, 10.5, 0.9), at(snowy(spruce), 6, 12.5, 0.8)), {step:0.08}); }, 'Winter on the Jura ridges.');
 
+/* ---------------------------------------------------------------- logos: drawn small, then scaled up with hard pixels */
+function pixelArt(w, h, scale, draw){ const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); draw(g, c);
+  const d = g.getImageData(0, 0, w, h), a = d.data; for (let i = 3; i < a.length; i += 4) a[i] = a[i] > 100 ? 255 : 0; g.putImageData(d, 0, 0);
+  const o = document.createElement('canvas'); o.width = w*scale; o.height = h*scale; const og = o.getContext('2d'); og.imageSmoothingEnabled = false; og.drawImage(c, 0, 0, w*scale, h*scale); return o; }
+// a pixel glow: blur the shape, then keep two hard steps of it
+function glowLayer(w, h, draw, inner, outer){ const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.shadowColor = '#000'; g.shadowBlur = 6; draw(g);
+  const d = g.getImageData(0, 0, w, h), a = d.data, ci = hex(inner), co = hex(outer); for (let i = 0; i < a.length; i += 4){ const v = a[i + 3]; const col = v > 150 ? ci : co; if (v > 25){ a[i] = col[0]; a[i + 1] = col[1]; a[i + 2] = col[2]; a[i + 3] = 255; } else a[i + 3] = 0; }
+  g.putImageData(d, 0, 0); return c; }
+const LOGO_FONT = 'bold {s}px "Silkscreen", monospace';
+const fireText = (g, txt, x, y, size, opts) => { opts = opts || {}; g.font = LOGO_FONT.replace('{s}', size); g.textAlign = opts.align || 'center'; g.textBaseline = 'alphabetic';
+  const gr = g.createLinearGradient(0, y - size, 0, y); gr.addColorStop(0, '#ffe066'); gr.addColorStop(0.5, '#ff8a1a'); gr.addColorStop(1, '#d81e12');
+  g.lineJoin = 'round'; g.strokeStyle = '#1a0e0a'; g.lineWidth = Math.max(2, size/4); g.strokeText(txt, x, y); g.fillStyle = gr; g.fillText(txt, x, y); };
+const LOGOS = {
+  // the game emblem: arched title on a dark ring, a rig over the Jura ridges on a glowing disc
+  game(scale){ const W = 170, H = 150, cx = 85, cy = 78, R = 56; return pixelArt(W, H, scale || 3, (g) => {
+    const shape = (q) => { q.beginPath(); q.arc(cx, cy, R + 9, 0, Math.PI*2); q.fill(); };
+    g.drawImage(glowLayer(W, H, (q) => { q.fillStyle = '#000'; shape(q); }, '#ff7a1a', '#c8281a'), 0, 0);
+    g.fillStyle = '#1a0e0a'; g.beginPath(); g.arc(cx, cy, R + 8, 0, Math.PI*2); g.fill();
+    const rg = g.createRadialGradient(cx, cy - 6, 4, cx, cy, R - 6); rg.addColorStop(0, '#ffd25a'); rg.addColorStop(0.45, '#ff8a1a'); rg.addColorStop(1, '#a8180e'); g.fillStyle = rg; g.beginPath(); g.arc(cx, cy, R - 6, 0, Math.PI*2); g.fill();
+    g.save(); g.beginPath(); g.arc(cx, cy, R - 6, 0, Math.PI*2); g.clip(); g.fillStyle = '#1a0e0a';
+    g.beginPath(); g.moveTo(cx - 60, cy + 30); for (let i = 0; i <= 12; i++){ const x = cx - 60 + i*10; g.lineTo(x, cy + 22 - Math.sin(i*0.9)*5 - (i % 3)*2); } g.lineTo(cx + 60, cy + 60); g.lineTo(cx - 60, cy + 60); g.fill();
+    g.strokeStyle = '#1a0e0a'; g.lineWidth = 3; const top = [cx, cy - 34], l = [cx - 13, cy + 20], r = [cx + 13, cy + 20];
+    g.beginPath(); g.moveTo(l[0], l[1]); g.lineTo(top[0], top[1]); g.lineTo(r[0], r[1]); g.stroke(); g.lineWidth = 2;
+    for (let k = 1; k < 5; k++){ const t = k/5, y = top[1] + (l[1] - top[1])*t, hw = 13*t; g.beginPath(); g.moveTo(cx - hw, y); g.lineTo(cx + hw*(k % 2 ? 1 : -1)*-1, y + (l[1] - top[1])/5); g.stroke(); g.beginPath(); g.moveTo(cx - hw, y); g.lineTo(cx + hw, y); g.stroke(); }
+    g.fillRect(cx - 5, cy - 39, 10, 5); g.fillRect(cx - 18, cy + 16, 36, 6); g.fillRect(cx - 1, cy + 22, 2, 30); g.restore();
+    // arched title on the ring
+    const txt = 'JURAFRACKERS', a0 = -Math.PI*0.86, a1 = -Math.PI*0.14; g.font = LOGO_FONT.replace('{s}', 11);
+    [...txt].forEach((ch, i) => { const a = a0 + (a1 - a0)*(i + 0.5)/txt.length; g.save(); g.translate(cx + Math.cos(a)*(R + 1), cy + Math.sin(a)*(R + 1)); g.rotate(a + Math.PI/2); fireText(g, ch, 0, 4, 11); g.restore(); });
+    g.save(); g.translate(cx, cy + R + 5); fireText(g, '2.0', 0, 0, 11); g.restore(); }); },
+  // the wordmark for the header
+  word(scale){ return pixelArt(250, 26, scale || 2, (g) => { g.drawImage(glowLayer(250, 26, (q) => { q.font = LOGO_FONT.replace('{s}', 16); q.textAlign = 'left'; q.fillStyle = '#000'; q.fillText('JURAFRACKERS 2.0', 6, 20); }, '#ff7a1a', '#c8281a'), 0, 0); fireText(g, 'JURAFRACKERS 2.0', 6, 20, 16, {align:'left'}); }); },
+  // the association, after the style of the national geothermal association: bold red name, orange line under it, a red-to-orange loop
+  association(scale){ return pixelArt(150, 46, scale || 3, (g) => { g.textAlign = 'left'; g.font = LOGO_FONT.replace('{s}', 16); g.fillStyle = '#d8262a'; g.fillText('GÉOTHERMIE', 4, 18);
+    g.font = '8px "Silkscreen", monospace'; g.fillStyle = '#ee8a3a'; g.fillText('HELVETICA', 5, 28);
+    const gr = g.createLinearGradient(4, 0, 146, 0); gr.addColorStop(0, '#d8262a'); gr.addColorStop(1, '#ee8a3a'); g.strokeStyle = gr; g.lineWidth = 3; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(6, 38); g.bezierCurveTo(20, 30, 30, 46, 44, 38); g.bezierCurveTo(58, 30, 68, 46, 82, 38); g.lineTo(144, 38); g.stroke(); }); },
+  // the company, after the style of the deep geothermal developer: a blue and red crescent, the name stacked in navy
+  company(scale, jura){ return pixelArt(150, 50, scale || 3, (g) => { const cx = 20, cy = 25;
+    g.lineCap = 'round'; g.strokeStyle = '#1f3a8f'; g.lineWidth = 7; g.beginPath(); g.arc(cx, cy, 14, Math.PI*0.35, Math.PI*1.75); g.stroke();
+    g.strokeStyle = '#e0303a'; g.lineWidth = 4; g.beginPath(); g.arc(cx + 3, cy + 2, 8, Math.PI*1.1, Math.PI*1.95); g.stroke();
+    g.textAlign = 'left'; g.fillStyle = '#1f3a8f'; g.font = LOGO_FONT.replace('{s}', 12); g.fillText('ÉNERGIE', 40, 16); g.fillText('GÉO', 40, 30);
+    if (jura){ g.fillStyle = '#e0303a'; g.fillText('JURA', 40, 44); for (let i = 0; i < 3; i++) g.fillRect(92, 35 + i*3, 54, 2); }
+    else { g.font = '8px "Silkscreen", monospace'; g.fillText('SWITZERLAND SA', 41, 43); } }); }
+};
+
 function outline(c, col){ const g = c.getContext('2d'), W = c.width, Hh = c.height, d = g.getImageData(0, 0, W, Hh), a = d.data, o = new Uint8Array(W*Hh), rgb = hex(col || '#2a2d33');
   for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++){ const i = (y*W + x)*4; if (a[i + 3]) continue; if ((x > 0 && a[i - 1]) || (x < W - 1 && a[i + 7]) || (y > 0 && a[i - W*4 + 3]) || (y < Hh - 1 && a[i + W*4 + 3])) o[y*W + x] = 1; }
   for (let j = 0; j < o.length; j++) if (o[j]){ a[j*4] = rgb[0]; a[j*4 + 1] = rgb[1]; a[j*4 + 2] = rgb[2]; a[j*4 + 3] = 255; } g.putImageData(d, 0, 0); }
-window.ART = {models:M, draw, outline, PAL};
+window.ART = {models:M, draw, outline, PAL, logos:LOGOS};
 })();
