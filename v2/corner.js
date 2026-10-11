@@ -2,7 +2,7 @@
    lone spruces and a dry stone wall, limestone showing through, field strips along the slope, hedges with oaks, a meandering
    stream with gravel banks and a bridge, and a small hamlet with gardens. The ground is worked out for every pixel.
    Three levels of detail: s < 4 far (masses only), s < 8 middle (rows, fences, shrubs), s ≥ 8 close (tufts, flowers, stones). */
-const Q = new URLSearchParams(location.search), S = +(Q.get('s') || 10), Z = +(Q.get('z') || 1), LOD = S >= 8 ? 3 : S >= 4 ? 2 : 1;
+const Q = new URLSearchParams(location.search), S = +(Q.get('s') || 10), Z = +(Q.get('z') || 1), SCR = S*Z, LOD = +(Q.get('d') || (SCR >= 20 ? 3 : SCR >= 8 ? 2 : 1));
 const W = 140, D = 100;
 const SCENE = ART.compose(W, D, (H, K) => {
   const r = K.rng(11), hsh = K.hsh, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), sm = t => t*t*(3 - 2*t), lerp = (a, b, t) => a + (b - a)*t;
