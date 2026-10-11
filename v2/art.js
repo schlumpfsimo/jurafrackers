@@ -1183,7 +1183,13 @@ function outline(c, col){ const g = c.getContext('2d'), W = c.width, Hh = c.heig
   for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++){ const i = (y*W + x)*4; if (a[i + 3]) continue; if ((x > 0 && a[i - 1]) || (x < W - 1 && a[i + 7]) || (y > 0 && a[i - W*4 + 3]) || (y < Hh - 1 && a[i + W*4 + 3])) o[y*W + x] = 1; }
   for (let j = 0; j < o.length; j++) if (o[j]){ a[j*4] = rgb[0]; a[j*4 + 1] = rgb[1]; a[j*4 + 2] = rgb[2]; a[j*4 + 3] = 255; } g.putImageData(d, 0, 0); }
 /* House and farm variants for scenes: walls, roofs, gable direction, shutters, balconies, garages, woodpiles */
-const VARS = {house:[], farm:[]};
+const VARS = {house:[], farm:[], car:[]};
+// villagers' cars: small hatchbacks and estates in everyday colours (front at +x)
+[['#b8322a', 0], ['#2c5f93', 1], ['#e6e4de', 0], ['#3a3f45', 1], ['#7a8f6e', 0], ['#c9ced3', 1], ['#e8b730', 0], ['#5a3a3a', 1]].forEach(([paint, estate], i) => { const n = 'Car ' + (i + 1), Lc = estate ? 4.5 : 3.9, rear = estate ? 0.45 : 0.75; VARS.car.push(n);
+  veh(n, Lc, 1.8, 1.55, c => [
+    ...tyres([0.8, Lc - 0.85], 1.8, 0.33, 0.28),
+    [both(rbx(0.35, Lc - 1.0, 0.3, 1.5, 0.8, 1.45, 0.18), p => p[2] < 1.45 - Math.max(0, p[0] - (Lc - 1.45))*1.1 && p[2] < 1.45 - Math.max(0, rear - p[0])*1.6), glassBand(paint, 0.95, 1.36, 0.5, Lc - 1.1, 1.0, Lc - 1.3, estate ? 0.6 : 0.9)],
+    [rbx(0.05, Lc - 0.05, 0.12, 1.68, 0.25, 0.88, 0.22), p => p[0] > Lc - 0.17 && p[2] > 0.6 && Math.abs(p[1] - 0.9) > 0.45 ? LAMP : p[0] < 0.17 && p[2] > 0.6 && Math.abs(p[1] - 0.9) > 0.45 ? TAIL : p[2] < 0.36 && (p[0] < 0.15 || p[0] > Lc - 0.15) ? '#3a3f45' : paint]], ''); });
 for (let i = 0; i < 12; i++){ const r = rng(400 + i*17), Wm = 7 + Math.round(r()*3), Dm = 6 + Math.round(r()*2.5), two = r() < 0.5, ax = r() < 0.5 ? 'x' : 'y', wh = two ? 5.6 : 3.1;
   const wall = pick(r, ['#efe9dc', '#f2ead2', '#e9e2cf', '#f4f0e6', '#e6dcc6', '#dfe3e4', '#efe2c8']), roof = pick(r, ['#a8473a', '#8e3f32', '#9a5a3a', '#b8553e', '#6e4b38', '#7d4d3c', '#59606a']), shut = pick(r, ['#3f6b45', '#7a3a2a', '#3a5f8a', '#5a4632', null]);
   const garage = r() < 0.35, balcony = two && r() < 0.45, PW = Wm + (garage ? 4.5 : 0) + 3, PD = Dm + 3, name = 'House variant ' + (i + 1); VARS.house.push(name);

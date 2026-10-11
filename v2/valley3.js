@@ -3,7 +3,7 @@
    land in between. Built like the test corner: the ground is worked out for every pixel, the trees are the locked ones.
    ?s= resolution (px per metre), ?z= pixel enlargement, ?d= detail (default from the screen scale s·z: <8 far, <20 middle,
    ≥20 close), ?win=x0,y0,x1,y1 draws one part, ?works=1 adds a test drill site, a site in the forest and their new roads. */
-const Q = new URLSearchParams(location.search), S = +(Q.get('s') || 2.5), Z = +(Q.get('z') || 1), SCR = S*Z, LOD = +(Q.get('d') || (SCR >= 20 ? 3 : SCR >= 8 ? 2 : 1)), WORKS = Q.get('works') === '1';
+const Q = new URLSearchParams(location.search), S = Math.min(7, +(Q.get('s') || 2.5)), Z = +(Q.get('z') || 1), SCR = S*Z, LOD = +(Q.get('d') || (SCR >= 20 ? 3 : SCR >= 8 ? 2 : 1)), WORKS = Q.get('works') === '1';
 const W = 640, D = 480;
 const SCENE = ART.compose(W, D, (H, K) => {
   const r = K.rng(23), hsh = K.hsh, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), sm = t => t*t*(3 - 2*t), lerp = (a, b, t) => a + (b - a)*t;
@@ -13,10 +13,10 @@ const SCENE = ART.compose(W, D, (H, K) => {
   // ---- paths: smooth curves, with a bounding box; nearest point on them
   const curve = (pts, w) => { const out = []; for (let i = 0; i < pts.length - 1; i++){ const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)], n = Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1])/2);
       for (let k = 0; k < n; k++){ const t = k/n, t2 = t*t, t3 = t2*t, f = (a, b, c, d) => 0.5*(2*b + (-a + c)*t + (2*a - 5*b + 4*c - d)*t2 + (-a + 3*b - 3*c + d)*t3); out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]); } }
-    out.push(pts[pts.length - 1]); const xs = out.map(p => p[0]), ys = out.map(p => p[1]); out.box = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; out.w = w || 2.7; return out; };
-  const nearP = (pl, x, y, lim) => { const [a, b, c, d] = pl.box; if (x < a - lim || x > c + lim || y < b - lim || y > d + lim) return null; let best = 1e9, bx = 0, by = 0;
-    for (let i = 0; i < pl.length - 1; i++){ const [ax, ay] = pl[i], [qx, qy] = pl[i + 1], vx = qx - ax, vy = qy - ay, t = clamp(((x - ax)*vx + (y - ay)*vy)/(vx*vx + vy*vy || 1), 0, 1), px = ax + vx*t, py = ay + vy*t, d2 = Math.hypot(x - px, y - py); if (d2 < best){ best = d2; bx = px; by = py; } }
-    return [best, bx, by]; };
+    out.push(pts[pts.length - 1]); out.cum = [0]; for (let i = 1; i < out.length; i++) out.cum.push(out.cum[i - 1] + Math.hypot(out[i][0] - out[i - 1][0], out[i][1] - out[i - 1][1])); const xs = out.map(p => p[0]), ys = out.map(p => p[1]); out.box = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; out.w = w || 2.7; return out; };
+  const nearP = (pl, x, y, lim) => { const [a, b, c, d] = pl.box; if (x < a - lim || x > c + lim || y < b - lim || y > d + lim) return null; let best = 1e9, bx = 0, by = 0, bs = 0, bside = 1;
+    for (let i = 0; i < pl.length - 1; i++){ const [ax, ay] = pl[i], [qx, qy] = pl[i + 1], vx = qx - ax, vy = qy - ay, t = clamp(((x - ax)*vx + (y - ay)*vy)/(vx*vx + vy*vy || 1), 0, 1), px = ax + vx*t, py = ay + vy*t, d2 = Math.hypot(x - px, y - py); if (d2 < best){ best = d2; bx = px; by = py; bs = pl.cum[i] + t*Math.hypot(vx, vy); bside = vx*(y - ay) - vy*(x - ax) > 0 ? 1 : -1; } }
+    return [best, bx, by, bs, bside]; };
   const near = (pl, x, y, lim) => { const q = nearP(pl, x, y, lim); return q ? q[0] : 1e9; };
   // roads (half widths): the valley road, town streets, village lanes; farm tracks
   const MAIN = curve([[-2, 250], [80, 246], [160, 253], [240, 241], [300, 237], [360, 239], [440, 232], [520, 226], [642, 231]], 2.8);
@@ -43,6 +43,7 @@ const SCENE = ART.compose(W, D, (H, K) => {
   // settlements
   const TOWN = [300, 222, 72, 52], VILLAGES = [[134, 130, 34], [524, 112, 30], [578, 352, 34]];
   const inSettle = (x, y, m) => Math.hypot((x - TOWN[0])/(TOWN[2] + m), (y - TOWN[1])/(TOWN[3] + m)) < 1 || VILLAGES.some(([cx, cy, rr]) => Math.hypot(x - cx, y - cy) < rr + m);
+  const inTown = (x, y) => Math.hypot((x - TOWN[0])/(TOWN[2] - 6), (y - TOWN[1])/(TOWN[3] - 6)) < 1;
   const inSite = (x, y, m) => SITES.some(([a, b, c, e]) => x > a - m && x < c + m && y > b - m && y < e + m);
   const rock = (x, y) => (y < 175 || (x > 500 && y < 240)) && !inSettle(x, y, 10) && !inSite(x, y, 4) ? clamp((fbm(x/8, y/8, 9) - 0.6)*5, 0, 1)*clamp((slope(x, y) - 0.3)*4, 0, 1) : 0;
   // levelled ground: building plots, sites; roads are cut into the slope (flat across, smooth along)
@@ -99,7 +100,8 @@ const SCENE = ART.compose(W, D, (H, K) => {
   const kindAt = (x, y) => {
     if (inSite(x, y, 0)) return ['site', Math.min(x - SITES.find(s => inBox(x, y, s, 0))[0], 99)]; if (inSite(x, y, 1.4)) return ['earth', 0];
     for (const pl of NEWROADS){ const d = near(pl, x, y, 6); if (d < pl.w) return ['newroad', d]; if (d < pl.w + 1.3) return ['earth', 0]; if (d < pl.w + 4.5 && forestRaw(x, y)) return ['stumps', d]; }
-    for (const pl of ROADS){ const d = near(pl, x, y, 4); if (d < pl.w) return ['road', d, pl.w]; }
+    for (const pl of ROADS){ const q = nearP(pl, x, y, pl.w + 2); if (!q) continue; const town = inTown(x, y); if (q[0] < pl.w) return ['road', q[0], pl.w, q[3], q[4], pl, town, Math.hypot(q[1] - SQUARE[0], q[2] - SQUARE[1])];
+      if (town && q[0] < pl.w + 1.7) return ['pavement', q[0] - pl.w, 0, q[3]]; }
     if (Math.hypot(x - SQUARE[0], y - SQUARE[1]) < 16 && !PROBE(x, y, 0)) return ['square', 0];
     const v = streamV(x, y), w = hw(x); if (Math.abs(v) < w) return ['water', Math.abs(v)/w]; if (Math.abs(v) < w + 1.4 && v*ys2(x) > 0 && Math.abs(v) < w + 1.4*(0.4 + 0.6*vn(x/5, 0, 52))) return ['gravel', 0]; if (Math.abs(v) < w + 2.6) return ['bank', Math.abs(v) - w];
     const ds = near(SIDE, x, y, 3); if (ds < 1.3) return ['water', ds/1.3]; if (ds < 2.6) return ['bank', ds - 1.3];
@@ -116,16 +118,24 @@ const SCENE = ART.compose(W, D, (H, K) => {
   // ---- the colour of each kind of ground; more texture the closer we are
   const hex = c => c.match(/\w\w/g).map(v => parseInt(v, 16)), C = {};
   const col = c => C[c] || (C[c] = hex(c)), mul = (c, f) => [c[0]*f, c[1]*f, c[2]*f], mixC = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
-  const speck = (x, y, q, s) => hsh(Math.floor(x/q), Math.floor(y/q), s);
+  const speck = (x, y, q, s) => { q = Math.max(q, 1/S); return hsh(Math.floor(x/q), Math.floor(y/q), s); }, per = q => Math.max(q, 3/S);
   const surface = (x, y, k) => { const [kind, a, b] = k, n1 = fbm(x/14, y/14, 61), n2 = fbm(x/3, y/3, 62);
     switch (kind){
-      case 'road': { let c = mul(col('#6d7176'), 0.94 + 0.1*n2); if (LOD >= 2 && fbm(x/4, y/4, 63) > 0.72) c = mul(c, 0.9); if (a > b - 0.4) c = mixC(c, col('#a59b86'), clamp((a - b + 0.4)/0.4, 0, 1)*(0.5 + 0.5*speck(x, y, 0.2, 64)));
-        if (LOD >= 3 && speck(x, y, 0.1, 65) > 0.93) c = mul(c, 0.88); if (LOD >= 3 && Math.abs(fbm(x/2.5, y/2.5, 66) - 0.5) < 0.006 && fbm(x/12, y/12, 107) > 0.55) c = mul(c, 0.86); return c; }
+      case 'road': { const [, d, w, sl, side, pl, town, dsq] = k; let c = mul(col('#6d7176'), 0.94 + 0.1*n2); if (LOD >= 2 && fbm(x/4, y/4, 63) > 0.72) c = mul(c, 0.92);
+        if (LOD >= 2 && Math.abs(d - w*0.5) < 0.45) c = mul(c, 0.95);                                                                     // where the wheels run
+        if (!town && d > w - 0.4) c = mixC(c, col('#a59b86'), clamp((d - w + 0.4)/0.4, 0, 1)*(0.5 + 0.5*speck(x, y, 0.2, 64)));          // crumbly edge in the country
+        if (!town && pl === MAIN && LOD >= 2){ if (d > w - 0.5 && d < w - 0.32) c = col('#e4e2da'); if (d < 0.09 && ((sl % 9) + 9) % 9 < 3) c = col('#e4e2da'); }   // edge lines, dashed centre line
+        if (town){ if (d > w - 0.22) c = mul(c, 0.86); if (LOD >= 2 && ((sl % 16) + 16) % 16 < 0.55 && d > w - 0.45) c = mul(col('#3a3d40'), 1 + 0.3*(((sl*8) % 1 + 1) % 1 < 0.5));
+          if (LOD >= 2){ const mh = Math.hypot(((sl % 27) + 27) % 27 - 13, side*d - 0.9); if (mh < 0.36) c = mh > 0.27 ? col('#45484b') : mul(col('#5a5d60'), 1 + 0.12*(((x + y)*6 % 1 + 1) % 1 < 0.5)); }
+          if (dsq > 16.5 && dsq < 19.5 && (((side*d + w)/0.5) % 2 + 2) % 2 < 1) c = col('#e8e6de'); }                                      // the zebra crossing by the square
+        if (LOD >= 3 && speck(x, y, 0.1, 65) > 0.93) c = mul(c, 0.9); if (LOD >= 3 && Math.abs(fbm(x/2.5, y/2.5, 66) - 0.5) < 0.006 && fbm(x/12, y/12, 107) > 0.55) c = mul(c, 0.88); return c; }
+      case 'pavement': { const [, d, , sl] = k; let c = mul(col('#b9b5ab'), 0.95 + 0.06*n2); if (d < 0.18) c = col('#cfcbc1');
+        else if (LOD >= 2){ const q = per(0.6); if (((sl/q) % 1 + 1) % 1 < 0.12 || (((d - 0.18)/q) % 1 + 1) % 1 < 0.12) c = mul(c, 0.88); else if (LOD >= 3) c = mul(c, 0.96 + 0.08*hsh(Math.floor(sl/q), Math.floor(d/q), 108)); } return c; }
       case 'newroad': { let c = mul(col('#5e6266'), 0.97 + 0.05*n2); if (a > 2.2) c = mixC(c, col('#9a9282'), 0.6); if (LOD >= 3 && speck(x, y, 0.1, 100) > 0.95) c = mul(c, 1.1); return c; }
       case 'site': { let c = mul(col('#b3ab9c'), 0.93 + 0.1*n2); if (LOD >= 2 && Math.abs(Math.sin((x + 4*Math.sin(y/6))*0.7)) > 0.95) c = mul(c, 0.88); if (LOD >= 3 && speck(x, y, 0.1, 101) > 0.85) c = mul(c, speck(x, y, 0.1, 102) > 0.5 ? 1.1 : 0.88); return c; }
       case 'earth': return mul(col('#8a6a48'), 0.9 + 0.15*n2*(LOD >= 3 ? speck(x, y, 0.15, 103) + 0.5 : 1));
       case 'stumps': { let c = mixC(col('#7a8a4e'), col('#8a7a52'), n2); if (LOD >= 2 && speck(x, y, 0.6, 104) > 0.9 && Math.hypot(((x/0.6) % 1 + 1) % 1 - 0.5, ((y/0.6) % 1 + 1) % 1 - 0.5) < 0.32) c = col(LOD >= 3 ? '#c9a878' : '#a08868'); return c; }
-      case 'square': { let c = mul(col('#b9b1a2'), 0.94 + 0.08*n1); if (LOD >= 2){ const u = x*2.6, v = y*2.6 + (Math.floor(x*2.6) % 2)*0.5; if ((u % 1 + 1) % 1 < (LOD >= 3 ? 0.12 : 0.2) || (v % 1 + 1) % 1 < (LOD >= 3 ? 0.12 : 0.2)) c = mul(c, 0.86); else if (LOD >= 3) c = mul(c, 0.94 + 0.12*hsh(Math.floor(u), Math.floor(v), 105)); } return c; }
+      case 'square': { let c = mul(col('#b9b1a2'), 0.94 + 0.08*n1); if (LOD >= 2){ const cq = 1/per(0.38), u = x*cq, v = y*cq + (Math.floor(x*cq) % 2)*0.5; if ((u % 1 + 1) % 1 < (LOD >= 3 ? 0.12 : 0.2) || (v % 1 + 1) % 1 < (LOD >= 3 ? 0.12 : 0.2)) c = mul(c, 0.86); else if (LOD >= 3) c = mul(c, 0.94 + 0.12*hsh(Math.floor(u), Math.floor(v), 105)); } return c; }
       case 'track': { const rut = Math.abs(a - 0.72) < 0.28; let c = rut ? mul(col('#9a8361'), 0.92 + 0.12*n2) : a < 0.42 ? mixC(col('#8fae62'), col('#a89470'), 0.3*n2) : mixC(col('#a89470'), col('#8fae62'), clamp((a - 1.0)/0.45, 0, 1));
         if (LOD >= 3 && rut && fbm(x/3, y/3, 67) > 0.74) c = mixC(c, col('#7f8f99'), 0.7); if (LOD >= 3 && !rut && speck(x, y, 0.1, 68) > 0.85) c = mul(c, 1.08); return c; }
       case 'water': { let c = mixC(col('#6b9ab8'), col('#4a7896'), sm(1 - a)); if (LOD >= 2 && Math.abs(Math.sin(x*1.3 + y*0.4 + fbm(x/4, y/2, 69)*6)) > 0.97 && fbm(x/2, y/2, 70) > 0.5) c = mixC(c, col('#cfe2ec'), 0.6); return c; }
@@ -136,13 +146,13 @@ const SCENE = ART.compose(W, D, (H, K) => {
       case 'floor': { let c = mixC(col('#4c6a3a'), col('#5e5a3c'), fbm(x/5, y/5, 98)); if (LOD >= 3 && speck(x, y, 0.1, 99) > 0.85) c = mul(c, 1.15); return mul(c, 0.85); }
       case 'pad': return mul(col('#b5a98c'), 0.93 + 0.1*n2);
       case 'yard': { let c = mul(col('#b5a98c'), 0.93 + 0.1*n2); if (LOD >= 2 && Math.abs(Math.sin((x + 3*Math.sin(y/4))*0.9)) > 0.94) c = mul(c, 0.86); if (LOD >= 3 && speck(x, y, 0.1, 78) > 0.9) c = mul(c, 1.1); return c; }
-      case 'garden': { const p = b, bed = y > p[3] + 0.8 && y < p[3] + 3.8 && x > p[0] && x < p[0] + 5; if (bed){ let c = col('#8a6a4a'); if (LOD >= 2 && ((y*2) % 1 + 1) % 1 < 0.45) c = mixC(c, col('#5f8a3c'), LOD >= 3 ? 0.6 + 0.4*speck(x, y, 0.15, 79) : 0.5); return c; }
+      case 'garden': { const p = b, bed = y > p[3] + 0.8 && y < p[3] + 3.8 && x > p[0] && x < p[0] + 5; if (bed){ let c = col('#8a6a4a'); if (LOD >= 2 && ((y/per(0.5)) % 1 + 1) % 1 < 0.45) c = mixC(c, col('#5f8a3c'), LOD >= 3 ? 0.6 + 0.4*speck(x, y, 0.15, 79) : 0.5); return c; }
         let c = mixC(col('#8fba68'), col('#9cc472'), n1); if (LOD >= 3 && speck(x, y, 0.1, 80) > 0.97) c = [[240, 240, 235], [232, 200, 70], [200, 90, 110]][Math.floor(speck(x, y, 0.1, 81)*3)]; return c; }
       case 'pasture': { let c = mixC(col('#7aa652'), col('#8db55e'), n1); c = mul(c, 0.94 + 0.1*n2);
         const ph = base0(x, y)*1.4 + fbm(x/10, y/10, 82)*2; if (LOD >= 3 && fbm(x/30, y/30, 106) > 0.6 && Math.abs((ph % 1 + 1) % 1 - 0.5) < 0.03) c = mixC(c, col('#a8996e'), 0.55);
         if (LOD >= 3){ const t = speck(x, y, 0.1, 83); if (t > 0.86) c = mul(c, 0.84); else if (t < 0.05) c = mul(c, 1.12); if (speck(x, y, 0.3, 84) > 0.996 && Math.hypot(((x/0.3) % 1 + 1) % 1 - 0.5, ((y/0.3) % 1 + 1) % 1 - 0.5) < 0.38) c = col('#7a5a3e'); if (speck(x, y, 0.1, 85) > 0.992) c = [236, 236, 230]; } return c; }
       case 'margin': { let c = mixC(col('#8ab260'), col('#a3bf72'), n2); if (LOD >= 3 && speck(x, y, 0.1, 86) > 0.93) c = speck(x, y, 0.1, 87) > 0.5 ? [228, 220, 120] : [214, 214, 220]; return c; }
-      default: { const p = b, v = p.v, wv = fbm(x/9, y/9, 88), row = (q, w) => ((v/q) % 1 + 1) % 1 < w; let c;
+      default: { const p = b, v = p.v, wv = fbm(x/9, y/9, 88), row = (q, w) => ((v/per(q)) % 1 + 1) % 1 < w; let c;
         if (kind === 'wheat' || kind === 'barley'){ c = mixC(col(kind === 'wheat' ? '#dcbf68' : '#d4c886'), col(kind === 'wheat' ? '#e8d48e' : '#e0d6a0'), wv); c = mul(c, 0.95 + 0.08*n2);
           if (LOD >= 2 && Math.abs(((v % 12) + 12) % 12 - 6) < (LOD >= 3 ? 0.25 : 0.4)) c = mul(c, 0.88); if (LOD >= 3 && row(0.3, 0.3)) c = mul(c, 0.94); if (LOD >= 3 && speck(x, y, 0.1, 89) > 0.995) c = [200, 60, 50]; }
         else if (kind === 'meadow'){ c = mixC(col('#86b45c'), col('#9cc26a'), wv); c = mul(c, 0.94 + 0.1*n2); if (LOD >= 3){ const t = speck(x, y, 0.1, 90); if (t > 0.9) c = mul(c, 0.86); if (t > 0.985) c = [[240, 240, 232], [236, 206, 70], [176, 120, 190]][Math.floor(speck(x, y, 0.1, 91)*3)]; } }
@@ -188,7 +198,20 @@ const SCENE = ART.compose(W, D, (H, K) => {
   for (let i = 0; i < 40; i++){ const x = r()*W, y = r()*D; if (!pastureM(x, y) || inSettle(x, y, 10) || !free(x, y, 3)) continue; const z = hb(x + 1.4, y + 0.5);
     if (i % 3) { H.SD(x, x + 2.8, y, y + 1, 0, 1.5, (px, py, pz) => K.cowM(i % 2 ? {graze:1} : {})(px - x, py - y, pz), {step:0.06, lift:z}); casters.push([x + 0.3, y + 0.2, x + 2.5, y + 0.8, 1.3]); }
     else H.SD(x, x + 1.4, y, y + 0.6, 0, 0.9, (px, py, pz) => K.sheepFn({graze:1})(px - x, py - y, pz), {step:0.05, lift:z}); }
-  for (let i = 0; i < 26; i++){ const pl = ROADS[Math.floor(r()*ROADS.length)], [px, py] = pl[Math.floor(r()*pl.length)], x = px + (r() - 0.5)*2*(pl.w + 1.2), y = py + (r() - 0.5)*2; if (PROBE(x, y, 0.5) || x < 2 || y < 2 || x > W - 3 || y > D - 3) continue; K.figure(H, K.VILL[i % 20], x, y, i % 2 ? K.POSE.walkA : null, hb(x + 0.75, y + 0.75)); }
+  // ---- streets: lamps, parked and passing cars, people on the pavements, groups chatting, life on the square
+  const atRoad = (pl, sl, off) => { let i = 1; while (i < pl.cum.length - 1 && pl.cum[i] < sl) i++; const [ax, ay] = pl[i - 1], [bx2, by2] = pl[i], L = Math.hypot(bx2 - ax, by2 - ay) || 1, t = clamp((sl - pl.cum[i - 1])/L, 0, 1), ux = (bx2 - ax)/L, uy = (by2 - ay)/L;
+    return [ax + (bx2 - ax)*t - uy*off, ay + (by2 - ay)*t + ux*off, ux, uy]; };
+  const okSpot = (x, y, m) => !PROBE(x, y, m) && x > 2 && y > 2 && x < W - 3 && y < D - 3;
+  for (const pl of ROADS){ const len = pl.cum[pl.cum.length - 1];
+    for (let sl = 6, k = 0; sl < len; sl += 24, k++){ const [x, y] = atRoad(pl, sl, (k % 2 ? 1 : -1)*(pl.w + 1.4)); if (!inTown(x, y) || !okSpot(x, y, 0.4)) continue; const z = hb(x, y); H.B(x - 0.06, y - 0.06, z, 0.12, 0.12, 4.2, '#3a3f45'); H.B(x - 0.25, y - 0.12, z + 4.1, 0.5, 0.24, 0.14, '#4a4f55', {top:'#5a5f65'}); H.B(x - 0.2, y - 0.08, z + 4.02, 0.4, 0.16, 0.08, '#fff4c8'); }
+    for (let sl = 4; sl < len; sl += 7){ const [x, y, ux] = atRoad(pl, sl, (pl.w - 1.05)*(r() < 0.5 ? 1 : -1)); if (Math.abs(ux) < 0.9 || r() > (inTown(x, y) ? 0.3 : 0.015) || ROADS.some(o => o !== pl && near(o, x, y, o.w + 6) < o.w + 6)) continue; const nm = K.VARS.car[Math.floor(r()*K.VARS.car.length)], m = K.M.find(q => q.n === nm); if (okSpot(x, y, 1)) K.place(H, nm, x - m.W/2, y - m.D/2, hb(x, y)); }
+    for (let sl = 3; sl < len; sl += 2.2){ const side = r() < 0.5 ? 1 : -1, [x, y, ux] = atRoad(pl, sl, side*(pl.w + 0.4 + r()*1.0)); if (!inTown(x, y) || r() > 0.32 || !okSpot(x, y, 0.3)) continue; const z = hb(x + 0.75, y + 0.75), fwd = (ux > 0) === (side > 0), o = K.VILL[Math.floor(r()*20)];
+      if (r() < 0.22){ K.figure(H, o, x - 0.75, y - 0.75, null, z); K.turned(H, K.VILL[Math.floor(r()*20)], x + 0.35, y - 0.75, null, z); }      // two people stopped for a chat
+      else (fwd ? K.figure : K.turned)(H, r() < 0.15 ? Object.assign({}, o, {small:1, item:null}) : o, x - 0.75, y - 0.75, r() < 0.5 ? K.POSE.walkA : K.POSE.walkB, z); } }
+  for (const [name, dx, dy] of [['Café terrace', -2, -14], ['Market stall with cheese seller', -14, 4], ['Market stall with cheese seller', -9, 8], ['Pensioners on a bench', 8, 6], ['Kids playing', 2, 7], ['Dog walker', 24, -2], ['Woman with a pram', -24, 6], ['Cyclist', -30, 15]]){ const x = SQUARE[0] + dx, y = SQUARE[1] + dy, m = K.M.find(q => q.n === name);
+    search: for (let rad = 0; rad < 14; rad += 1) for (let a = 0; a < 8; a++){ const px = x + Math.cos(a*0.785)*rad, py = y + Math.sin(a*0.785)*rad;
+      if ([[0, 0], [m.W, 0], [0, m.D], [m.W, m.D], [m.W/2, m.D/2]].every(([u, v]) => !roadNear(px + u, py + v, 0.3) && okSpot(px + u, py + v, 0.5))){ K.place(H, name, px, py, hb(px + m.W/2, py + m.D/2), null, true); break search; } } }
+  for (const pl of [MAIN, ROADS[4]]) for (let sl = 30; sl < pl.cum[pl.cum.length - 1]; sl += 90){ const [x, y, ux] = atRoad(pl, sl, -pl.w*0.5); if (inTown(x, y) || Math.abs(ux) < 0.85 || !okSpot(x, y, 1)) continue; const nm = K.VARS.car[Math.floor(r()*K.VARS.car.length)], m = K.M.find(q => q.n === nm); K.place(H, nm, x - m.W/2, y - m.D/2, hb(x, y)); }
   K.place(H, 'Post bus', 352, 236.6, hb(356, 238)); K.place(H, 'Tractor with manure spreader', 104, 247, hb(108, 248));
   // ---- light: sun direction, soft shade on slopes, darker hollows and feet of things, shadows, warm sun and cool shade, haze
   const L = [0.345, 0.636, 1], Ln = Math.hypot(...L), sx = 0.345/0.723, sy = 0.636/0.723, rise = 1/0.723;
