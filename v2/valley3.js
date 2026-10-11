@@ -35,7 +35,7 @@ const SCENE = ART.compose(W, D, (H, K) => {
   const MAIN = curve(Array.from({length:9}, (_, i) => { const x = i === 0 ? -2 : i === 8 ? 642 : i*80 + rr(-10, 10); return [x, axis(x) - 8 + 6*Math.sin(x/70 + PH[5]) + rr(-3, 3)]; }), 2.8);
   const RAIL = curve(Array.from({length:7}, (_, i) => { const x = i === 0 ? -2 : i === 6 ? 642 : i*107; return [x, axis(x) - 46 + 5*Math.sin(x/110 + PH[6])]; }), 1.6);
   // ---- where the settlements are: one town on the valley road, a village on the slope, one in the side valley, one across the stream
-  const far = (p, list, d) => list.every(q => Math.hypot(p[0] - q[0], p[1] - q[1]) > d);
+  const far = (p, list, d) => list.every(q => !q || Math.hypot(p[0] - q[0], p[1] - q[1]) > d);
   let TX = 320; for (let i = 0; i < 200; i++){ TX = rr(200, 440); if (Math.abs(TX - SVX) > 120) break; }
   const TYR = yOn(MAIN, TX), TOWN = [TX, TYR - 12, 72, 52];
   let VA = null, VB = null, VC = null;
