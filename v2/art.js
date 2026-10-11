@@ -49,6 +49,11 @@ function build(fn){
 }
 
 /* ---------------------------------------------------------------- renderer */
+// writing on a wall: drawn with the picture, or (TEXTS.on) kept so a zoomed view can write it in screen pixels
+const TEXTS = {on:false, list:[]};
+function wallText(g, [mx, my], len, fs, skew, txt, tc){ g.save(); g.fillStyle = tc; g.font = fs + 'px "Silkscreen", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; const tw = g.measureText(txt).width, fit = Math.min(1, (len*0.9)/tw);
+  g.translate(mx, my); g.transform(1, skew, 0, 1, 0, 0); g.scale(fit, 1); g.fillText(txt, 0, 0.5); g.restore(); }
+function faceText(g, post, m1, len, fs, skew, txt, tc){ if (TEXTS.on) TEXTS.list.push([m1, len, fs, skew, txt, tc]); else post.push(() => wallText(g, m1, len, fs, skew, txt, tc)); }
 function draw(g, model, rot, S, ox, oy, post){
   post = post || [];
   const W = model.W, D = model.D, rp = (x, y) => rot === 0 ? [x, y] : rot === 1 ? [D - y, x] : rot === 2 ? [W - x, D - y] : [y, W - x];
@@ -96,8 +101,7 @@ function draw(g, model, rot, S, ox, oy, post){
             if (ww > 0.9 && col === PAL.glass || col === '#9fc3d6' || col === '#7fa6c4' || col === '#8fb0c4'){ g.beginPath(); const m1 = M2(0.5, 0), m2 = M2(0.5, 1), m3 = M2(0, 0.55), m4 = M2(1, 0.55); g.moveTo(m1[0], m1[1]); g.lineTo(m2[0], m2[1]); g.moveTo(m3[0], m3[1]); g.lineTo(m4[0], m4[1]); g.stroke(); }
             if (wz > 0.4){ g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = Math.max(1, S*0.16); g.beginPath(); const s1 = M2(-0.06, -0.04), s2 = M2(1.06, -0.04); g.moveTo(s1[0], s1[1]); g.lineTo(s2[0], s2[1]); g.stroke(); } }
           if (txt){ const m1 = P((A[0] + Bq[0])/2, (A[1] + Bq[1])/2, base + wh/2), len = Math.hypot(Bq[0] - A[0], Bq[1] - A[1])*S*1.12, fs = Math.max(6, Math.round(S*wh*0.8)), skew = fr === 'S' ? 0.5 : -0.5;
-            post.push(() => { g.save(); g.fillStyle = tc || '#fff'; g.font = fs + 'px "Silkscreen", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; const tw = g.measureText(txt).width, fit = Math.min(1, (len*0.9)/tw);
-              g.translate(m1[0], m1[1]); g.transform(1, skew, 0, 1, 0, 0); g.scale(fit, 1); g.fillText(txt, 0, 0.5); g.restore(); }); } }
+            faceText(g, post, m1, len, fs, skew, txt, tc || '#fff'); } }
       }});
     } else if (p.t === 'cyl'){
       const q = rp(p.x, p.y); items.push({k:key(p) + (p.k || 0), i, f(){
@@ -134,8 +138,7 @@ function draw(g, model, rot, S, ox, oy, post){
       for (const [f, a0, a1, z, hh, txt, tc, pl] of p.labels || []){ const fr = rf(f); if (fr !== 'E' && fr !== 'S') continue;
         const A = rp(...(f === 'S' ? [a0, pl] : f === 'N' ? [a1, pl] : f === 'E' ? [pl, a0] : [pl, a1])), Bq = rp(...(f === 'S' ? [a1, pl] : f === 'N' ? [a0, pl] : f === 'E' ? [pl, a1] : [pl, a0]));
         const m1 = P((A[0] + Bq[0])/2, (A[1] + Bq[1])/2, z + hh/2), len = Math.hypot(Bq[0] - A[0], Bq[1] - A[1])*S*1.12, fs = Math.max(6, Math.round(S*hh*0.8)), skew = fr === 'S' ? 0.5 : -0.5;
-        post.push(() => { g.save(); g.fillStyle = tc; g.font = fs + 'px "Silkscreen", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; const tw = g.measureText(txt).width, fit = Math.min(1, (len*0.9)/tw);
-          g.translate(m1[0], m1[1]); g.transform(1, skew, 0, 1, 0, 0); g.scale(fit, 1); g.fillText(txt, 0, 0.5); g.restore(); }); }
+        faceText(g, post, m1, len, fs, skew, txt, tc); }
     } else if (p.t === 'hf'){
       items.push({k:-1e6 + (p.k2 || 0), i, f(){ heightfield(g, p, rot, S, ox, oy, W, D); }});
     } else if (p.t === 'fig'){
@@ -236,7 +239,7 @@ function heightfield(g, p, rot, S, ox, oy, W, D){
       if (z <= hz){
         if (first && hz - z > step*0.75){ const f = 0.82 + 0.1*((Math.floor(z*1.2) % 2 + 2) % 2); col = earth.map(v => Math.round(v*f)); break; }   // the ray came in through the map's side
         let lo = z, hi = prev === null ? z + step : prev; for (let k = 0; k < 6; k++){ const m = (lo + hi)/2, [mx, my] = inv(a/2 + b + m, b + m - a/2); if (m <= hAt(mx, my)) lo = m; else hi = m; }
-        const [fx, fy] = inv(a/2 + b + lo, b + lo - a/2), ci = Math.min(cnx - 1, Math.max(0, Math.floor(fx/cc))), cj = Math.min(cny - 1, Math.max(0, Math.floor(fy/cc))); col = colours[cj*cnx + ci]; break; }
+        const [fx, fy] = inv(a/2 + b + lo, b + lo - a/2); if (p.colourAt){ col = p.colourAt(fx, fy); break; } const ci = Math.min(cnx - 1, Math.max(0, Math.floor(fx/cc))), cj = Math.min(cny - 1, Math.max(0, Math.floor(fy/cc))); col = colours[cj*cnx + ci]; break; }
       prev = z; first = false; }
     if (!col) continue; const o = (jy*w + ix)*4; d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = 255; }
   const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h; tmp.getContext('2d').putImageData(img, 0, 0); g.drawImage(tmp, sx0, sy0);
@@ -1205,5 +1208,5 @@ for (let i = 0; i < 4; i++){ const r = rng(900 + i*31), ax = i % 2 ? 'y' : 'x', 
 // composing scenes from the locked assets: a kit of the building blocks used above
 const KIT = {M, VARS, place:placeModel, figure:figure3, turned, PROT, VILL, BLOC, GOON, RIOT, POSE, cowM, sheepFn, chickFn, horseFn, dogAt, bikeAt, bench, barricade, beech, spruce, fruitTree, bareBeech, snowy, sway, at, firstOf, flame, grass, f35At, rng, pick, hsh, cell, leafy};
 const compose = (W, D, fn) => ({cat:'s', n:'scene', W, D, parts:build(H => fn(H, KIT))});
-window.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose, plates:PLATES, plateText};
+window.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose, plates:PLATES, plateText, texts:TEXTS, wallText};
 })();

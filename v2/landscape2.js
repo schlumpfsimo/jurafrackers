@@ -49,7 +49,8 @@ const SCENE = ART.compose(W, D, (H, K) => {
     if (forestAt(x, y, h)) return 'forest'; const p = plot(x, y); return p.edge < 2.2 ? 'hedge' : 'f' + Math.floor(p.s.kind*FIELD.length*0.999); };
   const shade = (c, f) => '#' + c.match(/\w\w/g).map(v => Math.round(parseInt(v, 16)*f).toString(16).padStart(2, '0')).join('');
   const BASE = {road:'#6b7075', water:'#5f8fb0', bank:'#7d8f6a', rail:'#9e978a', track:'#b39d72', yard:'#bdb08a', garden:'#9db383', forest:'#4e7a42', hedge:'#5f8a48'};
-  const inShadow = (x, y) => { for (const [a, b, c2, e, h] of casters){ if (x > c2 + 1 || y > e + 1 || x < a - h || y < b - h*1.9) continue; for (let t = 0.3; t <= h; t += 0.6){ const px = x + 0.345*t, py = y + 0.636*t; if (px > a && px < c2 && py > b && py < e) return true; } } return false; };
+  let CB = null; const bucket = () => { CB = new Map(); for (const q of casters){ const [a, b, c2, e, h] = q; for (let i = Math.floor((a - h)/8); i <= Math.floor((c2 + 1)/8); i++) for (let j = Math.floor((b - h*1.9)/8); j <= Math.floor((e + 1)/8); j++){ const k = i*1000 + j; if (!CB.has(k)) CB.set(k, []); CB.get(k).push(q); } } };
+  const inShadow = (x, y) => { if (!CB) bucket(); for (const [a, b, c2, e, h] of CB.get(Math.floor(x/8)*1000 + Math.floor(y/8)) || []){ if (x > c2 + 1 || y > e + 1 || x < a - h || y < b - h*1.9) continue; for (let t = 0.3; t <= h; t += 0.6){ const px = x + 0.345*t, py = y + 0.636*t; if (px > a && px < c2 && py > b && py < e) return true; } } return false; };
   const ground = (x, y, h, hx, hy, k, edgeK) => { let c = BASE[k];
     if (!c){ const i = +k.slice(1), p = plot(x, y); c = FIELD[i]; const ang = p.s.kind*40, u = x*Math.cos(ang) + y*Math.sin(ang);
       if ((i === 0 || i === 1 || i === 5 || i === 6) && (((u % 1.6) + 1.6) % 1.6) < 0.5) c = shade(c, 0.88); }
@@ -58,9 +59,9 @@ const SCENE = ART.compose(W, D, (H, K) => {
     const edge = edgeK;
     const n = [-hx, -hy, 1], nl = Math.hypot(...n), lit = (n[0]*L[0] + n[1]*L[1] + n[2]*L[2])/(nl*Ln);
     let f = Math.round((0.78 + 0.3*lit)*10)/10; if (edge) f *= 0.82; if (inShadow(x, y)) f *= 0.78;
-    if (k !== 'road' && k !== 'water' && hsh(Math.floor(x/2), Math.floor(y/2), 5) > 0.8) f *= 0.95;
+    if (k !== 'road' && k !== 'water' && hsh(Math.floor(x/0.4), Math.floor(y/0.4), 5) > 0.8) f *= 0.95;
     const haze = clamp((360 - (x + y))/360, 0, 1)*0.16, [R, G, B] = (c[0] === '#' ? c.match(/\w\w/g).map(v => parseInt(v, 16)) : c.match(/\d+/g).map(Number)), mix = (v, tt) => Math.round(Math.min(255, v*f)*(1 - haze) + tt*haze);
-    return 'rgb(' + mix(R, 214) + ',' + mix(G, 224) + ',' + mix(B, 226) + ')'; };
+    return [mix(R, 214), mix(G, 224), mix(B, 226)]; };
   items.forEach(f => f());
   // trees: forest on the ridge and in the woods, rows along hedges and the stream, fruit trees near the farms and hamlets
   const tree = (x, y, kind, s) => { const f = kind === 's' ? K.spruce : kind === 'f' ? K.fruitTree : K.beech, hh = (kind === 's' ? 10.5 : kind === 'f' ? 4.2 : 7.6)*s, z = height(x, y) - 0.2; casters.push([x - 1.2*s, y - 1.2*s, x + 1.2*s, y + 1.2*s, hh*0.85]);
@@ -97,16 +98,18 @@ const SCENE = ART.compose(W, D, (H, K) => {
   { const [x, y] = at(38, -1.4); K.place(H, 'Police van', x, y - 1.1, height(x + 2.6, y)); const [x2, y2] = at(45, -1.2); K.place(H, 'Riot police bus', x2, y2 - 1.2, height(x2 + 4, y2)); }
   { const jo = K.M.find(q => q.n === 'Journalist (La Feuille)').o, [x, y] = at(24, 5.6); person(jo, x - 0.75, y - 0.75, {armR:'eye', armL:'eye'}, true); const [x3, y3] = at(36, 5.4); person(K.M.find(q => q.n === 'Police officer').o, x3 - 0.75, y3 - 0.75, {armR:'forward'}, true); }
   for (let i = 0; i < 12; i++){ const [x, y] = at(8 + r()*6, (r() < 0.5 ? -1 : 1)*(4 + r()*2)); person(folk(), x - 0.75, y - 0.75, null, false); }
-  // terrain: heights on a 1 m grid, a colour per cell (shading in tone steps, outlines between kinds of ground, shadows), traced per pixel
-  const C1 = 1, nx = W/C1, ny = D/C1, CC = 0.5, cx = W/CC, cy = D/CC, heights = new Float32Array((nx + 1)*(ny + 1)), kinds = new Array(cx*cy), colours = new Array(cx*cy);
+  // terrain: heights on a 1 m grid; the colour is worked out for every pixel at 10 cm (the kind of ground is remembered per 10 cm cell)
+  const C1 = 1, nx = W/C1, ny = D/C1, heights = new Float32Array((nx + 1)*(ny + 1));
   for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) heights[j*(nx + 1) + i] = height(i*C1, j*C1);
-  for (let j = 0; j < cy; j++) for (let i = 0; i < cx; i++) kinds[j*cx + i] = kindAt((i + 0.5)*CC, (j + 0.5)*CC);
-  const KA = (i, j) => kinds[Math.min(cy - 1, Math.max(0, j))*cx + Math.min(cx - 1, Math.max(0, i))], hh = (q, r2) => heights[Math.min(ny, r2)*(nx + 1) + Math.min(nx, q)];
-  for (let j = 0; j < cy; j++) for (let i = 0; i < cx; i++){ const x = (i + 0.5)*CC, y = (j + 0.5)*CC, k = kinds[j*cx + i], gi = Math.floor(x), gj = Math.floor(y);
-    const hx = (hh(gi + 1, gj) + hh(gi + 1, gj + 1) - hh(gi, gj) - hh(gi, gj + 1))/2, hy = (hh(gi, gj + 1) + hh(gi + 1, gj + 1) - hh(gi, gj) - hh(gi + 1, gj))/2;
-    const edge = [[1, 0], [0, 1], [-1, 0], [0, -1], [2, 0], [0, 2]].some(([dx, dy]) => { const k2 = KA(i + dx, j + dy); return k2 !== k && k !== 'bank' && k2 !== 'bank'; });
-    colours[j*cx + i] = ground(x, y, 0, hx, hy, k, edge).match(/\d+/g).map(Number); }
-  H.HF(W, D, C1, heights, colours, {base:6, ccell:CC});
+  const hh = (q, r2) => heights[Math.min(ny, Math.max(0, r2))*(nx + 1) + Math.min(nx, Math.max(0, q))];
+  const KN = ['road', 'water', 'bank', 'rail', 'track', 'yard', 'garden', 'forest', 'hedge', ...FIELD.map((_, i) => 'f' + i)], FN = 0.1, fnx = Math.round(W/FN), fny = Math.round(D/FN), kc = new Uint8Array(fnx*fny);
+  const kindF = (x, y) => { const i = clamp(Math.floor(x/FN), 0, fnx - 1), j = clamp(Math.floor(y/FN), 0, fny - 1), o = j*fnx + i; if (!kc[o]) kc[o] = KN.indexOf(kindAt((i + 0.5)*FN, (j + 0.5)*FN)) + 1; return KN[kc[o] - 1]; };
+  const hb = (x, y) => { const i = Math.floor(x), j = Math.floor(y), u = x - i, v = y - j; return hh(i, j)*(1 - u)*(1 - v) + hh(i + 1, j)*u*(1 - v) + hh(i, j + 1)*(1 - u)*v + hh(i + 1, j + 1)*u*v; };
+  const colourAt = (x, y) => { const k = kindF(x, y), hx = hb(x + 0.5, y) - hb(x - 0.5, y), hy = hb(x, y + 0.5) - hb(x, y - 0.5);
+    const edge = k !== 'bank' && [[0.15, 0], [0, 0.15], [-0.15, 0], [0, -0.15], [0.3, 0], [0, 0.3]].some(([dx, dy]) => { const k2 = kindF(x + dx, y + dy); return k2 !== k && k2 !== 'bank'; });
+    return ground(x, y, 0, hx, hy, k, edge); };
+  H.HF(W, D, C1, heights, null, {base:6, colourAt});
+
 });
 (document.fonts && document.fonts.load ? Promise.all([document.fonts.load('bold 16px Silkscreen'), document.fonts.ready]) : Promise.resolve()).then(() => {
   // the valley is drawn at one fixed resolution (s, pixels per metre); zooming (z) only enlarges the pixels
@@ -114,11 +117,12 @@ const SCENE = ART.compose(W, D, (H, K) => {
   let pad = 40, ox = D*S + pad, oy = 60*S + pad; n.width = Math.ceil((W + D)*S) + pad*2; n.height = Math.ceil((W + D)/2*S + 60*S) + pad*2;
   if (win){ const [x0, y0, x1, y1] = win, zt = 14; n.width = Math.ceil((x1 - y0 - x0 + y1)*S); n.height = Math.ceil(((x1 + y1 - x0 - y0)/2 + zt)*S); ox = -(x0 - y1)*S; oy = -((x0 + y0)/2 - zt - 4)*S; }
   const g = n.getContext('2d'); const sky = g.createLinearGradient(0, 0, 0, n.height); sky.addColorStop(0, '#dfe6ec'); sky.addColorStop(1, '#eef0ea'); g.fillStyle = sky; g.fillRect(0, 0, n.width, n.height);
-  const t = Date.now(); ART.plates.length = 0; const post = ART.draw(g, SCENE, 0, S, ox, oy); post.forEach(f => f());
+  const t = Date.now(); ART.plates.length = 0; ART.texts.on = true; ART.texts.list.length = 0; const post = ART.draw(g, SCENE, 0, S, ox, oy); post.forEach(f => f());
   c.width = n.width*Z; c.height = n.height*Z; const gc = c.getContext('2d'); gc.imageSmoothingEnabled = false; gc.drawImage(n, 0, 0, c.width, c.height);
   // sign letters appear once the zoom gives them room, written where the board can be seen
   const px = g.getImageData(0, 0, n.width, n.height).data, hex = h => h.match(/\w\w/g).map(v => parseInt(v, 16));
   if (Z > 1) for (const p of ART.plates){ const cx = p.x0 + (p.w >> 1), cy = p.y0 + (p.h >> 1); if (cx < 0 || cy < 0 || cx >= n.width || cy >= n.height) continue; const i = (cy*n.width + cx)*4, b = hex(p.bg);
     if (Math.abs(px[i] - b[0]) + Math.abs(px[i + 1] - b[1]) + Math.abs(px[i + 2] - b[2]) < 30) ART.plateText(gc, p.x0*Z, p.y0*Z, p.w*Z, p.h*Z, p.text, p.fg); }
+  gc.save(); gc.scale(Z, Z); for (const [m1, len, fs, skew, txt, tc] of ART.texts.list) ART.wallText(gc, m1, len, fs, skew, txt, tc); gc.restore();
   document.title += ' · ' + (Date.now() - t) + ' ms';
 });
