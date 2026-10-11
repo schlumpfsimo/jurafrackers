@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jurafrackers 2.0 · Catalogue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Pixelify+Sans:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f6f4ef;--card:#fff;--ink:#1f2328;--muted:#6b7178;--line:#e2ded5;--co:#2c5f93;--co2:#e07a2c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.45 "Helvetica Neue",Helvetica,Arial,sans-serif}
+header{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:18px;padding:10px 20px;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 1px 6px rgba(0,0,0,.04)}
+.logo{font:700 26px/1 "Silkscreen",monospace;letter-spacing:1px;color:var(--ink);text-shadow:2px 2px 0 var(--co2)}
+.logo span{color:var(--co);text-shadow:2px 2px 0 #9cc0e4}
+header nav a{color:var(--muted);text-decoration:none;margin-right:14px;font-size:13px}
+header nav a:hover{color:var(--ink)}
+main{max-width:1280px;margin:0 auto;padding:20px}
+h2{font:700 15px/1 "Silkscreen",monospace;letter-spacing:.5px;margin:28px 0 12px;color:var(--co)}
+.intro{color:var(--muted);max-width:760px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(560px,1fr));gap:14px}
+.grid.people{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.card h3{margin:0 0 2px;font-size:14px}
+.card h3 b{font:700 12px/1 "Silkscreen",monospace;color:#fff;background:var(--ink);padding:3px 6px;border-radius:3px;margin-right:8px;vertical-align:1px}
+.card p{margin:0 0 8px;color:var(--muted);font-size:12.5px}
+.views{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.view{text-align:center;font-size:11px;color:var(--muted)}
+.view canvas{display:block;image-rendering:pixelated;background:linear-gradient(#eef1ea,#e6eadf);border-radius:4px}
+.fonts{display:flex;gap:30px;flex-wrap:wrap}
+.fonts div{background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px 16px}
+.f1{font:400 20px "Silkscreen",monospace}.f2{font:600 22px "Pixelify Sans",sans-serif}
+</style>
+</head>
+<body>
+<header><div class="logo">JURA<span>FRACKERS</span> 2.0</div><nav><a href="#b">Buildings</a><a href="#v">Vehicles</a><a href="#p">People</a><a href="#f">Fonts</a></nav></header>
+<main>
+<p class="intro">Every building, vehicle and person, numbered, each in four orientations. Tell me by number what to change. Buildings and vehicles: views 1–4 are the object turned by a quarter each time. People: facing front-left, front-right, back-left, back-right.</p>
+<h2 id="b">Buildings</h2><div class="grid" id="gb"></div>
+<h2 id="v">Vehicles</h2><div class="grid" id="gv"></div>
+<h2 id="p">People</h2><div class="grid people" id="gp"></div>
+<h2 id="f">Fonts</h2>
+<div class="fonts"><div><div class="f1">Silkscreen · LA FEUILLE DE LA FAILLE · 10.40</div><small>Option A: titles, map labels, header</small></div><div><div class="f2">Pixelify Sans · La Feuille de la Faille · 10.40</div><small>Option B: rounder, easier at small sizes</small></div><div style="font:15px Helvetica,Arial,sans-serif">Helvetica · body text in windows: The council of Saint-Calorie thanks the Company.<br><small>Body text</small></div></div>
+</main>
+<script src="art.js"></script>
+<script>
+const S = 3, ZOOM = 2;
+function extent(m){ let zt = 0; for (const p of m.parts){ if (p.t === 'blk') zt = Math.max(zt, p.z + Math.max(...p.h)); else if (p.t === 'cyl') zt = Math.max(zt, p.z + p.h); else if (p.t === 'ln') for (const q of p.pts) zt = Math.max(zt, q[2]); else if (p.t === 'txt') zt = Math.max(zt, p.z + 3); } return zt; }
+function crisp(c){ const g = c.getContext('2d'), d = g.getImageData(0, 0, c.width, c.height), a = d.data; for (let i = 3; i < a.length; i += 4) a[i] = a[i] > 110 ? 255 : 0; g.putImageData(d, 0, 0); }
+function card(host, num, title, note){ const el = document.createElement('div'); el.className = 'card'; el.innerHTML = '<h3><b>' + num + '</b>' + title + '</h3>' + (note ? '<p>' + note + '</p>' : '<p>&nbsp;</p>') + '<div class="views"></div>'; host.appendChild(el); return el.querySelector('.views'); }
+function addView(views, label, c){ const v = document.createElement('div'); v.className = 'view'; c.style.width = c.width*ZOOM + 'px'; c.style.height = c.height*ZOOM + 'px'; v.appendChild(c); v.appendChild(document.createTextNode(label)); views.appendChild(v); }
+function renderAll(){
+  let nb = 0, nv = 0;
+  for (const m of ART.models){
+    const isB = m.cat === 'b', num = isB ? 'B' + String(++nb).padStart(2, '0') : 'V' + String(++nv).padStart(2, '0');
+    const views = card(document.getElementById(isB ? 'gb' : 'gv'), num, m.n, m.note);
+    const zt = extent(m), span = m.W + m.D, pad = 6, s = Math.max(1.2, Math.min(7, 118/span, 150/(span/2 + Math.max(zt, 1))));
+    for (let r = 0; r < 4; r++){
+      const c = document.createElement('canvas'); c.width = Math.ceil(span*s + pad*2); c.height = Math.ceil(span*s/2 + Math.max(zt, 1)*s + pad*2);
+      const g = c.getContext('2d'), ox = (r % 2 ? m.D : m.W)*s + pad, oy = Math.max(zt, 1)*s + pad;
+      const post = ART.draw(g, m, r, s, ox - (r % 2 ? m.D : m.W)*s + (r % 2 ? m.W : m.D)*s, oy); crisp(c); post.forEach(f => f()); addView(views, String(r + 1), c);
+    }
+  }
+  ART.people.forEach((p, i) => {
+    const views = card(document.getElementById('gp'), 'P' + String(i + 1).padStart(2, '0'), p.n, p.note);
+    for (let d = 0; d < 4; d++){ const c = document.createElement('canvas'); c.width = 52; c.height = 92; ART.drawPerson(c.getContext('2d'), 26, 86, 3, p, d); addView(views, ['front-left', 'front-right', 'back-left', 'back-right'][d], c); }
+  });
+}
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(renderAll);
+</script>
+</body>
+</html>
