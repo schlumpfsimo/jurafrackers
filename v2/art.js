@@ -173,10 +173,14 @@ const lerpT = (tab, x) => { if (x <= tab[0][0]) return tab[0][1]; for (let i = 1
 /* 4×5 pixel letters for plates that must stay readable */
 const GLYPH = {N:['1001', '1101', '1011', '1001', '1001'], O:['0110', '1001', '1001', '1001', '0110'], S:['0111', '1000', '0110', '0001', '1110'], T:['1111', '0110', '0110', '0110', '0110'], P:['1110', '1001', '1110', '1000', '1000'], E:['1111', '1000', '1110', '1000', '1111'], A:['0110', '1001', '1111', '1001', '1001'], U:['1001', '1001', '1001', '1001', '0110'], J:['0011', '0001', '0001', '1001', '0110'], R:['1110', '1001', '1110', '1010', '1001'], I:['1110', '0100', '0100', '0100', '1110']};
 // the sign is always the same size in the world (1 m × 0.55 m); the letters only appear once they fit on it
-function pixelPlate(g, cx, cy, text, bg, fg, S){ const w = Math.max(2, Math.round(1.0*S)), h = Math.max(1, Math.round(0.55*S)), x0 = cx - Math.floor(w/2), y0 = cy - Math.floor(h/2), tw = text.length*5 - 1;
-  if (S >= 8){ g.fillStyle = '#2a2d33'; g.fillRect(x0 - 1, y0 - 1, w + 2, h + 2); } g.fillStyle = bg; g.fillRect(x0, y0, w, h);
-  const k = Math.floor(Math.min((w - 2)/tw, (h - 2)/5)); if (k < 1) return; const tx = x0 + Math.floor((w - tw*k)/2), ty = y0 + Math.floor((h - 5*k)/2); g.fillStyle = fg;
-  [...text].forEach((ch, i) => (GLYPH[ch] || []).forEach((row, r) => [...row].forEach((bit, cc) => { if (bit === '1') g.fillRect(tx + (i*5 + cc)*k, ty + r*k, k, k); }))); }
+// the sign is always the same size in the world (1 m × 0.55 m). When the letters do not fit at this resolution, the plate is
+// remembered so a zoomed view can write them on top in screen pixels (only where the board is visible)
+const PLATES = [];
+function plateText(g, x0, y0, w, h, text, fg){ const tw = text.length*5 - 1, k = Math.floor(Math.min((w - 2)/tw, (h - 2)/5)); if (k < 1) return false;
+  const tx = x0 + Math.floor((w - tw*k)/2), ty = y0 + Math.floor((h - 5*k)/2); g.fillStyle = fg;
+  [...text].forEach((ch, i) => (GLYPH[ch] || []).forEach((row, r) => [...row].forEach((bit, cc) => { if (bit === '1') g.fillRect(tx + (i*5 + cc)*k, ty + r*k, k, k); }))); return true; }
+function pixelPlate(g, cx, cy, text, bg, fg, S){ const w = Math.max(2, Math.round(1.0*S)), h = Math.max(1, Math.round(0.55*S)), x0 = cx - Math.floor(w/2), y0 = cy - Math.floor(h/2);
+  g.fillStyle = bg; g.fillRect(x0, y0, w, h); if (!plateText(g, x0, y0, w, h, text, fg)) PLATES.push({x0, y0, w, h, text, bg, fg}); }
 
 /* Smooth volumes drawn pixel by pixel: for every screen pixel find the nearest surface along the view, shade it from the
    surface direction with the buildings' light (top bright, south face mid, east face dark), in a few tone steps. */
@@ -1201,5 +1205,5 @@ for (let i = 0; i < 4; i++){ const r = rng(900 + i*31), ax = i % 2 ? 'y' : 'x', 
 // composing scenes from the locked assets: a kit of the building blocks used above
 const KIT = {M, VARS, place:placeModel, figure:figure3, turned, PROT, VILL, BLOC, GOON, RIOT, POSE, cowM, sheepFn, chickFn, horseFn, dogAt, bikeAt, bench, barricade, beech, spruce, fruitTree, bareBeech, snowy, sway, at, firstOf, flame, grass, f35At, rng, pick, hsh, cell, leafy};
 const compose = (W, D, fn) => ({cat:'s', n:'scene', W, D, parts:build(H => fn(H, KIT))});
-window.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose};
+window.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose, plates:PLATES, plateText};
 })();

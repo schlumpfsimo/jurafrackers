@@ -109,9 +109,16 @@ const SCENE = ART.compose(W, D, (H, K) => {
   H.HF(W, D, C1, heights, colours, {base:6, ccell:CC});
 });
 (document.fonts && document.fonts.load ? Promise.all([document.fonts.load('bold 16px Silkscreen'), document.fonts.ready]) : Promise.resolve()).then(() => {
-  const Q = new URLSearchParams(location.search), S = +(Q.get('s') || 2.5), c = document.getElementById('c'), win = Q.get('win') ? Q.get('win').split(',').map(Number) : null;
-  let pad = 40, ox = D*S + pad, oy = 60*S + pad; c.width = Math.ceil((W + D)*S) + pad*2; c.height = Math.ceil((W + D)/2*S + 60*S) + pad*2;
-  if (win){ const [x0, y0, x1, y1] = win, zt = 14; c.width = Math.ceil((x1 - y0 - x0 + y1)*S); c.height = Math.ceil(((x1 + y1 - x0 - y0)/2 + zt)*S); ox = -(x0 - y1)*S; oy = -((x0 + y0)/2 - zt - 4)*S; }
-  const g = c.getContext('2d'); const sky = g.createLinearGradient(0, 0, 0, c.height); sky.addColorStop(0, '#dfe6ec'); sky.addColorStop(1, '#eef0ea'); g.fillStyle = sky; g.fillRect(0, 0, c.width, c.height);
-  const t = Date.now(); const post = ART.draw(g, SCENE, 0, S, ox, oy); post.forEach(f => f()); document.title += ' · ' + (Date.now() - t) + ' ms';
+  // the valley is drawn at one fixed resolution (s, pixels per metre); zooming (z) only enlarges the pixels
+  const Q = new URLSearchParams(location.search), S = +(Q.get('s') || 2.5), Z = +(Q.get('z') || 1), c = document.getElementById('c'), win = Q.get('win') ? Q.get('win').split(',').map(Number) : null, n = document.createElement('canvas');
+  let pad = 40, ox = D*S + pad, oy = 60*S + pad; n.width = Math.ceil((W + D)*S) + pad*2; n.height = Math.ceil((W + D)/2*S + 60*S) + pad*2;
+  if (win){ const [x0, y0, x1, y1] = win, zt = 14; n.width = Math.ceil((x1 - y0 - x0 + y1)*S); n.height = Math.ceil(((x1 + y1 - x0 - y0)/2 + zt)*S); ox = -(x0 - y1)*S; oy = -((x0 + y0)/2 - zt - 4)*S; }
+  const g = n.getContext('2d'); const sky = g.createLinearGradient(0, 0, 0, n.height); sky.addColorStop(0, '#dfe6ec'); sky.addColorStop(1, '#eef0ea'); g.fillStyle = sky; g.fillRect(0, 0, n.width, n.height);
+  const t = Date.now(); ART.plates.length = 0; const post = ART.draw(g, SCENE, 0, S, ox, oy); post.forEach(f => f());
+  c.width = n.width*Z; c.height = n.height*Z; const gc = c.getContext('2d'); gc.imageSmoothingEnabled = false; gc.drawImage(n, 0, 0, c.width, c.height);
+  // sign letters appear once the zoom gives them room, written where the board can be seen
+  const px = g.getImageData(0, 0, n.width, n.height).data, hex = h => h.match(/\w\w/g).map(v => parseInt(v, 16));
+  if (Z > 1) for (const p of ART.plates){ const cx = p.x0 + (p.w >> 1), cy = p.y0 + (p.h >> 1); if (cx < 0 || cy < 0 || cx >= n.width || cy >= n.height) continue; const i = (cy*n.width + cx)*4, b = hex(p.bg);
+    if (Math.abs(px[i] - b[0]) + Math.abs(px[i + 1] - b[1]) + Math.abs(px[i + 2] - b[2]) < 30) ART.plateText(gc, p.x0*Z, p.y0*Z, p.w*Z, p.h*Z, p.text, p.fg); }
+  document.title += ' · ' + (Date.now() - t) + ' ms';
 });
