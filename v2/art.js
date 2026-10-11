@@ -120,10 +120,10 @@ function draw(g, model, rot, S, ox, oy, post){
     } else if (p.t === 'vox'){
       const u = p.u, set = new Map(), cs = p.cells.map(([x, y, z, c]) => { const a = rp(x*u, y*u), b = rp((x + 1)*u, (y + 1)*u), rx = Math.round(Math.min(a[0], b[0])/u), ry = Math.round(Math.min(a[1], b[1])/u); set.set(rx + ',' + ry + ',' + z, 1); return [rx, ry, z, c]; });
       cs.sort((a, b) => (a[0] + a[1] + a[2]) - (b[0] + b[1] + b[2]) || a[2] - b[2]);
-      items.push({k:(p.k || 0), i, f(){ for (const [x, y, z, c] of cs){ const X0 = x*u, Y0 = y*u, Z0 = z*u, X1 = X0 + u, Y1 = Y0 + u, Z1 = Z0 + u;
-        if (!set.has(x + ',' + (y + 1) + ',' + z)) poly([P(X0, Y1, Z0), P(X1, Y1, Z0), P(X1, Y1, Z1), P(X0, Y1, Z1)], sh(c, 0.86));
-        if (!set.has((x + 1) + ',' + y + ',' + z)) poly([P(X1, Y0, Z0), P(X1, Y1, Z0), P(X1, Y1, Z1), P(X1, Y0, Z1)], sh(c, 0.7));
-        if (!set.has(x + ',' + y + ',' + (z + 1))) poly([P(X0, Y0, Z1), P(X1, Y0, Z1), P(X1, Y1, Z1), P(X0, Y1, Z1)], sh(c, 1.06)); } }});
+      items.push({k:(p.k || 0), i, f(){ for (const [x, y, z, c0] of cs){ const fl = c0[0] === '!', c = fl ? c0.slice(1) : c0, X0 = x*u, Y0 = y*u, Z0 = z*u, X1 = X0 + u, Y1 = Y0 + u, Z1 = Z0 + u;
+        if (!set.has(x + ',' + (y + 1) + ',' + z)) poly([P(X0, Y1, Z0), P(X1, Y1, Z0), P(X1, Y1, Z1), P(X0, Y1, Z1)], sh(c, fl ? 0.9 : 0.86));
+        if (!set.has((x + 1) + ',' + y + ',' + z)) poly([P(X1, Y0, Z0), P(X1, Y1, Z0), P(X1, Y1, Z1), P(X1, Y0, Z1)], sh(c, fl ? 0.9 : 0.7));
+        if (!set.has(x + ',' + y + ',' + (z + 1))) poly([P(X0, Y0, Z1), P(X1, Y0, Z1), P(X1, Y1, Z1), P(X0, Y1, Z1)], sh(c, fl ? 0.9 : 1.06)); } }});
     } else if (p.t === 'fig'){
       const q = rp(p.x, p.y); items.push({k:q[0] + q[1] + (p.k || 0), i, f(){ figure(g, P(q[0], q[1], 0), S, rot, p.o); }});
     } else if (p.t === 'puff'){
@@ -457,27 +457,33 @@ def('v', 'Police helicopter', 10.5, 2.6, ({B, X, C, L, Q}, c) => { const wh = '#
   for (const [y, f] of [[m + 0.13, 'S'], [m - 0.13, 'N']]){ const ring = []; for (let i = 0; i < 12; i++){ const a = i/12*Math.PI*2; ring.push([0.48 + Math.cos(a)*0.3, y, 1.72 + Math.sin(a)*0.3]); } Q(ring, '#22252a', {face:f}); }
   for (let i = 0; i < 4; i++){ const a = i*Math.PI/2 + 0.4, ca = Math.cos(a), sa = Math.sin(a), w = 0.13; Q([[4.6 - sa*w, m + ca*w, 2.76], [4.6 + ca*5.2 - sa*w, m + sa*5.2 + ca*w, 2.76], [4.6 + ca*5.2 + sa*w, m + sa*5.2 - ca*w, 2.76], [4.6 + sa*w, m - ca*w, 2.76]], '#2b2f33', {k:8000}); }
 }, 'Cabin with a glass nose and a blue band, engine and rotor mast on the roof, tail boom, ducted tail rotor, skids. The last resort.');
-def('v', 'F-35', 15.6, 11, ({VF, W, L}, c) => { const m = 5.5, g = '#8b8d87', gt = '#9a9c96', gb = '#70726d', dk = '#2c2d2b', zc = 1.45;
-  // proportions read off a three-view drawing: x from the tailplane tips (0) to the nose (15.6), half-widths and heights in metres
-  for (const [x, y] of [[13.2, 0], [7.0, -1.6], [7.0, 1.6]]){ L([[x, m + y, 0.3], [x, m + y*0.85, 0.75]], '#3a3c38', 0.9); W(x, m + y, x > 10 ? 0.28 : 0.38); }
-  const wT = [[0.5, 0.65], [1.4, 0.85], [2.5, 1.45], [3.6, 1.8], [7.6, 1.95], [10.3, 1.45], [10.7, 1.2], [11.0, 1.35], [12.0, 1.0], [13.0, 0.7], [14.4, 0.35], [15.6, 0.02]];
-  const huT = [[0.5, 0.35], [1.5, 0.5], [4, 0.7], [8, 0.85], [10.5, 0.85], [13.3, 0.75], [14.2, 0.45], [15.6, 0.02]];
-  const hlT = [[0.5, 0.4], [2, 0.6], [5, 0.85], [9, 0.85], [12, 0.7], [14, 0.35], [15.6, 0.02]];
-  VF(0.14, -0.3, 15.7, 0, 11, 0.5, 5.0, (x, y, z) => { const ay = Math.abs(y - m);
-    if (inEll([x, y, z], [12.05, m, zc + 0.78], 1.35, 0.46, 0.55) && z > zc + 0.7) return '#5e5133';          // canopy
-    // engine nozzle behind the body
-    if (x >= 0.55 && x < 2.4 && (y - m)**2 + (z - zc - 0.1)**2 <= 0.62**2) return x < 0.85 ? '#3a3b38' : '#5a5c57';
-    // fuselage: chined section, widest at the chine, intake openings in the notches
-    if (x >= 0.5 && x <= 15.6){ const w = lerpT(wT, x), r = ay/w; if (r <= 1){ const top = zc + lerpT(huT, x)*(1 - r**1.8), bot = zc - lerpT(hlT, x)*(1 - r**2.2);
-      if (z <= top && z >= bot){ if (x > 10.45 && x < 11.0 && ay > 0.95 && z < zc + 0.15 && z > zc - 0.55) return dk; return z > zc + 0.15 ? gt : z < zc - 0.15 ? gb : g; } } }
-    // wings: leading edge from mid-body, short tip chord, trailing edge swept slightly forward
-    if (Math.abs(z - zc) < 0.08 && ay >= 1.8 && ay <= 5.35){ const f = (ay - 1.9)/3.45, le = 7.6 - f*2.0, te = 3.0 + f*0.75; if (x <= le && x >= te) return g; }
-    // tailplanes reaching past the nozzle, square tips
-    if (Math.abs(z - zc - 0.05) < 0.07 && ay >= 1.0 && ay <= 3.66){ const f = Math.max(0, (ay - 1.3)/2.36), le = 4.06 - f*3.2; if (x <= le && x >= -0.07) return g; }
-    // twin tails set inside the body edge, leaning out about 18 degrees
-    const zb = zc + 0.6; if (z >= zb && z <= zb + 2.37){ const t = (z - zb)/2.37, yc = 1.35 + t*0.77, le = 4.0 - t*1.8, te = 1.35 - t*0.55; if (Math.abs(ay - yc) < 0.21 && x <= le && x >= te) return t > 0.93 ? gb : g; }
+def('v', 'F-35', 15.6, 11, ({VF, W, L}, c) => { const m = 5.5, g = '#80827e', gt = '#8c8e8a', gb = '#6c6e6a', lt = '#a9aba6', dk = '#262725', zc = 1.45;
+  // after a three-view drawing and photos: wide flat body blending into the wings, short cone nose, big bubble canopy with a hump behind,
+  // bulging intakes under the canopy, broad trapezoid tails leaning out, lighter sawtooth panel edges on top
+  for (const [x, y] of [[13.0, 0], [7.0, -1.7], [7.0, 1.7]]){ L([[x, m + y, 0.3], [x, m + y*0.85, 0.75]], '#3a3c38', 0.9); W(x, m + y, x > 10 ? 0.28 : 0.38); }
+  const wT = [[0.5, 0.7], [1.4, 0.95], [2.5, 1.6], [3.6, 2.0], [7.6, 2.1], [10.2, 1.75], [11.6, 1.45], [12.6, 1.0], [13.6, 0.62], [14.6, 0.32], [15.6, 0.03]];
+  const huT = [[0.5, 0.4], [1.5, 0.6], [4, 0.85], [8, 1.0], [10.6, 1.05], [12.6, 0.8], [13.6, 0.5], [14.6, 0.28], [15.6, 0.03]];
+  const hlT = [[0.5, 0.4], [2, 0.6], [5, 0.85], [9, 0.9], [12, 0.7], [13.6, 0.45], [15.6, 0.03]];
+  const saw = (x, ay) => { const step = Math.floor(ay/0.35) % 2 ? 0.28 : 0; for (const xs of [3.4, 5.6, 8.0]) if (Math.abs(x - xs - step) < 0.09 && ay < 1.6) return true; return Math.abs(ay - 0.95 - (Math.floor(x/0.5) % 2)*0.2) < 0.08 && x > 3 && x < 9.6; };
+  VF(0.14, -0.3, 15.7, 0, 11, 0.5, 5.4, (x, y, z) => { const ay = Math.abs(y - m);
+    // big one-piece canopy, dark smoky, with a light frame line; hump behind it
+    if (inEll([x, y, z], [11.95, m, zc + 1.0], 1.5, 0.55, 0.58) && z > zc + 0.95) return Math.abs(x - 11.1) < 0.08 ? '#b5b7b2' : '#3b3a33';
+    if (inEll([x, y, z], [9.6, m, zc + 0.95], 1.9, 0.75, 0.3) && z > zc + 0.9) return gt;
+    // bulging intakes under the canopy sides, dark mouths facing forward
+    for (const sg of [-1, 1]) if (inEll([x, y, z], [10.6, m + sg*1.55, zc - 0.05], 1.3, 0.45, 0.48)) return x > 11.55 && ay < 1.85 && ay > 1.2 ? dk : g;
+    // engine nozzle
+    if (x >= 0.55 && x < 2.4 && (y - m)**2 + (z - zc - 0.1)**2 <= 0.66**2) return x < 0.85 ? '#3a3b38' : '#585a55';
+    // body: wide flat deck, sharp chine, light cone nose
+    if (x >= 0.5 && x <= 15.6){ const w = lerpT(wT, x), r = ay/w; if (r <= 1){ const top = zc + lerpT(huT, x)*(1 - r**3), bot = zc - lerpT(hlT, x)*(1 - r**2.4);
+      if (z <= top && z >= bot){ if (x > 14.0) return '#a3a5a0'; if (z > top - 0.15 && saw(x, ay)) return lt; return z > zc + 0.15 ? gt : z < zc - 0.15 ? gb : g; } } }
+    // wings blending out of the body, light edge panels at the tips
+    if (Math.abs(z - zc) < 0.09 && ay >= 1.8 && ay <= 5.35){ const f = (ay - 1.9)/3.45, le = 7.9 - f*2.2, te = 3.0 + f*0.8; if (x <= le && x >= te) return ay > 4.8 || x < te + 0.25 ? lt : g; }
+    // tailplanes past the nozzle, square tips
+    if (Math.abs(z - zc - 0.05) < 0.08 && ay >= 1.0 && ay <= 3.7){ const f = Math.max(0, (ay - 1.3)/2.4), le = 4.1 - f*3.0; if (x <= le && x >= -0.07) return g; }
+    // broad trapezoid tails at the body edges, leaning out about 22 degrees
+    const zb = zc + 0.75; if (z >= zb && z <= zb + 2.5){ const t = (z - zb)/2.5, yc = 1.55 + t*1.0, le = 4.6 - t*1.9, te = 1.2 - t*0.25; if (Math.abs(ay - yc) < 0.22 && x <= le && x >= te) return '!' + (t > 0.94 ? lt : y > m ? '#8e908b' : '#767874'); }
     return null; });
-}, 'After a three-view drawing: long pointed nose, high canopy set forward, angled intakes, wide chined body, wings from mid-body with short tips, tailplanes past the nozzle, twin tails leaning out. Only in the secret ending.');
+}, 'Unmistakably an F-35: wide flat body blending into the wings, short light cone nose, big bubble canopy with a hump behind, bulging intakes under it, broad trapezoid tails leaning out, lighter sawtooth panels. Only in the secret ending.');
 M[M.length - 1].big = 2.4;
 def('v', 'Regional train', 20, 3, ({B, W}, c) => { for (const x0 of [0.3, 10.2]){ wheels(W, [x0 + 1.4, x0 + 8], 3, 0.45);
   B(x0, 0.25, 0.6, 9.5, 2.5, 2.8, '#dfe2e5', {bv:0.5, win:[...[0.6, 2.3, 4, 5.7, 7.4].flatMap(a => sides(a, 1.3, 1.3, 0.85, GL)), ...sides(0.3, 0.45, 8.9, 0.26, '#b8322a'), ['E', 0.3, 1.2, 1.9, 0.9, GL], ['W', 0.3, 1.2, 1.9, 0.9, GL]]}); } }, 'Along the top of the valley.');
