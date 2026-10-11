@@ -32,7 +32,8 @@ function build(fn){
     // a row of windows on a face: face, from, to, step, z, w, h
     Q:(pts, c, o) => push(Object.assign({t:'q', pts, c}, o || {})),                                // flat 3D polygon: fins, blades; o.face shows it only from that side
     V:(x, y, z, w, d, h, c) => { for (let i = x; i < x + w; i++) for (let j = y; j < y + d; j++) for (let k = z; k < z + h; k++) vox.set(i + ',' + j + ',' + k, c); },   // voxels (people), 0.1 m cubes
-    SD:(x0, x1, y0, y1, z0, z1, fn, o) => push(Object.assign({t:'sdf', b:[x0, x1, y0, y1, z0, z1], fn, zt:z1}, o || {})),   // smooth volume, rendered per pixel
+    SD:(x0, x1, y0, y1, z0, z1, fn, o) => { const L = (o && o.lift) || 0, f = L ? (x, y, z) => fn(x, y, z - L) : fn; return push(Object.assign({t:'sdf', b:[x0, x1, y0, y1, z0 + L, z1 + L], fn:f, zt:z1 + L}, o || {})); },
+    raw:p => push(p),   // smooth volume, rendered per pixel
     VF:(u, x0, x1, y0, y1, z0, z1, fn) => { const cells = []; for (let i = Math.floor(x0/u); i*u < x1; i++) for (let j = Math.floor(y0/u); j*u < y1; j++) for (let k = Math.floor(z0/u); k*u < z1; k++){ const c = fn((i + 0.5)*u, (j + 0.5)*u, (k + 0.5)*u); if (c) cells.push([i, j, k, c]); }
       return push({t:'vox', u, cells, zt:(Math.max(...cells.map(q => q[2])) + 1)*u}); },
     row:(f, a0, a1, step, z, w, h, c) => { const r = []; for (let a = a0; a <= a1 + 1e-6; a += step) r.push([f, a, z, w, h, c]); return r; },
@@ -127,6 +128,7 @@ function draw(g, model, rot, S, ox, oy, post){
         if (!set.has(x + ',' + y + ',' + (z + 1))) poly([P(X0, Y0, Z1), P(X1, Y0, Z1), P(X1, Y1, Z1), P(X0, Y1, Z1)], sh(c, fl ? 0.9 : 1.06)); } }});
     } else if (p.t === 'sdf'){
       const [x0, x1, y0, y1] = p.b, c0 = rp(x0, y0), c1 = rp(x1, y1); items.push({k:(c0[0] + c1[0])/2 + (c0[1] + c1[1])/2 + (p.k || 0), i, f(){ volume(g, p, rot, S, ox, oy, W, D); }});
+      if (p.badge){ const bd = p.badge, q = rp(bd.x, bd.y), at = P(q[0], q[1], bd.z); post.push(() => pixelPlate(g, Math.round(at[0]), Math.round(at[1]), bd.text, bd.bg, bd.fg, Math.max(1, Math.round(S/12)))); }
       for (const [f, a0, a1, z, hh, txt, tc, pl] of p.labels || []){ const fr = rf(f); if (fr !== 'E' && fr !== 'S') continue;
         const A = rp(...(f === 'S' ? [a0, pl] : f === 'N' ? [a1, pl] : f === 'E' ? [pl, a0] : [pl, a1])), Bq = rp(...(f === 'S' ? [a1, pl] : f === 'N' ? [a0, pl] : f === 'E' ? [pl, a1] : [pl, a0]));
         const m1 = P((A[0] + Bq[0])/2, (A[1] + Bq[1])/2, z + hh/2), len = Math.hypot(Bq[0] - A[0], Bq[1] - A[1])*S*1.12, fs = Math.max(6, Math.round(S*hh*0.8)), skew = fr === 'S' ? 0.5 : -0.5;
@@ -164,6 +166,12 @@ const inCap = (p, a, b, r1, r2) => { const [d, t] = segD(p, a, b); return d <= r
 const inEll = (p, c, rx, ry, rz) => ((p[0] - c[0])/rx)**2 + ((p[1] - c[1])/ry)**2 + ((p[2] - c[2])/rz)**2 <= 1;
 const lerpT = (tab, x) => { if (x <= tab[0][0]) return tab[0][1]; for (let i = 1; i < tab.length; i++) if (x <= tab[i][0]){ const [x0, y0] = tab[i - 1], [x1, y1] = tab[i]; return y0 + (y1 - y0)*(x - x0)/(x1 - x0); } return tab[tab.length - 1][1]; };
 
+/* 4×5 pixel letters for plates that must stay readable */
+const GLYPH = {N:['1001', '1101', '1011', '1001', '1001'], O:['0110', '1001', '1001', '1001', '0110'], S:['0111', '1000', '0110', '0001', '1110'], T:['1111', '0110', '0110', '0110', '0110'], P:['1110', '1001', '1110', '1000', '1000']};
+function pixelPlate(g, cx, cy, text, bg, fg, k){ const w = (text.length*5 + 3)*k, h = 9*k, x0 = cx - Math.floor(w/2), y0 = cy - Math.floor(h/2);
+  g.fillStyle = '#2a2d33'; g.fillRect(x0 - k, y0 - k, w + 2*k, h + 2*k); g.fillStyle = bg; g.fillRect(x0, y0, w, h); g.fillStyle = fg;
+  [...text].forEach((ch, i) => (GLYPH[ch] || []).forEach((row, r) => [...row].forEach((b, cc) => { if (b === '1') g.fillRect(x0 + (2 + i*5 + cc)*k, y0 + (2 + r)*k, k, k); }))); }
+
 /* Smooth volumes drawn pixel by pixel: for every screen pixel find the nearest surface along the view, shade it from the
    surface direction with the buildings' light (top bright, south face mid, east face dark), in a few tone steps. */
 function volume(g, p, rot, S, ox, oy, W, D){
@@ -189,10 +197,10 @@ function volume(g, p, rot, S, ox, oy, W, D){
     const ey = dn && up ? [dn[0] - up[0], dn[1] - up[1], dn[2] - up[2]] : dn ? [dn[0] - q[0], dn[1] - q[1], dn[2] - q[2]] : up ? [q[0] - up[0], q[1] - up[1], q[2] - up[2]] : null;
     let n = [0, 0, 1]; if (ex && ey){ n = [ex[1]*ey[2] - ex[2]*ey[1], ex[2]*ey[0] - ex[0]*ey[2], ex[0]*ey[1] - ex[1]*ey[0]]; if (n[0] + n[1] + n[2] < 0) n = n.map(v => -v); const L = Math.hypot(...n) || 1; n = n.map(v => v/L); }
     const flat = c0[0] === '!', c = flat ? c0.slice(1) : c0;
-    let f = flat ? 0.9 : Math.max(0.5, Math.min(1.14, 0.55 + 0.55*(n[0]*Lx + n[1]*Ly + n[2]*Lz))); f = Math.round(f*10)/10;
+    let f = flat ? 1 : Math.max(0.6, Math.min(1.14, 0.55 + 0.55*(n[0]*Lx + n[1]*Ly + n[2]*Lz))); f = Math.round(f*10)/10;
     // a darker pixel where something nearer covers this part: reads as a contour
-    for (const nb of [pt(i + 1, j), pt(i - 1, j), pt(i, j + 1), pt(i, j - 1)]) if (nb && depth(nb) - dq > 0.35){ f *= 0.72; break; }
-    const [R, G, B] = hex(c), k = v => Math.max(0, Math.min(255, Math.round(f > 1 ? v + (255 - v)*(f - 1) : v*f))), o = (j*w + i)*4; d[o] = k(R); d[o + 1] = k(G); d[o + 2] = k(B); d[o + 3] = 255; }
+    for (const nb of [pt(i + 1, j), pt(i - 1, j), pt(i, j + 1), pt(i, j - 1)]) if (nb && depth(nb) - dq > 0.35){ f *= flat ? 1 : 0.84; break; }
+    const [R, G, B] = c[0] === '#' ? hex(c) : c.match(/\d+/g).map(Number), k = v => Math.max(0, Math.min(255, Math.round(f > 1 ? v + (255 - v)*(f - 1) : v*f))), o = (j*w + i)*4; d[o] = k(R); d[o + 1] = k(G); d[o + 2] = k(B); d[o + 3] = 255; }
   const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h; tmp.getContext('2d').putImageData(img, 0, 0); g.drawImage(tmp, sx0, sy0);
 }
 
@@ -556,15 +564,14 @@ veh('Police helicopter', 10.5, 2.6, 2.8, c => { const wh = '#f6f6f3', bl = '#2a4
   [p => p[0] >= 0.05 && p[0] <= 1.0 && Math.abs(p[1] - m) <= 0.11 && p[2] >= 1.2 && p[2] <= 2.65 - (p[0] - 0.05)*0.7, p => Math.hypot(p[0] - 0.48, p[2] - 1.72) < 0.3 && Math.hypot(p[0] - 0.48, p[2] - 1.72) > 0.18 ? '#22252a' : bl]]; },
   'Cabin with a glass nose and a blue band, engine and rotor mast on the roof, tail boom, ducted tail rotor, skids. The last resort.',
   {extra: Q => { const m = 1.3; for (let i = 0; i < 4; i++){ const a = i*Math.PI/2 + 0.4, ca = Math.cos(a), sa = Math.sin(a), w = 0.07; Q([[4.6 - sa*w, m + ca*w, 2.78], [4.6 + ca*5.2 - sa*w, m + sa*5.2 + ca*w, 2.78], [4.6 + ca*5.2 + sa*w, m + sa*5.2 - ca*w, 2.78], [4.6 + sa*w, m - ca*w, 2.78]], '#2b2f33', {k:8000}); } }});
-def('v', 'F-35', 15.6, 11, ({SD, W, L}, c) => { const m = 5.5, g = '#80827e', gt = '#8c8e8a', gb = '#6c6e6a', lt = '#a9aba6', dk = '#262725', zc = 1.45;
+const F35 = (() => { const m = 5.5, g = '#80827e', gt = '#8c8e8a', gb = '#6c6e6a', lt = '#a9aba6', dk = '#262725', zc = 1.45;
   // after a three-view drawing and photos: wide flat body blending into the wings, short cone nose, big bubble canopy with a hump behind,
   // bulging intakes under the canopy, broad trapezoid tails leaning out, lighter sawtooth panel edges on top
-  for (const [x, y] of [[13.0, 0], [7.0, -1.7], [7.0, 1.7]]){ L([[x, m + y, 0.3], [x, m + y*0.85, 0.75]], '#3a3c38', 0.9); W(x, m + y, x > 10 ? 0.28 : 0.38); }
   const wT = [[0.5, 0.7], [1.4, 0.95], [2.5, 1.6], [3.6, 2.0], [7.6, 2.1], [10.2, 1.75], [11.6, 1.45], [12.6, 1.0], [13.6, 0.62], [14.6, 0.32], [15.6, 0.03]];
   const huT = [[0.5, 0.4], [1.5, 0.6], [4, 0.85], [8, 1.0], [10.6, 1.05], [12.6, 0.8], [13.6, 0.5], [14.6, 0.28], [15.6, 0.03]];
   const hlT = [[0.5, 0.4], [2, 0.6], [5, 0.85], [9, 0.9], [12, 0.7], [13.6, 0.45], [15.6, 0.03]];
   const saw = (x, ay) => { const step = Math.floor(ay/0.35) % 2 ? 0.28 : 0; for (const xs of [3.4, 5.6, 8.0]) if (Math.abs(x - xs - step) < 0.09 && ay < 1.6) return true; return Math.abs(ay - 0.95 - (Math.floor(x/0.5) % 2)*0.2) < 0.08 && x > 3 && x < 9.6; };
-  SD(-0.3, 15.7, 0, 11, 0.5, 5.4, (x, y, z) => { const ay = Math.abs(y - m);
+  return (x, y, z) => { const ay = Math.abs(y - m);
     // big one-piece canopy, dark smoky, with a light frame line; hump behind it
     if (inEll([x, y, z], [11.95, m, zc + 1.0], 1.5, 0.55, 0.58) && z > zc + 0.95) return Math.abs(x - 11.1) < 0.08 ? '#b5b7b2' : '#3b3a33';
     if (inEll([x, y, z], [9.6, m, zc + 0.95], 1.9, 0.75, 0.3) && z > zc + 0.9) return gt;
@@ -581,9 +588,13 @@ def('v', 'F-35', 15.6, 11, ({SD, W, L}, c) => { const m = 5.5, g = '#80827e', gt
     if (Math.abs(z - zc - 0.05) < 0.08 && ay >= 1.0 && ay <= 3.7){ const f = Math.max(0, (ay - 1.3)/2.4), le = 4.1 - f*3.0; if (x <= le && x >= -0.07) return g; }
     // broad trapezoid tails at the body edges, leaning out about 22 degrees
     const zb = zc + 0.75; if (z >= zb && z <= zb + 2.5){ const t = (z - zb)/2.5, yc = 1.55 + t*1.0, le = 4.6 - t*1.9, te = 1.2 - t*0.25; if (Math.abs(ay - yc) < 0.22 && x <= le && x >= te) return '!' + (t > 0.94 ? lt : y > m ? '#8e908b' : '#767874'); }
-    return null; });
-}, 'Unmistakably an F-35: wide flat body blending into the wings, short light cone nose, big bubble canopy with a hump behind, bulging intakes under it, broad trapezoid tails leaning out, lighter sawtooth panels. Only in the secret ending.');
-M[M.length - 1].big = 2.4;
+    return null; };
+})();
+const F35_SHADOW = (() => { const h = [[15.6, 0], [14.6, 0.32], [13.6, 0.62], [12.6, 1.0], [11.6, 1.45], [10.2, 1.75], [7.9, 1.9], [5.7, 5.35], [3.8, 5.35], [3.0, 2.15], [1.1, 3.7], [-0.07, 3.7], [-0.07, 1.0], [0.55, 0.66]];
+  return [...h.map(([x, y]) => [x, 5.5 - y]), ...h.slice(1).reverse().map(([x, y]) => [x, 5.5 + y])]; })();
+const f35At = (H, dx, dy, lift) => { H.F(F35_SHADOW.map(([x, y]) => [x + dx, y + dy]), '#a9ae9f'); H.SD(-0.3 + dx, 15.7 + dx, dy, 11 + dy, 0.5, 5.4, (x, y, z) => F35(x - dx, y - dy, z), {lift}); };
+def('v', 'F-35', 15.6, 11, (H) => f35At(H, 0, 0, 9), 'Unmistakably an F-35: wide flat body blending into the wings, short light cone nose, big bubble canopy with a hump behind, bulging intakes under it, broad trapezoid tails leaning out, lighter sawtooth panels. Only in the secret ending.');
+M[M.length - 1].big = 1.6;
 veh('Regional train', 20, 3, 3.6, c => [
   ...[0.3, 10.2].flatMap(x0 => [...tyres([x0 + 1.4, x0 + 8.1], 3, 0.45, 0.4),
     [rbx(x0, x0 + 9.5, 0.25, 2.75, 0.6, 3.45, 0.5), p => p[2] > 1.95 && p[2] < 2.75 && ((((p[0] - x0) % 1.7) > 0.2) || p[0] < x0 + 0.4 || p[0] > x0 + 9.1) ? VG : p[2] > 1.05 && p[2] < 1.3 ? '#b8322a' : '#dfe2e5']])],
@@ -700,11 +711,11 @@ const personVol = (o) => { const cx = 0.75, cy = 0.75, k = o.small ? 0.62 : (o.t
     if (it === 'fork'){ put(Math.hypot(x - cx - 0.04, y - ry) < 0.02 && z < 2.05, '#8a6a4a'); put(Math.abs(x - cx - 0.04) < 0.02 && Math.abs(y - ry) < 0.12 && z > 2.0 && z < 2.25 && (Math.abs(y - ry) > 0.09 || Math.abs(y - ry) < 0.025 || z < 2.04), '#9aa3ab'); }
     if (it === 'rifle') put(inCap(p, [cx + 0.17, cy - 0.15, 1.05], [cx + 0.17, cy + 0.18, 1.4], 0.025, 0.025), '#2f3329');
     if (it === 'shield') put(x > cx + 0.22 && x < cx + 0.26 && y > cy - 0.48 && y < cy + 0.12 && z > 0.25 && z < 1.5, (y < cy - 0.44 || y > cy + 0.08 || z < 0.29 || z > 1.46) ? '#5f7896' : '#a9c7e8');
-    if (it === 'sign'){ const sy = ry + 0.08, sx = cx + 0.04; put(Math.abs(x - sx) < 0.02 && Math.abs(y - sy) < 0.02 && z > 1.7 && z < 2.2, '#8a6a4a');
-      if (Math.abs(y - sy) < 0.6 && z > 2.15 && z < 2.68 && Math.abs(x - sx) < 0.04) c = x > sx && z > 2.32 && z < 2.5 && Math.abs(y - sy) < 0.48 ? (o.signInk || '#c63a2c') : (o.signBoard || '#f4f2ec'); }
+    if (it === 'sign'){ const sy = ry + 0.08, sx = cx + 0.04; put(Math.abs(x - sx) < 0.022 && Math.abs(y - sy) < 0.022 && z > 1.7 && z < 2.45, '#8a6a4a'); }
     return c; };
   return (x, y, z) => f(cx + (x - cx)/kw, cy + (y - cy)/kw, z/k); };
-const volP = (n, o, note) => { const k = o.small ? 0.62 : (o.tall || 1); def('p', n, 1.5, 1.5, ({SD}) => SD(0, 1.5, 0, o.item === 'sign' ? 2.1 : 1.5, 0, (o.item === 'sign' ? 2.75 : o.item === 'fork' || o.item === 'radio' ? 2.3 : 1.95)*k, personVol(o), {step:0.02}), note); };
+const volP = (n, o, note) => { const k = o.small ? 0.62 : (o.tall || 1), sign = o.item === 'sign';
+  def('p', n, 1.5, 1.5, ({SD}) => SD(0, 1.5, 0, sign ? 2.1 : 1.5, 0, (sign ? 2.5 : o.item === 'fork' || o.item === 'radio' ? 2.3 : 1.95)*k, personVol(o), {step:0.02, badge:sign ? {x:0.79, y:0.75 + 0.255*(o.bulk || 1) + 0.08, z:2.55*k, text:o.signText || 'NON', bg:o.signBoard || '#f4f2ec', fg:o.signInk || '#c63a2c'} : null}), note); };
 const hi = '#e8ece4';
 volP('The CEO', {top:'#2f343c', bot:'#2f343c', hair:'#9a9590', skin:'#efc9a8', tie:'#b8322a', shirt:'#f4f2ec', item:'case', tall:1.06, shoe:'#1c1f22'}, 'Tall, grey at the temples, dark suit.');
 volP('Suit (woman)', {top:'#1f2329', bot:'#1f2329', hair:'#3a2b20', longHair:1, bun:1, skin:'#f2d2b6', item:'case', skirt:1, shirt:'#f4f2ec', shoe:'#1c1f22'}, 'Lent by the association.');
@@ -723,7 +734,7 @@ volP('Villager (man), elderly', {top:'#8a6a4a', bot:'#3a4a63', hair:'#e6e2da', s
 volP('Farmer', {top:'#2c5f93', bot:'#2c5f93', hair:'#5a4632', skin:'#d9a882', hat:'cap', hatc:'#3a3f45', item:'fork', bulk:1.15, belly:1, shoe:'#2f5f3a', boots:1}, 'Blue work jacket, rubber boots, a belly, a pitchfork.');
 volP('Mayor', {top:'#3a3f45', bot:'#3a3f45', hair:'#c9c4b6', bun:1, skin:'#f2d2b6', sash:1, bulk:1.08}, 'With the sash on fête days.');
 volP('Protester with sign', {skin:'#f2d2b6', top:'#3f7a4a', bot:'#3a4a63', shoe:'#5a4632', hair:'#9a4a2a', longHair:1, hat:'beanie', hatc:'#c63a2c', scarf:'#e8b730', hood:1, bulk:1.12, raise:1, item:'sign'}, 'Green parka, red beanie, yellow scarf, sign held up.');
-volP('Protester with sign (2)', {top:'#c9622a', bot:'#4a4f55', hair:'#2b2522', beard:'#2b2522', skin:'#a8704a', raise:1, item:'sign', signBoard:'#e8b730', signInk:'#1c1f22'}, 'Yellow sign.');
+volP('Protester with sign (2)', {top:'#c9622a', bot:'#4a4f55', hair:'#2b2522', beard:'#2b2522', skin:'#a8704a', raise:1, item:'sign', signText:'STOP', signBoard:'#e8b730', signInk:'#1c1f22'}, 'Yellow STOP sign.');
 volP('Police officer', {top:'#2a4fa0', bot:'#1f2a44', hair:'#2b2522', skin:'#e8c09c', hat:'cap', hatc:'#1f2a44', belt:'#1c1f22', shoe:'#1c1f22'}, '');
 volP('Riot police', {top:'#2d3440', bot:'#2d3440', hair:'#1f2a44', skin:'#e8c09c', hat:'visor', hatc:'#8f9aa8', armor:'#6f7c8c', armor2:'#b9c3ce', knee:'#b9c3ce', hand:'#1c1f22', shoe:'#16181b', boots:1, bulk:1.3, tall:1.06, item:'shield'}, 'Full armour, closed helmet with a black visor, shoulder plates, a big shield.');
 volP('Journalist (La Feuille)', {top:'#c9a24a', bot:'#3a3f45', hair:'#3a2b20', longHair:1, skin:'#f2d2b6', item:'camera', pack:'#5a4632'}, '');
@@ -735,6 +746,115 @@ volP('Soldier with radio', {top:'#5b6b45', bot:'#5b6b45', hair:'#5a4632', skin:'
 volP('Officer', {top:'#4f5d3c', bot:'#4f5d3c', hair:'#9a9590', skin:'#efc9a8', hat:'army', hatc:'#4a5838', shoe:'#2b2a22', boots:1, item:'board', tall:1.04, belt:'#2b2a22'}, 'Reads the evacuation order.');
 volP('Soldier (woman)', {top:'#5b6b45', bot:'#5b6b45', hair:'#3a2b20', longHair:1, skin:'#f2d2b6', hat:'army', hatc:'#4a5838', shoe:'#2b2a22', boots:1, pack:'#4a5838'}, '');
 volP('Child', {top:'#e8b730', bot:'#3a4a63', hair:'#8a5a3a', skin:'#f2d2b6', small:1}, '');
+
+/* ---------------------------------------------------------------- nature, animals, ground, site items, air */
+const hsh = (a, b, c) => { const s = Math.sin(a*127.1 + b*311.7 + c*74.7)*43758.5453; return s - Math.floor(s); };
+const cell = (x, y, z, q) => hsh(Math.floor(x/q), Math.floor(y/q), Math.floor(z/q));
+const leafy = (base, x, y, z) => { const n = cell(x, y, z, 0.35); return n < 0.22 ? sh(base, 0.9) : n > 0.82 ? sh(base, 1.12) : base; };
+// trees as functions of a local point, so forests can reuse them
+const beech = (x, y, z, s) => { s = s || 1; if (cyZ(0, 0, 0.22*s, 0, 3*s)([x, y, z])) return '#6a4a32';
+  const P3 = [x, y, z]; if (inEll(P3, [0, 0, 5*s], 2.4*s, 2.4*s, 2.1*s) || inEll(P3, [-0.8*s, 0.4*s, 4.2*s], 1.5*s, 1.5*s, 1.3*s) || inEll(P3, [0.8*s, -0.4*s, 4.4*s], 1.6*s, 1.6*s, 1.4*s) || inEll(P3, [0, 0.8*s, 6.1*s], 1.4*s, 1.4*s, 1.2*s)) return leafy('#5d8a3e', x, y, z); return null; };
+const spruce = (x, y, z, s) => { s = s || 1; const r = Math.hypot(x, y); if (r < 0.18*s && z < 2*s) return '#5a3e2a'; if (z < 1*s || z > 10*s) return null;
+  const t = (z - 1*s)/(9*s), tier = 0.72 + 0.28*(((z/s)*1.15) % 1), R = 1.9*s*(1 - t)*tier; return r <= R ? leafy('#2f5a3a', x, y, z) : null; };
+const fruitTree = (x, y, z) => { if (cyZ(0, 0, 0.16, 0, 1.8)([x, y, z])) return '#6a4a32'; if (inEll([x, y, z], [0, 0, 2.7], 1.5, 1.5, 1.15)) return cell(x, y, z, 0.25) > 0.9 ? '#c8322a' : leafy('#6a9a44', x, y, z); return null; };
+const at = (f, ox, oy, s) => (x, y, z) => f(x - ox, y - oy, z, s);
+const firstOf = (...fs) => (x, y, z) => { for (const f of fs){ const c = f(x, y, z); if (c) return c; } return null; };
+const grass = (F, W, D, c) => F([[0, 0], [W, 0], [W, D], [0, D]], c || '#9db383');
+const nat = (n, W, D, H, fn, note, o) => def('n', n, W, D, ({SD, F}) => { if (!(o && o.bare)) grass(F, W, D); SD(0, W, 0, D, 0, H, fn, Object.assign({step:0.05}, o || {})); }, note);
+
+nat('Beech (broadleaf tree)', 6, 6, 7.5, at(beech, 3, 3), 'Village and valley trees.');
+nat('Spruce', 4, 4, 10.2, at(spruce, 2, 2), 'The Jura forests are mostly spruce and fir.');
+nat('Fruit tree', 4, 4, 4, at(fruitTree, 2, 2), 'Orchards around the farms.');
+nat('Bush', 2.6, 2.6, 1.5, (x, y, z) => inEll([x, y, z], [1.3, 1.3, 0.55], 1.15, 1.1, 0.8) && z > 0 ? leafy('#55803c', x, y, z) : null, '');
+nat('Hedge', 8, 1.6, 1.6, (x, y, z) => rbx(0.2, 7.8, 0.25, 1.35, 0, 1.45, 0.45)([x, y, z]) ? leafy('#4f7a38', x, y, z) : null, 'Field borders.');
+nat('Forest patch', 16, 14, 11, firstOf(at(spruce, 3, 3, 0.9), at(spruce, 8, 2.5, 1.05), at(beech, 12.5, 4, 0.85), at(spruce, 4, 9, 1.1), at(spruce, 9, 8, 0.95), at(beech, 13, 10.5, 0.9), at(spruce, 6, 12.5, 0.8)), 'Placed in clusters on the hills.', {step:0.08});
+nat('Rock outcrop', 4, 3, 1.8, (x, y, z) => (inEll([x, y, z], [1.5, 1.4, 0.3], 1.3, 1.0, 1.1) || inEll([x, y, z], [2.7, 1.6, 0.2], 1.0, 0.9, 0.8) || inEll([x, y, z], [2.0, 1.0, 0.9], 0.6, 0.5, 0.7)) && z > 0 ? (cell(x, y, z, 0.3) > 0.7 ? '#b8b4a8' : '#a19d92') : null, 'Limestone, as everywhere in the Jura.');
+def('n', 'Pond', 8, 6, ({F, L}) => { grass(F, 8, 6); const ring = (rx, ry) => Array.from({length:16}, (_, i) => { const a = i/16*Math.PI*2; return [4 + Math.cos(a)*rx, 3 + Math.sin(a)*ry*(1 + 0.08*Math.sin(a*3))]; });
+  F(ring(3.4, 2.5), '#7d8f6a'); F(ring(3.1, 2.2), '#5f8fb0'); F(ring(2.2, 1.4), '#6b9cbd'); for (const [x, y] of [[1.4, 2.2], [1.6, 3.6], [6.6, 2.4]]) L([[x, y, 0], [x + 0.1, y, 0.9]], '#6a7f45', 0.6); }, 'Where the farmers water the cows.');
+def('n', 'Stream', 12, 5, ({F}) => { grass(F, 12, 5); const pts = Array.from({length:13}, (_, i) => [i, 2.5 + Math.sin(i*0.7)*0.9]); F([...pts.map(([x, y]) => [x, y - 0.75]), ...pts.slice().reverse().map(([x, y]) => [x, y + 0.75])], '#7d8f6a');
+  F([...pts.map(([x, y]) => [x, y - 0.55]), ...pts.slice().reverse().map(([x, y]) => [x, y + 0.55])], '#5f8fb0'); }, 'The valley stream; contamination shows here first.');
+
+/* Animals: small, so few details. Chickens are three pixels. */
+const ani = (n, W, D, H, fn, note) => def('a', n, W, D, ({SD}) => SD(0, W, 0, D, 0, H, fn, {step:0.015}), note);
+const cowFn = (lying) => (x, y, z) => { const p = [x, y, z], bz = lying ? 0.45 : 0.95, hz = lying ? 0.8 : 1.0;
+  if (!lying) for (const lx of [0.75, 1.85]) for (const ly of [0.33, 0.67]) if (inCap(p, [lx, ly, 0.75], [lx, ly, 0], 0.08, 0.065)) return z < 0.08 ? '#2b2522' : '#e2d8c8';
+  if (inEll(p, [2.36, 0.5, hz], 0.27, 0.16, 0.17)) return x > 2.5 ? '#e8b8a0' : '#f2efe6';
+  for (const s of [-1, 1]) if (inEll(p, [2.22, 0.5 + s*0.17, hz + 0.1], 0.06, 0.07, 0.04)) return '#9a4a2a';
+  if (inCap(p, [1.95, 0.5, bz + 0.15], [2.25, 0.5, hz + 0.05], 0.18, 0.15)) return '#9a4a2a';
+  if (!lying && inEll(p, [1.1, 0.5, 0.64], 0.13, 0.11, 0.07)) return '#e8a8a0';
+  if (inCap(p, [0.42, 0.5, bz + 0.2], [0.36, 0.5, bz - 0.35], 0.03, 0.03)) return '#9a4a2a';
+  if (inEll(p, [1.3, 0.5, bz], 0.92, 0.34, 0.38) && z > 0) return cell(x + 0.2, y, z, 0.4) > 0.45 ? '#9a4a2a' : '#f2efe6';
+  return null; };
+ani('Cow (Simmental)', 2.7, 1.0, 1.45, cowFn(false), 'Red and white, as in the Jura.');
+ani('Cow, lying', 2.7, 1.0, 1.0, cowFn(true), '');
+ani('Sheep', 1.3, 0.6, 0.9, (x, y, z) => { const p = [x, y, z]; if (inEll(p, [1.08, 0.3, 0.68], 0.13, 0.09, 0.12)) return '#2b2a28'; for (const lx of [0.42, 0.88]) for (const ly of [0.2, 0.4]) if (inCap(p, [lx, ly, 0.45], [lx, ly, 0], 0.03, 0.03)) return '#2b2a28';
+  return inEll(p, [0.65, 0.3, 0.6], 0.45, 0.27, 0.27) ? (cell(x, y, z, 0.1) > 0.6 ? '#f6f3ea' : '#e2ddd0') : null; }, '');
+ani('Chicken', 0.45, 0.3, 0.42, (x, y, z) => { const p = [x, y, z]; if (inEll(p, [0.34, 0.15, 0.36], 0.04, 0.02, 0.04)) return '#c8322a'; if (inEll(p, [0.4, 0.15, 0.31], 0.035, 0.02, 0.02)) return '#e8b730';
+  if (z < 0.12 && Math.abs(y - 0.15) < 0.06 && Math.abs(x - 0.22) < 0.02) return '#e8b730'; return inEll(p, [0.2, 0.15, 0.22], 0.15, 0.09, 0.1) || inEll(p, [0.33, 0.15, 0.3], 0.07, 0.06, 0.07) ? '#f4f2ec' : null; }, 'Three pixels.');
+ani('Chicken (brown)', 0.45, 0.3, 0.42, (x, y, z) => { const p = [x, y, z]; if (inEll(p, [0.34, 0.15, 0.36], 0.04, 0.02, 0.04)) return '#c8322a';
+  if (z < 0.12 && Math.abs(y - 0.15) < 0.06 && Math.abs(x - 0.22) < 0.02) return '#e8b730'; return inEll(p, [0.2, 0.15, 0.22], 0.15, 0.09, 0.1) || inEll(p, [0.33, 0.15, 0.3], 0.07, 0.06, 0.07) ? '#a0603a' : null; }, '');
+
+/* Ground: roads, tracks, pipes, lines, fields, street furniture */
+const ASP = '#6b7075', SHO = '#a39d8e';
+const dash = (F, x0, x1, y, alongX) => { for (let a = x0 + 0.5; a < x1 - 1; a += 3) F(alongX ? [[a, y - 0.07], [a + 1.5, y - 0.07], [a + 1.5, y + 0.07], [a, y + 0.07]] : [[y - 0.07, a], [y + 0.07, a], [y + 0.07, a + 1.5], [y - 0.07, a + 1.5]], '#f2f0e8'); };
+const gnd = (n, W, D, fn, note) => def('g', n, W, D, fn, note);
+gnd('Road, straight', 10, 8, ({F}) => { grass(F, 10, 8); F([[0, 1.7], [10, 1.7], [10, 6.3], [0, 6.3]], SHO); F([[0, 2], [10, 2], [10, 6], [0, 6]], ASP); dash(F, 0, 10, 4, true); }, 'Laid on a grid; 4 m of asphalt with a gravel shoulder.');
+gnd('Road, crossing', 10, 10, ({F}) => { grass(F, 10, 10); F([[0, 2.7], [10, 2.7], [10, 7.3], [0, 7.3]], SHO); F([[2.7, 0], [7.3, 0], [7.3, 10], [2.7, 10]], SHO); F([[0, 3], [10, 3], [10, 7], [0, 7]], ASP); F([[3, 0], [7, 0], [7, 10], [3, 10]], ASP); dash(F, 0, 3, 5, true); dash(F, 7, 10, 5, true); dash(F, 0, 3, 5, false); dash(F, 7, 10, 5, false); }, '');
+gnd('Road, T-junction', 10, 10, ({F}) => { grass(F, 10, 10); F([[0, 2.7], [10, 2.7], [10, 7.3], [0, 7.3]], SHO); F([[2.7, 7], [7.3, 7], [7.3, 10], [2.7, 10]], SHO); F([[0, 3], [10, 3], [10, 7], [0, 7]], ASP); F([[3, 6.9], [7, 6.9], [7, 10], [3, 10]], ASP); dash(F, 0, 10, 5, true); }, '');
+gnd('Road, bend', 10, 10, ({F}) => { grass(F, 10, 10); const arc = (r) => Array.from({length:10}, (_, i) => { const a = i/9*Math.PI/2; return [10 - Math.cos(a)*r, 10 - Math.sin(a)*r]; });
+  F([...arc(7.3), ...arc(2.7).reverse()], SHO); F([...arc(7), ...arc(3).reverse()], ASP); }, '');
+gnd('Dirt track', 10, 6, ({F}) => { grass(F, 10, 6); F([[0, 1.8], [10, 1.8], [10, 4.2], [0, 4.2]], '#a99a7a'); F([[0, 2.6], [10, 2.6], [10, 3.4], [0, 3.4]], '#94a873'); }, 'To farms, the villa and sites: two ruts and grass between.');
+gnd('Gravel pad', 10, 8, ({F, L}) => { F([[0, 0], [10, 0], [10, 8], [0, 8]], PAL.gravel); for (const y of [2.5, 5]) L([[0.5, y, 0], [9.5, y + 0.6, 0]], '#9e9788', 0.8); }, 'Under every site and rig.');
+gnd('Heat pipe, above ground', 10, 3, ({F, B, SD}) => { grass(F, 10, 3); for (const x of [1, 5, 9]) B(x - 0.15, 0.6, 0, 0.3, 1.8, 0.75, '#9aa1a8');
+  SD(0, 10, 0, 3, 0.6, 1.4, (x, y, z) => cyY(0, 0, 0, 0, 0)([x, y, z]) || (((y - 1.1)**2 + (z - 1.0)**2 <= 0.26**2) || ((y - 1.9)**2 + (z - 1.0)**2 <= 0.26**2)) ? (((x % 2.5) < 0.12) ? '#a9afb5' : '#c9ced3') : null, {step:0.04}); }, 'Insulated supply and return, on short supports.');
+gnd('Heat pipe, buried', 10, 3, ({F, C}) => { grass(F, 10, 3); F([[0, 1.1], [10, 1.1], [10, 1.9], [0, 1.9]], '#a99a7a'); for (const x of [1.5, 6.5]) C(x, 0.6, 0, 0.07, 1.0, '#e8b730', {top:'#c8322a'}); }, 'Fresh trench, yellow marker posts.');
+gnd('Power line (wooden poles)', 20, 3, ({F, C, B, L}) => { grass(F, 20, 3); for (const x of [3, 13]){ C(x, 1.5, 0, 0.13, 8, '#7a5a3a'); B(x - 0.08, 0.6, 7.4, 0.16, 1.8, 0.14, '#6a4a32'); }
+  for (const y of [0.75, 2.25]){ const sag = []; for (let i = 0; i <= 20; i++){ const x = i, u = ((x - 3) % 10 + 10) % 10/10; sag.push([x, y, 7.6 - Math.sin(u*Math.PI)*0.6]); } L(sag, '#2b2f33', 0.4); } }, 'Village supply.');
+gnd('High-voltage pylon', 8, 8, ({F, L}) => { grass(F, 8, 8); const top = 18, leg = (x, y) => L([[x, y, 0], [4 + (x - 4)*0.15, 4 + (y - 4)*0.15, top]], '#8a9198', 1);
+  leg(1.5, 1.5); leg(6.5, 1.5); leg(6.5, 6.5); leg(1.5, 6.5); for (const z of [4, 8, 12]){ const f = 1 - z/top*0.85, a = 4 - 2.5*f, b = 4 + 2.5*f; L([[a, a, z], [b, a, z], [b, b, z], [a, b, z], [a, a, z]], '#8a9198', 0.6); L([[a, a, z], [b, b, z]], '#8a9198', 0.5); }
+  for (const z of [13, 16]) L([[4, -2, z], [4, 10, z]], '#8a9198', 1); for (const y of [-2, 10]) L([[-4, y, 12.5], [12, y, 12.2]], '#2b2f33', 0.4); }, 'The grid line across the valley; the substation hooks in here.');
+gnd('Fence', 8, 1.5, ({F, L}) => { grass(F, 8, 1.5); for (let x = 0.5; x <= 7.6; x += 1.4) L([[x, 0.75, 0], [x, 0.75, 1.15]], '#7a5a3a', 0.7); for (const z of [0.5, 0.95]) L([[0.5, 0.75, z], [7.5, 0.75, z]], '#8a6a4a', 0.5); }, 'Pastures.');
+gnd('Street lamp', 2, 2, ({C, L, B}) => { C(1, 1, 0, 0.08, 5, '#5a6066'); L([[1, 1, 5], [1.9, 1, 5.3]], '#5a6066', 0.7); B(1.6, 0.85, 5.05, 0.6, 0.3, 0.15, '#3a3f45', {win:[['S', 0.05, 0, 0.5, 0.05, '#fff4b8']]}); }, '');
+gnd('Bus stop', 5, 3, ({F, C, B}) => { F([[0, 0], [5, 0], [5, 3], [0, 3]], '#bdb9b0'); C(0.6, 2.4, 0, 0.05, 2.6, '#9aa3ab'); B(0.3, 2.35, 2.2, 0.6, 0.1, 0.45, '#e8b730', {win:[['S', 0.1, 0.08, 0.4, 0.3, '#e8b730', 'H', '#1c1f22']]});
+  B(1.6, 0.5, 0, 2.8, 1.2, 2.3, '#bfe0ee', {top:'#5a6066', win:[['S', 0.1, 0.4, 2.6, 0.12, '#5a6066']]}); }, 'For the post bus gift.');
+gnd('Hiking signpost', 2, 2, ({C, B}) => { C(1, 1, 0, 0.05, 2.2, '#9aa3ab'); B(1.0, 0.95, 1.85, 0.9, 0.08, 0.22, '#e8b730'); B(0.2, 1.0, 1.55, 0.8, 0.08, 0.22, '#e8b730'); }, 'Yellow, of course.');
+gnd('Bridge', 10, 8, ({F, B, L}) => { grass(F, 10, 8); F([[3, 0], [7, 0], [7, 8], [3, 8]], '#7d8f6a'); F([[3.4, 0], [6.6, 0], [6.6, 8], [3.4, 8]], '#5f8fb0');
+  B(0, 2.5, 0, 3.2, 3, 0.6, '#b8b4a8'); B(6.8, 2.5, 0, 3.2, 3, 0.6, '#b8b4a8'); B(0, 2.6, 0.6, 10, 2.8, 0.35, '#a19d92', {top:ASP}); for (const y of [2.65, 5.35]) L([[0, y, 1.0], [10, y, 1.0]], '#8a9198', 0.6); }, '');
+gnd('Meadow', 10, 10, ({F}) => { grass(F, 10, 10, '#9fb87f'); for (let i = 0; i < 40; i++){ const x = hsh(i, 1, 2)*9.6, y = hsh(i, 3, 4)*9.6, c = ['#f4f2ec', '#e8b730', '#c86a9a'][i % 3]; F([[x, y], [x + 0.25, y], [x + 0.25, y + 0.25], [x, y + 0.25]], c); } }, 'With flowers.');
+gnd('Wheat field', 10, 10, ({F}) => { F([[0, 0], [10, 0], [10, 10], [0, 10]], '#d9b85a'); for (let y = 0.6; y < 10; y += 0.9) F([[0, y], [10, y], [10, y + 0.18], [0, y + 0.18]], '#c4a24a'); }, '');
+gnd('Ploughed field', 10, 10, ({F}) => { F([[0, 0], [10, 0], [10, 10], [0, 10]], '#8a6a4a'); for (let x = 0.4; x < 10; x += 0.7) F([[x, 0], [x + 0.25, 0], [x + 0.25, 10], [x, 10]], '#76583c'); }, '');
+gnd('Pasture with cows and sheep', 16, 12, (H) => { grass(H.F, 16, 12, '#9fb87f'); for (const [x, y, f] of [[2, 2, cowFn(false)], [7, 6, cowFn(true)], [10, 2.5, cowFn(false)]]) H.SD(x, x + 2.7, y, y + 1, 0, 1.45, (px, py, pz) => f(px - x, py - y, pz), {step:0.03});
+  for (const [x, y] of [[3, 8], [4.6, 9.5], [12, 8.5], [13.5, 10]]) H.SD(x, x + 1.3, y, y + 0.6, 0, 0.9, (px, py, pz) => { const p = [px - x, py - y, pz]; return inEll(p, [1.08, 0.3, 0.68], 0.13, 0.09, 0.12) ? '#2b2a28' : inEll(p, [0.65, 0.3, 0.55], 0.45, 0.27, 0.3) && pz > 0.2 ? '#ece8dc' : pz < 0.4 && inEll(p, [0.65, 0.3, 0.2], 0.3, 0.12, 0.3) ? '#2b2a28' : null; }, {step:0.03}); }, 'How they appear on the map, at the same scale.');
+
+/* Site items and effects */
+const flame = (x, y, z, cx, cy, z0, r, h) => { const t = (z - z0)/h; if (t < 0 || t > 1) return null; const an = Math.atan2(y - cy, x - cx), rr = r*(1 - t**0.8)*(0.7 + 0.5*hsh(Math.floor(z*5), Math.floor(an*2), 1)), d = Math.hypot(x - cx, y - cy); if (d > rr) return null;
+  return '!' + (t < 0.3 ? '#ffe08a' : t < 0.6 ? '#f5a030' : '#d8502a'); };
+const site = (n, W, D, fn, note) => def('e', n, W, D, fn, note);
+site('Prospect flag', 2, 2, ({L, B}) => { L([[1, 1, 0], [1, 1, 3]], '#c9ccd0', 0.8); B(1.02, 1, 2.2, 0.04, 1.1, 0.75, PAL.co, {noline:1, win:[['S', 0.0, 0.25, 1.1, 0.22, PAL.co2]]}); }, 'Planted by the geologist; marks a prospect.');
+site('Survey line', 16, 2, ({L, B}) => { L([[0.5, 1, 0.05], [15.5, 1, 0.05]], '#e07a2c', 0.4); for (let x = 1; x < 16; x += 1.5){ B(x - 0.1, 0.9, 0, 0.2, 0.2, 0.12, '#3a3f45'); L([[x, 1.1, 0], [x, 1.1, 0.5]], '#c9ccd0', 0.3); B(x, 1.1, 0.35, 0.02, 0.25, 0.15, '#e07a2c', {noline:1}); } }, 'Geophones laid along a road during a survey.');
+site('Flare stack', 4, 4, ({C, SD, B}) => { B(1, 1, 0, 2, 2, 0.4, '#9aa3ab'); C(2, 2, 0.4, 0.22, 6, '#c9ccd0'); SD(0.5, 3.5, 0.5, 3.5, 6.3, 9.8, (x, y, z) => flame(x, y, z, 2, 2, 6.4, 1.0, 3.3)); }, 'Burns off gas from a kick; drilling goes on.');
+site('Mud tank', 6, 3, ({B, L}) => { B(0.3, 0.4, 0, 5.4, 2.2, 2.2, '#8a6a3a', {top:'#5a4632', win:[['S', 0.3, 0.3, 4.8, 0.2, '#e07a2c']]}); L([[5.8, 1.5, 0], [5.8, 1.5, 2.4]], '#c9ccd0', 0.6); }, '');
+site('Casing stack', 8, 3, ({SD}) => SD(0, 8, 0, 3, 0, 1.4, (x, y, z) => { for (const [yc, zc] of [[0.5, 0.3], [1.1, 0.3], [1.7, 0.3], [2.3, 0.3], [0.8, 0.82], [1.4, 0.82], [2.0, 0.82], [1.1, 1.3], [1.7, 1.3]]) if ((y - yc)**2 + (z - zc)**2 <= 0.27**2 && x > 0.3 && x < 7.7) return x < 0.38 || x > 7.62 ? '#3a3f45' : '#7a828a'; return null; }, {step:0.03}), 'Steel casing, as delivered to the pad.');
+site('Fire', 4, 4, ({SD, S}) => { SD(0, 4, 0, 4, 0, 3.4, firstOf((x, y, z) => flame(x, y, z, 1.6, 1.8, 0, 1.0, 3.2), (x, y, z) => flame(x, y, z, 2.6, 2.3, 0, 0.8, 2.4))); for (const [z, r] of [[4, 0.9], [5.2, 1.2], [6.5, 1.5]]) S(2 + z*0.1, 2, z, r, 'rgba(150,150,150,.85)'); }, 'Things set ablaze by an angry crowd.');
+site('Smoke column', 4, 4, ({S}) => { for (let i = 0; i < 7; i++) S(2 + i*0.25, 2, 1 + i*1.3, 0.7 + i*0.25, i % 2 ? 'rgba(150,150,150,.85)' : 'rgba(130,130,130,.85)'); }, 'Over ruins after a big quake, over burnt sites.');
+site('Rocket', 6, 2, ({SD, S}) => { SD(0, 6, 0, 2, 3, 5, (x, y, z) => { const p = [x, y, z]; if (inCap(p, [1.4, 1, 4], [4.8, 1, 4], 0.14, 0.14)) return x > 4.5 ? '#c8322a' : '#c9ced3'; if (x > 1.4 && x < 1.9 && ((Math.abs(y - 1) < 0.03 && Math.abs(z - 4) < 0.4) || (Math.abs(z - 4) < 0.03 && Math.abs(y - 1) < 0.4))) return '#8a9198';
+  return x > 0.7 && x < 1.4 && Math.hypot(y - 1, z - 4) < 0.12*(x - 0.7)/0.7 + 0.02 ? '!#f5a030' : null; }); for (let i = 0; i < 4; i++) S(0.5 - i*0.45, 1, 4, 0.18 + i*0.08, 'rgba(210,210,210,.85)'); }, 'Fired at the rigs from the formation.');
+site('Explosion', 6, 6, ({SD, S}) => { SD(0, 6, 0, 6, 0, 4.5, (x, y, z) => { const d = Math.hypot(x - 3, y - 3, (z - 1.8)*1.1) + (cell(x, y, z, 0.45) - 0.5)*0.9; if (d > 2.3) return null; const n = cell(x, y, z, 0.3); return '!' + (n > 0.62 ? '#ffe08a' : n > 0.3 ? '#f5a030' : '#d8502a'); }); for (const [x, z, r] of [[2, 4.5, 1.2], [3.8, 4.8, 1.3], [3, 6, 1.6]]) S(x, 3, z, r, 'rgba(140,140,140,.85)'); }, 'A rocket hit.');
+site('Destroyed rig', 14, 12, ({F, B, L, SD, S}) => { F([[0, 0], [14, 0], [14, 12], [0, 12]], PAL.gravel); F([[3, 3], [10, 2.5], [11, 9], [4, 9.5]], '#5a5048');
+  for (let i = 0; i < 6; i++) L([[2 + i*1.6, 4 + (i % 2), 0.2 + (i % 3)*0.3], [3 + i*1.6, 7 - (i % 2), 0.4]], '#d0663a', 1.2); L([[2, 5, 0.3], [12.5, 8, 1.2]], '#d0663a', 1.6); L([[2, 6.5, 0.3], [12.5, 9, 1]], '#d0663a', 1.4);
+  B(8, 2, 0, 3, 2, 1.2, '#3a3f45', {h:[1.2, 0.6, 0.9, 1.4]}); SD(5, 9, 4, 8, 0, 3, (x, y, z) => flame(x, y, z, 7, 6, 0, 1.4, 2.8)); for (const [z, r] of [[3.5, 1.2], [5, 1.6], [6.8, 2]]) S(7 + z*0.15, 6, z, r, 'rgba(130,130,130,.85)'); }, 'What is left after the formation passes.');
+site('Crater', 6, 6, ({F, B}) => { F([[0, 0], [6, 0], [6, 6], [0, 6]], '#9db383'); const ring = (r, c) => F(Array.from({length:14}, (_, i) => { const a = i/14*Math.PI*2; return [3 + Math.cos(a)*r*(1 + 0.12*Math.sin(a*4)), 3 + Math.sin(a)*r]; }), c);
+  ring(2.7, '#8a7458'); ring(1.9, '#5a4a38'); ring(1.0, '#3a3028'); for (const [x, y] of [[0.6, 1.2], [5.2, 4.6], [4.6, 0.8]]) B(x, y, 0, 0.4, 0.3, 0.25, '#7a6a58'); }, '');
+
+/* Air and scale: the F-35 flies low, so on the map it is not much bigger than a house */
+const placeModel = (H, name, dx, dy) => { const m = M.find(q => q.n === name), map = new Map();
+  for (const q of m.parts){ const c = Object.assign({}, q); for (const k of ['x', 'kx']) if (c[k] !== undefined) c[k] += dx; for (const k of ['y', 'ky']) if (c[k] !== undefined) c[k] += dy;
+    if (c.pts) c.pts = c.pts.map(v => v.length === 3 ? [v[0] + dx, v[1] + dy, v[2]] : [v[0] + dx, v[1] + dy]);
+    if (c.t === 'sdf'){ const f = q.fn; c.b = [q.b[0] + dx, q.b[1] + dx, q.b[2] + dy, q.b[3] + dy, q.b[4], q.b[5]]; c.fn = (x, y, z) => f(x - dx, y - dy, z); if (q.badge) c.badge = Object.assign({}, q.badge, {x:q.badge.x + dx, y:q.badge.y + dy}); delete c.labels; }
+    map.set(q, c); H.raw(c); }
+  for (const [q, c] of map) if (q.par) c.par = map.get(q.par); };
+def('x', 'Scale check: F-35 flying low over a house, a car, a driller and cows', 40, 22, (H) => { grass(H.F, 40, 22); placeModel(H, 'House, small', 2, 9); placeModel(H, 'Company car (old 911)', 14, 15); placeModel(H, 'Driller', 19, 15.5); placeModel(H, 'Cow (Simmental)', 22, 16); f35At(H, 16, 2, 12); }, 'All at the same scale. The jet at 12 m: its shadow on the ground, the jet above it.');
+def('x', 'F-35 formation (four, close)', 52, 46, (H) => { for (const [dx, dy] of [[30, 13], [19, 0], [19, 26], [8, 39]]) f35At(H, dx, dy, 9); for (const [x, y] of [[47, 16], [47, 21]]) H.SD(x, x + 3.4, y, y + 0.4, 9.5, 11, (px, py, pz) => inCap([px, py, pz], [x + 0.3, y + 0.2, 10.4], [x + 3.2, y + 0.2, 10.2], 0.1, 0.1) ? '#c9ced3' : null, {step:0.04}); }, 'Fly once across the map, low, firing at every rig. As many as needed.');
 
 function outline(c, col){ const g = c.getContext('2d'), W = c.width, Hh = c.height, d = g.getImageData(0, 0, W, Hh), a = d.data, o = new Uint8Array(W*Hh), rgb = hex(col || '#2a2d33');
   for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++){ const i = (y*W + x)*4; if (a[i + 3]) continue; if ((x > 0 && a[i - 1]) || (x < W - 1 && a[i + 7]) || (y > 0 && a[i - W*4 + 3]) || (y < Hh - 1 && a[i + W*4 + 3])) o[y*W + x] = 1; }
