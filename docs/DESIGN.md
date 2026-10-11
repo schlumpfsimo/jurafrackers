@@ -117,6 +117,23 @@ Carried over: moods per village, voter groups (higher/lower educated, farmers), 
 
 ---
 
+**World building (every game):**
+- Every game is a new valley from a random seed. The same seed gives the same valley.
+- The map is 640 × 480 m: a forested ridge at the back, the main valley with its stream and a railway, a side valley with its own stream, a wooded hill in front, and a lot of open land to build on.
+- One town on the valley road and three villages: one on the slope, one in the side valley, one across the stream.
+- No collisions: nothing stands on a road, the railway, a stream or another building; trees, animals, cars and people keep clear too.
+- Rule 1: every type of house is on the map (all ordinary houses, all farms, all public buildings, the villa, the station, the substation).
+- Rule 2: each building stands where its function puts it:
+  - town: square with fountain, mairie, church, shop, bank, Bourse du Jura, La Feuille de la Faille, gendarmerie, canton house, school, committee office, utility office, railway station on the railway, ordinary houses
+  - every village: mairie, chapel, shop and ordinary houses; the largest village also has a school
+  - freestanding: farms in the open with a track to the nearest road, the lender's villa alone on the slope near the forest with its own drive, the substation outside the town by the valley road
+- Buildings that come during play (company campus, sites, gifts, damaged states, protest camps) are not part of the start.
+- Detail follows the zoom: far, middle, close. The finest resolution is 7 px per metre; zooming further only enlarges the pixels.
+
+**Later:**
+- 16 views (directions) for every object, so vehicles follow curved roads and things can face any way.
+- Survey: the survey line is rotated with the arrow keys (buttons on a phone); the rig and everything else orient themselves to that line.
+
 ## 7. Survey and geology
 
 **One 3D underground** for the whole block: each layer's depth varies across the block; faults are tilted planes. A north–south and an east–west line through the same spot show the same rock where they cross. The block's faces show the same rock as the sections.

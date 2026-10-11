@@ -6,11 +6,13 @@
 const Q = new URLSearchParams(location.search), S = Math.min(7, +(Q.get('s') || 2.5)), Z = +(Q.get('z') || 1), SCR = S*Z, LOD = +(Q.get('d') || (SCR >= 20 ? 3 : SCR >= 8 ? 2 : 1)), WORKS = Q.get('works') === '1';
 const W = 640, D = 480;
 const SCENE = ART.compose(W, D, (H, K) => {
-  const r = K.rng(23), hsh = K.hsh, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), sm = t => t*t*(3 - 2*t), lerp = (a, b, t) => a + (b - a)*t;
+  // every game is a new valley: everything random comes from one seed (?seed= repeats a valley)
+  const SEED = +(Q.get('seed') || Math.floor(Math.random()*1e6)), SO = (SEED % 9973)*0.731;
+  const r = K.rng(SEED), hsh = (a, b, c) => K.hsh(a, b, c + SO), clamp = (v, a, b) => Math.max(a, Math.min(b, v)), sm = t => t*t*(3 - 2*t), lerp = (a, b, t) => a + (b - a)*t, rr = (a, b) => a + r()*(b - a);
   const vn = (x, y, s) => { const xi = Math.floor(x), yi = Math.floor(y), fx = sm(x - xi), fy = sm(y - yi), a = hsh(xi, yi, s), b = hsh(xi + 1, yi, s), c = hsh(xi, yi + 1, s), d = hsh(xi + 1, yi + 1, s);
     return a + (b - a)*fx + (c - a)*fy + (a - b - c + d)*fx*fy; };
   const fbm = (x, y, s) => vn(x, y, s)*0.5 + vn(x*2.03 + 5.1, y*2.03, s + 1)*0.3 + vn(x*4.1, y*4.1 + 2.7, s + 2)*0.2;
-  // ---- paths: smooth curves, with a bounding box; nearest point on them
+  // ---- paths: smooth curves, with a bounding box; nearest point on them (distance, point, distance along, side)
   const curve = (pts, w) => { const out = []; for (let i = 0; i < pts.length - 1; i++){ const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)], n = Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1])/2);
       for (let k = 0; k < n; k++){ const t = k/n, t2 = t*t, t3 = t2*t, f = (a, b, c, d) => 0.5*(2*b + (-a + c)*t + (2*a - 5*b + 4*c - d)*t2 + (-a + 3*b - 3*c + d)*t3); out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]); } }
     out.push(pts[pts.length - 1]); out.cum = [0]; for (let i = 1; i < out.length; i++) out.cum.push(out.cum[i - 1] + Math.hypot(out[i][0] - out[i - 1][0], out[i][1] - out[i - 1][1])); const xs = out.map(p => p[0]), ys = out.map(p => p[1]); out.box = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; out.w = w || 2.7; return out; };
@@ -18,76 +20,119 @@ const SCENE = ART.compose(W, D, (H, K) => {
     for (let i = 0; i < pl.length - 1; i++){ const [ax, ay] = pl[i], [qx, qy] = pl[i + 1], vx = qx - ax, vy = qy - ay, t = clamp(((x - ax)*vx + (y - ay)*vy)/(vx*vx + vy*vy || 1), 0, 1), px = ax + vx*t, py = ay + vy*t, d2 = Math.hypot(x - px, y - py); if (d2 < best){ best = d2; bx = px; by = py; bs = pl.cum[i] + t*Math.hypot(vx, vy); bside = vx*(y - ay) - vy*(x - ax) > 0 ? 1 : -1; } }
     return [best, bx, by, bs, bside]; };
   const near = (pl, x, y, lim) => { const q = nearP(pl, x, y, lim); return q ? q[0] : 1e9; };
-  // roads (half widths): the valley road, town streets, village lanes; farm tracks
-  const MAIN = curve([[-2, 250], [80, 246], [160, 253], [240, 241], [300, 237], [360, 239], [440, 232], [520, 226], [642, 231]], 2.8);
-  const ROADS = [MAIN,
-    curve([[300, 237], [302, 214], [298, 190], [290, 176]], 2.3), curve([[262, 216], [300, 212], [338, 216], [352, 224]], 2.3), curve([[240, 241], [250, 222], [262, 216]], 2.2),
-    curve([[300, 237], [310, 262], [328, 296], [396, 326], [480, 345], [548, 352], [600, 340]], 2.4),                       // over the stream to the village at the far end
-    curve([[160, 253], [150, 222], [176, 196], [152, 168], [142, 142], [128, 124]], 2.1),                                    // up the slope to the hill village
-    curve([[520, 226], [530, 196], [517, 160], [526, 124], [520, 96]], 2.1)];                                                // into the side valley
-  const TRACKS = [curve([[80, 246], [72, 210], [90, 176], [70, 140]], 1.45), curve([[420, 234], [430, 200], [410, 168], [420, 130], [404, 96]], 1.45), curve([[200, 245], [210, 290], [190, 330], [215, 380]], 1.45),
-    curve([[396, 326], [380, 380], [400, 430], [380, 482]], 1.45), curve([[600, 340], [620, 300], [608, 262]], 1.45), curve([[142, 142], [190, 120], [240, 104], [300, 100]], 1.45)];
-  // works: a drill site in a field, one in the forest, and the new roads to them (they cut through whatever is there)
-  const SITES = WORKS ? [[392, 140, 432, 170], [222, 20, 256, 44]] : [];
-  const NEWROADS = WORKS ? [curve([[420, 234], [418, 200], [412, 170]], 2.6), curve([[176, 196], [196, 150], [214, 112], [228, 70], [238, 44]], 2.6)] : [];
-  const ALLROADS = [...ROADS, ...NEWROADS];
-  // streams: the main stream meanders along the valley; a side stream comes down the side valley
-  const ys = x => 286 + 10*Math.sin(x/45) + 4*Math.sin(x/13 + 1), ys2 = x => -10/2025*Math.sin(x/45) - 4/169*Math.sin(x/13 + 1), hw = x => 2.4 + 0.6*Math.sin(x/23 + 2);
-  const streamV = (x, y) => { const dy = 10/45*Math.cos(x/45) + 4/13*Math.cos(x/13 + 1); return (y - ys(x))/Math.sqrt(1 + dy*dy); };
-  const sv = y => 548 + 14*Math.sin(y/37);
-  const SIDE = curve([[sv(0), -2], [sv(60), 60], [sv(120), 120], [sv(180), 180], [sv(230), 230], [565, ys(565)]], 1.3);
-  // ---- the land
-  const base0 = (x, y) => 30*sm(clamp((120 - y)/120, 0, 1)) + 16*Math.exp(-((x - 110)**2/95**2 + (y - 455)**2/70**2)) + 9*sm(clamp((y - 330)/130, 0, 1))*sm(clamp((x - 380)/160, 0, 1))
-    - 16*Math.exp(-((x - sv(y))**2)/34**2)*sm(clamp((240 - y)/120, 0, 1)) + 8*(fbm(x/60, y/60, 3) - 0.5) + 2.5*(fbm(x/16, y/16, 4) - 0.5);
+  const yOn = (pl, x) => { for (let i = 0; i < pl.length - 1; i++){ const [ax, ay] = pl[i], [bx, by] = pl[i + 1]; if ((x - ax)*(x - bx) <= 0 && ax !== bx) return ay + (by - ay)*(x - ax)/(bx - ax); } return pl[0][1]; };
+  // ---- the shape of the valley: a forested ridge at the back, the main valley and its stream, a side valley, a hill in front
+  const PH = Array.from({length:8}, () => r()*6.283), AX = rr(235, 268), TILT = rr(-0.045, 0.045), axis = x => AX + TILT*(x - 320), RID = x => 120 + 12*Math.sin(x/90 + PH[4]);
+  const ys = x => axis(x) + 34 + 10*Math.sin(x/45 + PH[0]) + 4*Math.sin(x/13 + PH[1]), dys = x => TILT + 10/45*Math.cos(x/45 + PH[0]) + 4/13*Math.cos(x/13 + PH[1]);
+  const ys2 = x => -10/2025*Math.sin(x/45 + PH[0]) - 4/169*Math.sin(x/13 + PH[1]), hw = x => 2.4 + 0.6*Math.sin(x/23 + PH[2]), streamV = (x, y) => (y - ys(x))/Math.sqrt(1 + dys(x)**2);
+  const SVX = r() < 0.5 ? rr(70, 150) : rr(490, 570), sv = y => SVX + 14*Math.sin(y/37 + PH[3]);
+  const SIDE = curve([[sv(-2), -2], ...[60, 120, 180].map(y => [sv(y), y]), [sv(axis(SVX) - 30), axis(SVX) - 30], [SVX + 8, ys(SVX + 8)]], 1.3);
+  const HX = rr(90, 550), PX = HX < 320 ? 430 : 210;
+  const base0 = (x, y) => 30*sm(clamp((RID(x) - y)/120, 0, 1)) + 16*Math.exp(-((x - HX)**2/95**2 + (y - 455)**2/70**2)) + 9*sm(clamp((y - 330)/130, 0, 1))*sm(clamp((HX < 320 ? x - PX : PX - x)/160 + 0.5, 0, 1))
+    - 16*Math.exp(-((x - sv(y))**2)/34**2)*sm(clamp((axis(SVX) - 10 - y)/120, 0, 1)) + 8*(fbm(x/60, y/60, 3) - 0.5) + 2.5*(fbm(x/16, y/16, 4) - 0.5);
   const slope = (x, y) => Math.hypot(base0(x + 1, y) - base0(x - 1, y), base0(x, y + 1) - base0(x, y - 1))/2;
-  // settlements
-  const TOWN = [300, 222, 72, 52], VILLAGES = [[134, 130, 34], [524, 112, 30], [578, 352, 34]];
-  const inSettle = (x, y, m) => Math.hypot((x - TOWN[0])/(TOWN[2] + m), (y - TOWN[1])/(TOWN[3] + m)) < 1 || VILLAGES.some(([cx, cy, rr]) => Math.hypot(x - cx, y - cy) < rr + m);
+  // ---- the valley road, the railway along the foot of the slope
+  const MAIN = curve(Array.from({length:9}, (_, i) => { const x = i === 0 ? -2 : i === 8 ? 642 : i*80 + rr(-10, 10); return [x, axis(x) - 8 + 6*Math.sin(x/70 + PH[5]) + rr(-3, 3)]; }), 2.8);
+  const RAIL = curve(Array.from({length:7}, (_, i) => { const x = i === 0 ? -2 : i === 6 ? 642 : i*107; return [x, axis(x) - 46 + 5*Math.sin(x/110 + PH[6])]; }), 1.6);
+  // ---- where the settlements are: one town on the valley road, a village on the slope, one in the side valley, one across the stream
+  const far = (p, list, d) => list.every(q => Math.hypot(p[0] - q[0], p[1] - q[1]) > d);
+  let TX = 320; for (let i = 0; i < 200; i++){ TX = rr(200, 440); if (Math.abs(TX - SVX) > 120) break; }
+  const TYR = yOn(MAIN, TX), TOWN = [TX, TYR - 12, 72, 52];
+  let VA = null, VB = null, VC = null;
+  for (let i = 0; i < 400 && !VA; i++){ const x = rr(50, 590), y = RID(x) + rr(5, 30); if (Math.abs(x - TX) > 170 && Math.abs(x - SVX) > 80 && slope(x, y) < 0.5) VA = [x, y, 32]; }
+  for (let i = 0; i < 400 && !VB; i++){ const y = rr(80, 125), x = sv(y) + 16; if (far([x, y], [VA, TOWN], 150)) VB = [x, y, 28]; }
+  for (let i = 0; i < 400 && !VC; i++){ const x = rr(60, 580), y = rr(350, 405); if (Math.abs(x - TX) > 150 && Math.abs(x - HX) > 130 && far([x, y], [VA, VB, TOWN], 150)) VC = [x, y, 32]; }
+  VA = VA || [100, 140, 32]; VB = VB || [sv(100) + 16, 100, 28]; VC = VC || [560, 380, 32];
+  const VILLAGES = [VA, VB, VC];
+  // ---- town streets and the lanes to the villages
+  const NX = TX + rr(-6, 6), SQ = [NX, TYR - 16];
+  const NORTH = curve([[NX, TYR], [NX + rr(-3, 3), TYR - 24], [NX + rr(-6, 6), TYR - 48], [NX + rr(-12, 12), TYR - 64]], 2.3);
+  const PAR = curve([[TX - 58, TYR - 31 + rr(-3, 3)], [TX - 20, TYR - 32], [NX, TYR - 32], [TX + 30, TYR - 31], [TX + 54, TYR - 28 + rr(-3, 3)]], 2.2);
+  const WEST = curve([[TX - 70, yOn(MAIN, TX - 70)], [TX - 64, TYR - 22], [TX - 58, PAR[0][1]]], 2.2);
+  const SX = TX + rr(16, 30), SOUTH = curve([[SX, yOn(MAIN, SX)], [SX + rr(-4, 4), yOn(MAIN, SX) + 14], [SX + rr(-6, 6), ys(SX) - 9]], 2.2);
+  const zig = (x0, y0, x1, y1, amp) => { const n = Math.max(2, Math.ceil(Math.abs(y1 - y0)/28)), pts = [[x0, y0]]; for (let k = 1; k < n; k++) pts.push([lerp(x0, x1, k/n) + (k % 2 ? amp : -amp), lerp(y0, y1, k/n)]); pts.push([x1, y1]); return pts; };
+  const xa = clamp(VA[0] + rr(-30, 30), 10, 630), ROAD_A = curve([...zig(xa, yOn(MAIN, xa), VA[0], VA[1], 20), [VA[0] + rr(-25, 25), VA[1] - 24]], 2.1);
+  const xb = sv(axis(SVX)) + 16, ROAD_B = curve([[xb, yOn(MAIN, xb)], ...[0.25, 0.5, 0.75].map(t => { const y = lerp(yOn(MAIN, xb), VB[1], t); return [sv(y) + 16, y]; }), [VB[0], VB[1]], [sv(VB[1] - 26) + 16, VB[1] - 26]], 2.1);
+  const xc = clamp(VC[0] + rr(-40, 40), 10, 630), ROAD_C = curve([[xc, yOn(MAIN, xc)], [lerp(xc, VC[0], 0.3), ys(lerp(xc, VC[0], 0.3)) - 10], [lerp(xc, VC[0], 0.4), ys(lerp(xc, VC[0], 0.4)) + 12], [VC[0], VC[1]], [VC[0] + rr(-20, 20), VC[1] + 24]], 2.2);
+  const LANES = VILLAGES.map(([vx, vy]) => { const dir = r() < 0.5 ? 1 : -1; return curve([[vx, vy], [vx + dir*14, vy + rr(-6, 6)], [vx + dir*30, vy + rr(-10, 10)]], 1.9); });
+  const ROADS = [MAIN, NORTH, PAR, WEST, SOUTH, ROAD_A, ROAD_B, ROAD_C, ...LANES];
+  // works: a test drill site in a field, one in the forest, and the new roads to them (they cut through whatever is there)
+  const SITES = [], NEWROADS = [];
+  if (WORKS){ for (let i = 0; i < 300 && SITES.length < 1; i++){ const x = rr(40, 560), y = rr(axis(x) - 40, axis(x) + 20); if (Math.abs(x - TX) > 110 && far([x, y], VILLAGES, 80) && Math.abs(streamV(x, y)) > 20){ SITES.push([x, y - 30, x + 40, y]); NEWROADS.push(curve([[x + 20, yOn(MAIN, x + 20)], [x + 20, y]], 2.6)); } }
+    for (let i = 0; i < 300 && SITES.length < 2; i++){ const x = rr(40, 560), y = RID(x) - rr(70, 90); if (y > 8 && Math.abs(x - SVX) > 70 && far([x, y], VILLAGES, 90)){ SITES.push([x, y, x + 34, y + 24]); const x2 = x + 17, y2 = axis(x2) - 8; NEWROADS.push(curve([[x2 + 30, yOn(MAIN, x2 + 30)], [x2 + 20, lerp(y2, y, 0.4)], [x2 + 8, lerp(y2, y, 0.75)], [x2, y + 24]], 2.6)); } } }
+  const ALLROADS = [...ROADS, ...NEWROADS], LEVELLED = [...ALLROADS, RAIL];
+  // ---- settlements
+  const inSettle = (x, y, m) => Math.hypot((x - TOWN[0])/(TOWN[2] + m), (y - TOWN[1])/(TOWN[3] + m)) < 1 || VILLAGES.some(([cx, cy, rad]) => Math.hypot(x - cx, y - cy) < rad + m);
   const inTown = (x, y) => Math.hypot((x - TOWN[0])/(TOWN[2] - 6), (y - TOWN[1])/(TOWN[3] - 6)) < 1;
   const inSite = (x, y, m) => SITES.some(([a, b, c, e]) => x > a - m && x < c + m && y > b - m && y < e + m);
-  const rock = (x, y) => (y < 175 || (x > 500 && y < 240)) && !inSettle(x, y, 10) && !inSite(x, y, 4) ? clamp((fbm(x/8, y/8, 9) - 0.6)*5, 0, 1)*clamp((slope(x, y) - 0.3)*4, 0, 1) : 0;
-  // levelled ground: building plots, sites; roads are cut into the slope (flat across, smooth along)
+  const rock = (x, y) => (y < RID(x) + 55 || (Math.abs(x - SVX) < 70 && y < axis(SVX))) && !inSettle(x, y, 10) && !inSite(x, y, 4) ? clamp((fbm(x/8, y/8, 9) - 0.6)*5, 0, 1)*clamp((slope(x, y) - 0.3)*4, 0, 1) : 0;
+  // levelled ground: building plots, sites; roads and the railway are cut into the slope (flat across, smooth along); culverts where they cross the side stream
   const flats = [], FB = new Map(); const level = (x0, y0, x1, y1, m) => { const z = base0((x0 + x1)/2, (y0 + y1)/2), f = [x0, y0, x1, y1, z, m || 4]; flats.push(f);
     for (let i = Math.floor((x0 - 8)/16); i <= Math.floor((x1 + 8)/16); i++) for (let j = Math.floor((y0 - 8)/16); j <= Math.floor((y1 + 8)/16); j++){ const k = i*1000 + j; if (!FB.has(k)) FB.set(k, []); FB.get(k).push(f); } return z; };
-  const roadLevel = (x, y, h) => { for (const pl of ALLROADS){ const q = nearP(pl, x, y, pl.w + 4); if (!q || q[0] > pl.w + 4) continue; const zc = base0(q[1], q[2]), t = q[0] < pl.w + 0.6 ? 0 : sm((q[0] - pl.w - 0.6)/3.4); h = zc + (h - zc)*t; } return h; };
+  for (const s of SITES) level(...s, 5);
+  const roadLevel = (x, y, h) => { for (const pl of LEVELLED){ const q = nearP(pl, x, y, pl.w + 4); if (!q || q[0] > pl.w + 4) continue; const zc = base0(q[1], q[2]), t = q[0] < pl.w + 0.6 ? 0 : sm((q[0] - pl.w - 0.6)/3.4); h = zc + (h - zc)*t; } return h; };
+  const onLevelled = (x, y, m) => LEVELLED.some(pl => near(pl, x, y, pl.w + m) < pl.w + m);
   const ground = (x, y) => { let h = roadLevel(x, y, base0(x, y)); for (const [x0, y0, x1, y1, z, m] of FB.get(Math.floor(x/16)*1000 + Math.floor(y/16)) || []){ const d = Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(y0 - y, 0, y - y1)); if (d < m){ const t = sm(d/m); h = z + (h - z)*t; } }
-    const v = Math.abs(streamV(x, y)), w = hw(x); if (v < w + 3) h -= 1.3*(v < w ? 1 : 1 - sm((v - w)/3)); const ds = near(SIDE, x, y, 4); if (ds < 3.5) h -= 0.9*(ds < 1.3 ? 1 : 1 - sm((ds - 1.3)/2.2));
+    const v = Math.abs(streamV(x, y)), w = hw(x); if (v < w + 3) h -= 1.3*(v < w ? 1 : 1 - sm((v - w)/3)); const ds = near(SIDE, x, y, 4); if (ds < 3.5 && !onLevelled(x, y, 1.2)) h -= 0.9*(ds < 1.3 ? 1 : 1 - sm((ds - 1.3)/2.2));
     const rk = rock(x, y); if (rk) h += rk*1.1*fbm(x/1.8, y/1.8, 12); return h; };
-  // ---- buildings: functional ones first (they keep their orientation), then houses along the streets, farms in the open
-  const placed = [], items = [], casters = [], yards = [], PB = new Map();
-  const roadNear = (x, y, m) => ALLROADS.some(pl => near(pl, x, y, pl.w + m) < pl.w + m);
-  const fits = (x, y, w, d) => { if (x < 4 || y < 4 || x + w > W - 4 || y + d > D - 4) return false; for (const [a, b, c, e] of placed) if (!(x + w + 2 < a || x - 2 > c || y + d + 2 < b || y - 2 > e)) return false;
-    for (let u = 0; u <= 1; u += 0.25) for (let v = 0; v <= 1; v += 0.25){ const px = x + w*u, py = y + d*v; if (roadNear(px, py, 0.8) || Math.abs(streamV(px, py)) < hw(px) + 4 || near(SIDE, px, py, 4) < 4 || inSite(px, py, 3)) return false; } return slope(x + w/2, y + d/2) < 0.45; };
-  const building = (name, x, y, recol) => { const m = K.M.find(q => q.n === name); if (!m || !fits(x, y, m.W, m.D)) return false; const p = [x, y, x + m.W, y + m.D, name]; placed.push(p);
+  // ---- buildings. Rule 1: every type of house is on the map. Rule 2: each stands where its function puts it (public buildings in the
+  // town, a mairie, chapel and shop in every village, ordinary houses in the town and villages, farms, the villa and the substation freestanding)
+  const placed = [], items = [], casters = [], yards = [], PB = new Map(), TRACKS = [];
+  const roadNear = (x, y, m) => ALLROADS.some(pl => near(pl, x, y, pl.w + m) < pl.w + m) || near(RAIL, x, y, RAIL.w + m) < RAIL.w + m;
+  const fits = (x, y, w, d, name) => { if (x < 4 || y < 4 || x + w > W - 4 || y + d > D - 4) return false; for (const [a, b, c, e] of placed) if (!(x + w + 2 < a || x - 2 > c || y + d + 2 < b || y - 2 > e)) return false;
+    for (let u = 0; u <= 1; u += 0.25) for (let v = 0; v <= 1; v += 0.25){ const px = x + w*u, py = y + d*v; if (ALLROADS.some(pl => near(pl, px, py, pl.w + 1) < pl.w + 0.8) || near(RAIL, px, py, 4) < RAIL.w + (name === 'Railway station' ? 0.3 : 2.5)
+      || Math.abs(streamV(px, py)) < hw(px) + 4 || near(SIDE, px, py, 4) < 4 || inSite(px, py, 3) || TRACKS.some(pl => near(pl, px, py, 2) < pl.w + 0.5)) return false; } return slope(x + w/2, y + d/2) < 0.45; };
+  const building = (name, x, y, recol) => { const m = K.M.find(q => q.n === name); if (!m || !fits(x, y, m.W, m.D, name)) return false; const p = [x, y, x + m.W, y + m.D, name]; placed.push(p);
     for (let i = Math.floor((x - 6)/16); i <= Math.floor((x + m.W + 6)/16); i++) for (let j = Math.floor((y - 6)/16); j <= Math.floor((y + m.D + 6)/16); j++){ const k = i*1000 + j; if (!PB.has(k)) PB.set(k, []); PB.get(k).push(p); }
     const z = level(x - 1, y - 1, x + m.W + 1, y + m.D + 1); items.push(() => K.place(H, name, x, y, z, recol, true)); const zt = Math.max(...m.parts.filter(q => q.t === 'blk').map(q => q.z + Math.max(...q.h)), 3); casters.push([x + 0.6, y + 0.6, x + m.W - 0.6, y + m.D - 0.6, zt*0.8]);
     if (name.startsWith('Farm')) yards.push([x - 3, y + m.D - 1, x + m.W + 2, y + m.D + 7]); return true; };
-  const nearBy = (name, x, y, recol) => { for (let rad = 0; rad < 18; rad += 1.5) for (let a = 0; a < 12; a++) if (building(name, x + Math.cos(a*0.524)*rad, y + Math.sin(a*0.524)*rad, recol)) return true; return false; };
+  const PROBE = (x, y, m) => (PB.get(Math.floor(x/16)*1000 + Math.floor(y/16)) || []).find(p => x > p[0] - m && x < p[2] + m && y > p[1] - m && y < p[3] + m);
+  const forestRaw = (x, y) => (y < RID(x) - 54 + 30*fbm(x/50, y/50, 21) && !(Math.abs(x - sv(y)) < 34 + 10*fbm(y/30, 1, 27) && y > 18))
+    || Math.hypot((x - HX)/(90 + 25*fbm(x/30, y/30, 28)), (y - 470)/60) < 1 || (fbm(x/48, y/48, 26) > 0.72 && y > RID(x) - 30);
+  const nearBy = (name, x, y, recol, reach) => { const m = K.M.find(q => q.n === name); for (let rad = 0; rad < (reach || 24); rad += 1.5) for (let a = 0; a < 16; a++) if (building(name, x + Math.cos(a*0.3927)*rad - m.W/2, y + Math.sin(a*0.3927)*rad - m.D/2, recol)) return true; return false; };
   const HOUSES = ['House, two storeys', 'House, small', ...K.VARS.house], house = () => HOUSES[Math.floor(r()*HOUSES.length)], FARMS = ['Farm', ...K.VARS.farm];
   const ROOFS = [null, {'#a8473a':'#b8553e'}, {'#a8473a':'#8e3f32'}, {'#a8473a':'#9a5a3a'}, {'#a8473a':'#c0624a'}], roof = () => ROOFS[Math.floor(r()*ROOFS.length)];
-  const FUNC = ['Church', 'Mairie', 'Fountain', 'Village shop', 'Bank', 'La Feuille de la Faille', 'Gendarmerie', 'Canton house', 'School', 'Chapel'];
-  // the town: the square by the fountain, the church and the mairie, the other public buildings along the streets
-  nearBy('Fountain', 304, 222); nearBy('Mairie', 312, 198); nearBy('Church', 276, 196); nearBy('Village shop', 318, 224); nearBy('Bank', 270, 225);
-  nearBy('La Feuille de la Faille', 336, 196); nearBy('Gendarmerie', 336, 244); nearBy('Canton house', 252, 192); nearBy('School', 280, 250);
-  // houses line the streets, a second row behind, thinning out at the edge of town; villages along their lanes
-  const frontage = (cx, cy, rx, ry, prob, rows, nmax) => { let k = 0; for (const pl of ROADS) for (let i = 0; i < pl.length - 1; i++){ const [ax, ay] = pl[i], [bx, by] = pl[i + 1], L = Math.hypot(bx - ax, by - ay), ux = (bx - ax)/L, uy = (by - ay)/L;
-      for (let s = 0; s < L; s += 1.2) for (const side of [-1, 1]) for (let row = 0; row < rows; row++){ if (k >= nmax) return k; const name = house(), m = K.M.find(q => q.n === name), off = pl.w + 3.2 + (row ? 13 : 0) + Math.max(m.W, m.D)/2;
+  const FUNC = ['Church', 'Mairie', 'Fountain', 'Village shop', 'Bank', 'Bourse du Jura', 'La Feuille de la Faille', 'Gendarmerie', 'Canton house', 'School', 'Chapel', 'Committee office', 'Utility office', 'Railway station', 'Substation (utility)'];
+  // the town: the square with the fountain, the mairie and church on it, the institutions around, the station on the railway, the substation outside
+  nearBy('Fountain', SQ[0] + 9, SQ[1]); nearBy('Railway station', NX + rr(14, 24), yOn(RAIL, NX + 20) - RAIL.w - 8.6, null, 30);
+  for (const [name, dx, dy] of [['Mairie', 14, -10], ['Church', -22, -8], ['Village shop', 16, 8], ['Bank', -24, 10], ['La Feuille de la Faille', 40, -6], ['Gendarmerie', 38, 22], ['Canton house', -48, -8],
+    ['Bourse du Jura', -50, 18], ['School', -12, 30], ['Committee office', 60, 10], ['Utility office', 58, -22]]) nearBy(name, SQ[0] + dx, SQ[1] + dy, null, 30);
+  for (const dx of [96, -96, 110, -110]){ const x = TX + dx; if (nearBy('Substation (utility)', x, yOn(MAIN, x) + 14, null, 14) || nearBy('Substation (utility)', x, yOn(MAIN, x) - 16, null, 14)) break; }
+  // houses line the streets, a second row behind, thinning out at the edge
+  const frontage = (cx, cy, rx, ry, prob, rows, nmax, pick) => { let k = 0; for (const pl of ROADS) for (let i = 0; i < pl.length - 1; i++){ const [ax, ay] = pl[i], [bx, by] = pl[i + 1], L = Math.hypot(bx - ax, by - ay), ux = (bx - ax)/L, uy = (by - ay)/L;
+      for (let s = 0; s < L; s += 1.2) for (const side of [-1, 1]) for (let row = 0; row < rows; row++){ if (k >= nmax) return k; const name = pick ? pick() : house(), m = K.M.find(q => q.n === name), off = pl.w + 3.2 + (row ? 13 : 0) + Math.max(m.W, m.D)/2;
         const px = ax + ux*s - uy*side*off, py = ay + uy*s + ux*side*off, d = Math.hypot((px - cx)/rx, (py - cy)/ry); if (d > 1 || r() > prob*(1.25 - d)) continue;
         if (building(name, px - m.W/2, py - m.D/2, roof())) k++; } } return k; };
-  frontage(TOWN[0], TOWN[1], TOWN[2], TOWN[3], 0.9, 2, 75);
-  VILLAGES.forEach(([cx, cy, rr], i) => { nearBy('Chapel', cx + [6, -4, 2][i], cy + [-6, 4, -8][i]); frontage(cx, cy, rr, rr, 0.8, 2, [11, 9, 10][i]); nearBy(FARMS[(i + 1) % FARMS.length], cx + [30, -32, 26][i], cy + [16, 24, 20][i]); });
-  for (const [x, y] of [[40, 180], [220, 300], [250, 160], [450, 280], [420, 410], [610, 190], [70, 330], [330, 420]]) nearBy(FARMS[Math.floor(r()*FARMS.length)], x, y, roof());
-  const PROBE = (x, y, m) => (PB.get(Math.floor(x/16)*1000 + Math.floor(y/16)) || []).find(p => x > p[0] - m && x < p[2] + m && y > p[1] - m && y < p[3] + m);
+  frontage(TOWN[0], TOWN[1], TOWN[2], TOWN[3], 1.4, 2, 90);
+  // each village: mairie, chapel and shop near the middle, houses along the lanes; the largest village also has a school
+  VILLAGES.forEach(([cx, cy, rad], i) => { for (const [name, dx, dy] of [['Mairie', 8, -10], ['Chapel', -10, -12], ['Village shop', 12, 10], ...(i === 0 ? [['School', -14, 12]] : [])]) nearBy(name, cx + dx, cy + dy, null, 34) || nearBy(name, cx, cy, null, 60);
+    frontage(cx, cy, rad, rad, 0.8, 2, [12, 10, 11][i]); });
+  for (const name of FUNC) if (!placed.some(p => p[4] === name)) nearBy(name, SQ[0], SQ[1], null, 80);
+  // rule 1: any type of house still missing goes into a village or the town
+  for (const name of HOUSES) if (!placed.some(p => p[4] === name)) for (const [cx, cy, rad] of [...VILLAGES, [TOWN[0], TOWN[1], 60]]){ if (frontage(cx, cy, rad + 8, rad + 8, 3, 2, 1, () => name)) break; }
+  // farms stand in the open, each with a track to the nearest road; every type of farm at least once
+  const trackTo = (x, y) => { let best = null; for (const pl of ROADS){ const q = nearP(pl, x, y, 400); if (q && (!best || q[0] < best[0])) best = q; } if (!best) return null; const mx = lerp(x, best[1], 0.5) + rr(-8, 8), my = lerp(y, best[2], 0.5) + rr(-8, 8);
+    const pl = curve([[x, y], [mx, my], [best[1], best[2]]], 1.45); for (let t = 0; t < pl.length; t += 2) if (PROBE(pl[t][0], pl[t][1], 1.5) && Math.hypot(pl[t][0] - x, pl[t][1] - y) > 3) return null; return pl; };
+  const farmOrder = [...FARMS, ...Array.from({length:6}, () => FARMS[Math.floor(r()*FARMS.length)])], farmsAt = [];
+  for (const name of farmOrder){ const m = K.M.find(q => q.n === name); for (let t = 0; t < 600; t++){ const x = rr(20, W - 20 - m.W), y = rr(RID(x) - 20, D - 30 - m.D), c = [x + m.W/2, y + m.D/2];
+      if (inSettle(c[0], c[1], 40) || !far(c, farmsAt, 80) || slope(c[0], c[1]) > 0.3 || forestRaw(c[0], c[1]) || Math.abs(streamV(c[0], c[1])) < 16) continue;
+      if (!building(name, x, y, roof())) continue; const tr = trackTo(c[0], y + m.D + 7); if (tr){ TRACKS.push(tr); farmsAt.push(c); break; } const p = placed.pop(); PB.forEach(v => { const k = v.indexOf(p); if (k >= 0) v.splice(k, 1); }); items.pop(); casters.pop(); yards.pop(); flats.pop(); } }
+  // the lender's villa: alone on the slope above the valley, near the forest, with its own drive
+  for (let t = 0; t < 800; t++){ const x = rr(30, 600), y = RID(x) - rr(-5, 25); if (Math.abs(x - TX) > 220 || !far([x, y], VILLAGES, 80) || slope(x, y) > 0.45 || inSettle(x, y, 30)) continue;
+    if (building('Villa', x, y, null)){ const tr = trackTo(x + 9, y + 16); if (tr){ TRACKS.push(tr); break; } const p = placed.pop(); PB.forEach(v => { const k = v.indexOf(p); if (k >= 0) v.splice(k, 1); }); items.pop(); casters.pop(); flats.pop(); } }
   const inBox = (x, y, [a, b, c, e], m) => x > a - m && x < c + m && y > b - m && y < e + m;
-  const SQUARE = (() => { const f = placed.find(p => p[4] === 'Fountain'); return f ? [(f[0] + f[2])/2, (f[1] + f[3])/2] : [304, 222]; })();
+  const SQUARE = (() => { const f = placed.find(p => p[4] === 'Fountain'); return f ? [(f[0] + f[2])/2, (f[1] + f[3])/2] : SQ; })();
+  // what is missing (should be nothing) and any overlap (should be none): shown in the page title for the tests
+  const REQUIRED = [...HOUSES, ...FARMS, 'Villa', ...FUNC], MISSING = REQUIRED.filter(n => !placed.some(p => p[4] === n));
+  let OVERLAPS = 0; placed.forEach((p, i) => placed.forEach((q, j) => { if (j > i && !(p[2] <= q[0] || p[0] >= q[2] || p[3] <= q[1] || p[1] >= q[3])) OVERLAPS++; }));
+  placed.forEach(p => { for (let u = 0.1; u < 1; u += 0.2) for (let v = 0.1; v < 1; v += 0.2){ const x = lerp(p[0], p[2], u), y = lerp(p[1], p[3], v); if (ALLROADS.some(pl => near(pl, x, y, pl.w) < pl.w) || near(RAIL, x, y, 2) < RAIL.w) { OVERLAPS++; return; } } });
+  window.WORLD = {seed:SEED, missing:MISSING, overlaps:OVERLAPS, buildings:placed.length};
   // ---- forest, woods, hedges
   const cleared = (x, y) => inSite(x, y, 4) || NEWROADS.some(pl => near(pl, x, y, 6) < pl.w + 4.5);
-  const forestRaw = (x, y) => (y < 66 + 30*fbm(x/50, y/50, 21) - 12 && !(Math.abs(x - sv(y)) < 34 + 10*fbm(y/30, 1, 27) && y > 18))
-    || Math.hypot((x - 105)/(90 + 25*fbm(x/30, y/30, 28)), (y - 470)/60) < 1 || (fbm(x/48, y/48, 26) > 0.72 && y > 90);
   const forestM = (x, y) => forestRaw(x, y) && !inSettle(x, y, 14) && fbm(x/14, y/14, 23) < 0.74 && !roadNear(x, y, 2.5) && !TRACKS.some(pl => near(pl, x, y, 4) < 3.6) && Math.abs(streamV(x, y)) > hw(x) + 2.5 && !cleared(x, y) && !PROBE(x, y, 6);
-  const HEDGES = [curve([[30, 262], [70, 270], [120, 266], [150, 282]]), curve([[230, 330], [262, 352], [256, 400], [272, 450]]), curve([[440, 250], [470, 262], [500, 252]]), curve([[350, 120], [380, 150], [372, 196]]),
-    curve([[470, 400], [520, 410], [560, 440], [620, 430]]), curve([[20, 200], [60, 190], [100, 205]]), curve([[440, 300], [452, 330], [470, 360]])];
-  const hedgeM = (x, y) => HEDGES.some(pl => near(pl, x, y, 2.4) < 1.0 + 0.6*fbm(x/3, y/3, 24)) && fbm(x/9, y/9, 25) < 0.74 && !roadNear(x, y, 1) && !cleared(x, y);
+  const HEDGES = []; for (let i = 0; i < 400 && HEDGES.length < 8; i++){ let x = rr(20, 620), y = rr(RID(x) - 10, 450), a = r()*6.283; const pts = [[x, y]]; for (let k = 0; k < 3; k++){ a += rr(-0.5, 0.5); x += Math.cos(a)*rr(35, 50); y += Math.sin(a)*rr(35, 50); pts.push([x, y]); }
+    if (pts.every(([px, py]) => px > 0 && py > 0 && px < W && py < D && !inSettle(px, py, 20) && !forestRaw(px, py))) HEDGES.push(curve(pts)); }
+  const hedgeM = (x, y) => HEDGES.some(pl => near(pl, x, y, 2.4) < 1.0 + 0.6*fbm(x/3, y/3, 24)) && fbm(x/9, y/9, 25) < 0.74 && !roadNear(x, y, 1) && !cleared(x, y) && !PROBE(x, y, 2);
   // ---- fields: blocks of strips along the slope
   const seeds = []; for (let i = 0; i < 3000 && seeds.length < 80; i++){ const x = r()*W, y = r()*D; if (seeds.every(s => Math.hypot(s.x - x, s.y - y) > 36)){ const gx = base0(x + 3, y) - base0(x - 3, y), gy = base0(x, y + 3) - base0(x, y - 3), g = Math.hypot(gx, gy);
       const a = g > 0.8 ? Math.atan2(gx, -gy) : (r() - 0.5)*1.4; seeds.push({x, y, a:a + (r() - 0.5)*0.25, w:10 + r()*10, id:seeds.length, past:r() < 0.18}); } }
@@ -95,13 +140,15 @@ const SCENE = ART.compose(W, D, (H, K) => {
   const plot = (x, y) => { let a = null, b = null, da = 1e9, db = 1e9; for (const s of seeds){ const d = Math.hypot(x - s.x, (y - s.y)*1.15); if (d < da){ db = da; b = a; da = d; a = s; } else if (d < db){ db = d; b = s; } }
     const ca = Math.cos(a.a), sa = Math.sin(a.a), u = (x - a.x)*ca + (y - a.y)*sa, v = -(x - a.x)*sa + (y - a.y)*ca, k = Math.floor(v/a.w), f = v/a.w - k;
     return {s:a, edge:(db - da)/2, u, v, k, f, crop:a.past ? 'pasture' : CROPS[Math.floor(hsh(a.id, k, 51)*CROPS.length)]}; };
-  const pastureM = (x, y) => { const fe = 66 + 30*fbm(x/50, y/50, 21) - 12; return (y > fe && y < fe + 46 && fbm(x/70, 3, 29) > 0.42) || (Math.abs(x - sv(y)) < 44 && y < 230 && y > 20); };
+  const pastureM = (x, y) => { const fe = RID(x) - 54 + 30*fbm(x/50, y/50, 21); return (y > fe && y < fe + 46 && fbm(x/70, 3, 29) > 0.42) || (Math.abs(x - sv(y)) < 44 && y < 230 && y > 20); };
   // ---- what lies at a point
   const kindAt = (x, y) => {
     if (inSite(x, y, 0)) return ['site', Math.min(x - SITES.find(s => inBox(x, y, s, 0))[0], 99)]; if (inSite(x, y, 1.4)) return ['earth', 0];
     for (const pl of NEWROADS){ const d = near(pl, x, y, 6); if (d < pl.w) return ['newroad', d]; if (d < pl.w + 1.3) return ['earth', 0]; if (d < pl.w + 4.5 && forestRaw(x, y)) return ['stumps', d]; }
-    for (const pl of ROADS){ const q = nearP(pl, x, y, pl.w + 2); if (!q) continue; const town = inTown(x, y); if (q[0] < pl.w) return ['road', q[0], pl.w, q[3], q[4], pl, town, Math.hypot(q[1] - SQUARE[0], q[2] - SQUARE[1])];
+    const qr = nearP(RAIL, x, y, 3), onRail = qr && qr[0] < RAIL.w, railLine = onRail && Math.abs(qr[0] - 0.72) < 0.07;
+    for (const pl of ROADS){ const q = nearP(pl, x, y, pl.w + 2); if (!q) continue; const town = inTown(x, y); if (railLine && q[0] < pl.w + 1.7) return ['rail', qr[0], qr[3]]; if (q[0] < pl.w) return ['road', q[0], pl.w, q[3], q[4], pl, town, Math.hypot(q[1] - SQUARE[0], q[2] - SQUARE[1])];
       if (town && q[0] < pl.w + 1.7) return ['pavement', q[0] - pl.w, 0, q[3]]; }
+    if (onRail) return ['rail', qr[0], qr[3]]; if (qr && qr[0] < RAIL.w + 0.8) return ['verge', 0];
     if (Math.hypot(x - SQUARE[0], y - SQUARE[1]) < 16 && !PROBE(x, y, 0)) return ['square', 0];
     const v = streamV(x, y), w = hw(x); if (Math.abs(v) < w) return ['water', Math.abs(v)/w]; if (Math.abs(v) < w + 1.4 && v*ys2(x) > 0 && Math.abs(v) < w + 1.4*(0.4 + 0.6*vn(x/5, 0, 52))) return ['gravel', 0]; if (Math.abs(v) < w + 2.6) return ['bank', Math.abs(v) - w];
     const ds = near(SIDE, x, y, 3); if (ds < 1.3) return ['water', ds/1.3]; if (ds < 2.6) return ['bank', ds - 1.3];
@@ -129,6 +176,8 @@ const SCENE = ART.compose(W, D, (H, K) => {
           if (LOD >= 2){ const mh = Math.hypot(((sl % 27) + 27) % 27 - 13, side*d - 0.9); if (mh < 0.36) c = mh > 0.27 ? col('#45484b') : mul(col('#5a5d60'), 1 + 0.12*(((x + y)*6 % 1 + 1) % 1 < 0.5)); }
           if (dsq > 16.5 && dsq < 19.5 && (((side*d + w)/0.5) % 2 + 2) % 2 < 1) c = col('#e8e6de'); }                                      // the zebra crossing by the square
         if (LOD >= 3 && speck(x, y, 0.1, 65) > 0.93) c = mul(c, 0.9); if (LOD >= 3 && Math.abs(fbm(x/2.5, y/2.5, 66) - 0.5) < 0.006 && fbm(x/12, y/12, 107) > 0.55) c = mul(c, 0.88); return c; }
+      case 'rail': { const sl = b; if (Math.abs(a - 0.72) < 0.07) return col('#5a5e62'); let c = mul(col('#9e978a'), 0.9 + 0.15*(LOD >= 3 ? speck(x, y, 0.12, 109) : n2));
+        if (LOD >= 2 && a < 1.15 && ((sl/per(0.6)) % 1 + 1) % 1 < 0.38) c = col('#6e5a44'); return c; }
       case 'pavement': { const [, d, , sl] = k; let c = mul(col('#b9b5ab'), 0.95 + 0.06*n2); if (d < 0.18) c = col('#cfcbc1');
         else if (LOD >= 2){ const q = per(0.6); if (((sl/q) % 1 + 1) % 1 < 0.12 || (((d - 0.18)/q) % 1 + 1) % 1 < 0.12) c = mul(c, 0.88); else if (LOD >= 3) c = mul(c, 0.96 + 0.08*hsh(Math.floor(sl/q), Math.floor(d/q), 108)); } return c; }
       case 'newroad': { let c = mul(col('#5e6266'), 0.97 + 0.05*n2); if (a > 2.2) c = mixC(c, col('#9a9282'), 0.6); if (LOD >= 3 && speck(x, y, 0.1, 100) > 0.95) c = mul(c, 1.1); return c; }
@@ -211,8 +260,8 @@ const SCENE = ART.compose(W, D, (H, K) => {
   for (const [name, dx, dy] of [['Café terrace', -2, -14], ['Market stall with cheese seller', -14, 4], ['Market stall with cheese seller', -9, 8], ['Pensioners on a bench', 8, 6], ['Kids playing', 2, 7], ['Dog walker', 24, -2], ['Woman with a pram', -24, 6], ['Cyclist', -30, 15]]){ const x = SQUARE[0] + dx, y = SQUARE[1] + dy, m = K.M.find(q => q.n === name);
     search: for (let rad = 0; rad < 14; rad += 1) for (let a = 0; a < 8; a++){ const px = x + Math.cos(a*0.785)*rad, py = y + Math.sin(a*0.785)*rad;
       if ([[0, 0], [m.W, 0], [0, m.D], [m.W, m.D], [m.W/2, m.D/2]].every(([u, v]) => !roadNear(px + u, py + v, 0.3) && okSpot(px + u, py + v, 0.5))){ K.place(H, name, px, py, hb(px + m.W/2, py + m.D/2), null, true); break search; } } }
-  for (const pl of [MAIN, ROADS[4]]) for (let sl = 30; sl < pl.cum[pl.cum.length - 1]; sl += 90){ const [x, y, ux] = atRoad(pl, sl, -pl.w*0.5); if (inTown(x, y) || Math.abs(ux) < 0.85 || !okSpot(x, y, 1)) continue; const nm = K.VARS.car[Math.floor(r()*K.VARS.car.length)], m = K.M.find(q => q.n === nm); K.place(H, nm, x - m.W/2, y - m.D/2, hb(x, y)); }
-  K.place(H, 'Post bus', 352, 236.6, hb(356, 238)); K.place(H, 'Tractor with manure spreader', 104, 247, hb(108, 248));
+  for (const pl of [MAIN, ROAD_C, ROAD_A]) for (let sl = 30; sl < pl.cum[pl.cum.length - 1]; sl += 90){ const [x, y, ux] = atRoad(pl, sl, -pl.w*0.5); if (inTown(x, y) || Math.abs(ux) < 0.85 || !okSpot(x, y, 1)) continue; const nm = K.VARS.car[Math.floor(r()*K.VARS.car.length)], m = K.M.find(q => q.n === nm); K.place(H, nm, x - m.W/2, y - m.D/2, hb(x, y)); }
+  { const q = nearP(MAIN, TX + 45, TYR, 60), [x, y] = atRoad(MAIN, q[3], -1.4); if (okSpot(x, y, 2)) K.place(H, 'Post bus', x - 4.5, y - 1.25, hb(x, y)); const [tx, ty] = atRoad(ROAD_A, 40, 0); K.place(H, 'Tractor with manure spreader', tx - 4.3, ty - 1.3, hb(tx, ty)); }
   // ---- light: sun direction, soft shade on slopes, darker hollows and feet of things, shadows, warm sun and cool shade, haze
   const L = [0.345, 0.636, 1], Ln = Math.hypot(...L), sx = 0.345/0.723, sy = 0.636/0.723, rise = 1/0.723;
   const colourAt = (x, y) => { const h = hb(x, y); let c = surface(x, y, kindAt(x, y));
