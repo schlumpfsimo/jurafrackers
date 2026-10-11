@@ -445,19 +445,21 @@ def('v', 'Police helicopter', 10.5, 2.6, ({B, X, C, L, Q}, c) => { const wh = '#
   for (const [y, f] of [[m + 0.13, 'S'], [m - 0.13, 'N']]){ const ring = []; for (let i = 0; i < 12; i++){ const a = i/12*Math.PI*2; ring.push([0.48 + Math.cos(a)*0.3, y, 1.72 + Math.sin(a)*0.3]); } Q(ring, '#22252a', {face:f}); }
   for (let i = 0; i < 4; i++){ const a = i*Math.PI/2 + 0.4, ca = Math.cos(a), sa = Math.sin(a), w = 0.13; Q([[4.6 - sa*w, m + ca*w, 2.76], [4.6 + ca*5.2 - sa*w, m + sa*5.2 + ca*w, 2.76], [4.6 + ca*5.2 + sa*w, m + sa*5.2 - ca*w, 2.76], [4.6 + sa*w, m - ca*w, 2.76]], '#2b2f33', {k:8000}); }
 }, 'Cabin with a glass nose and a blue band, engine and rotor mast on the roof, tail boom, ducted tail rotor, skids. The last resort.');
-def('v', 'F-35', 15.6, 11, ({X, B, W, L, Q}, c) => { const g = '#7f868c', g2 = '#737a80', m = 5.5, sym = pts => [...pts.map(([x, y]) => [x, m - y]), ...pts.slice().reverse().map(([x, y]) => [x, m + y])];
-  for (const [x, y] of [[12.9, 0], [6.6, -1.55], [6.6, 1.55]]){ L([[x, m + y, 0.3], [x, m + y*0.85, 1.15]], '#3a3f45', 0.9); W(x, m + y, x > 10 ? 0.28 : 0.36); }
-  X(sym([[1.0, 0.85], [2.0, 1.3], [4.0, 1.75], [9.0, 1.75], [11.2, 1.45], [12.6, 0.8], [14.2, 0.45], [15.6, 0]]), 1.1, 0.45, g);
-  B(13.1, m - 0.16, 0.98, 0.45, 0.32, 0.12, '#9a7a3a');
-  for (const s of [-1, 1]){ X([[10.0, m + s*1.6], [7.0, m + s*5.35], [5.6, m + s*5.35], [4.0, m + s*1.6]], 1.33, 0.14, g2, {kx:7.5, ky:m + s*3});
-    X([[3.8, m + s*1.2], [1.5, m + s*3.65], [0.55, m + s*3.65], [-0.45, m + s*1.0]], 1.38, 0.1, g2, {kx:8, ky:m + s*3.1});
-    Q([[11.22, m + s*0.85, 1.12], [11.22, m + s*1.45, 1.12], [10.45, m + s*1.38, 1.9], [10.45, m + s*0.7, 1.9]], '#2a2d31', {face:'E', kx:12, ky:m + s*2});
-    Q([[1.6, m + s*1.3, 2.0], [1.15, m + s*2.05, 4.0], [2.3, m + s*2.05, 4.0], [4.6, m + s*1.3, 2.0]], s > 0 ? '#878e94' : '#6a7177', {kx:8, ky:m + s*3.7, line:'rgba(20,24,28,.45)'}); }
-  X(sym([[1.2, 0.7], [2.0, 1.05], [4.5, 1.5], [10.4, 1.4], [12.0, 0.62], [13.6, 0.42], [14.9, 0]]), 1.55, 0.45, g);
-  X(sym([[1.8, 0.35], [2.6, 0.75], [6.5, 1.1], [9.6, 0.95], [10.4, 0.5], [10.4, 0]]), 2.0, 0.32, g);
-  X(sym([[10.3, 0], [10.4, 0.42], [11.3, 0.5], [12.7, 0.42], [13.5, 0]]), 2.0, 0.5, '#9c7c34', {top:'#c9a24a'});
-  B(-0.55, m - 0.55, 1.18, 1.6, 1.1, 0.72, '#4a4e53', {bv:0.18});
-}, 'Grey, wide flat body with a hump behind the gold canopy, angled side intakes, plain trapezoid wings, tailplanes reaching past the single nozzle, twin tails leaning outwards, sensor window under the nose. Only in the secret ending.');
+def('v', 'F-35', 15.6, 11, ({X, B, W, L, Q}, c) => { const g = '#8b8d87', gd = '#6f716c', gl = '#9b9d97', m = 5.5, sym = pts => [...pts.map(([x, y]) => [x, m - y]), ...pts.slice().reverse().map(([x, y]) => [x, m + y])];
+  for (const [x, y] of [[12.6, 0], [6.4, -1.5], [6.4, 1.5]]){ L([[x, m + y, 0.3], [x, m + y*0.85, 0.95]], '#3a3c38', 0.9); W(x, m + y, x > 10 ? 0.28 : 0.36); }
+  // belly, then the chine (widest, sharp edge), then the upper body and the spine: a faceted, thick fuselage
+  X(sym([[1.0, 0.7], [2.5, 1.15], [9.0, 1.3], [11.4, 0.9], [13.6, 0.4], [15.0, 0.08]]), 0.85, 0.35, gd);
+  X(sym([[0.8, 0.85], [2.0, 1.4], [4.0, 1.8], [9.4, 1.8], [11.2, 1.25], [13.4, 0.6], [15.6, 0]]), 1.2, 0.3, g);
+  for (const s of [-1, 1]){ X([[10.2, m + s*1.7], [7.0, m + s*5.35], [5.7, m + s*5.35], [3.9, m + s*1.7]], 1.32, 0.12, g, {kx:7.5, ky:m + s*3});
+    X([[3.9, m + s*1.3], [1.6, m + s*3.65], [0.65, m + s*3.65], [-0.4, m + s*1.05]], 1.36, 0.1, g, {kx:8, ky:m + s*3.1});
+    Q([[11.0, m + s*1.0, 1.25], [11.0, m + s*1.45, 1.25], [10.6, m + s*1.4, 1.75], [10.6, m + s*0.95, 1.75]], '#2a2c2a', {face:'E', kx:12, ky:m + s*2.1}); }
+  X(sym([[1.1, 0.75], [2.2, 1.25], [4.5, 1.7], [10.0, 1.65], [11.6, 0.85], [13.4, 0.5], [15.0, 0.06]]), 1.5, 0.5, g);
+  X(sym([[1.6, 0.5], [2.6, 1.0], [6.0, 1.4], [9.4, 1.3], [10.9, 0.6], [10.9, 0]]), 2.0, 0.38, gl);
+  X(sym([[10.6, 0], [10.9, 0.38], [12.0, 0.48], [13.2, 0.4], [14.0, 0]]), 2.0, 0.5, '#5e5133', {top:'#8c7a45'});
+  for (const s of [-1, 1]) Q([[1.4, m + s*1.3, 2.3], [1.0, m + s*1.85, 4.5], [2.6, m + s*1.85, 4.5], [5.0, m + s*1.3, 2.3]], s > 0 ? '#999b95' : '#6c6e69', {kx:8, ky:m + s*3.7, line:'rgba(20,24,28,.45)'});
+  B(-0.75, m - 0.62, 0.95, 1.8, 1.24, 1.0, '#5d5f5a', {bv:0.25}); B(-0.8, m - 0.45, 1.12, 0.06, 0.9, 0.66, '#2f302d', {noline:1});
+  B(13.0, m - 0.16, 0.82, 0.45, 0.32, 0.1, '#9a7a3a');
+}, 'Warm grey, thick faceted body with a sharp chine edge, long pointed nose, long tinted canopy set well forward, side intakes, trapezoid wings, big tailplanes, tall twin tails leaning outwards, one big nozzle. Only in the secret ending.');
 M[M.length - 1].big = 1.7;
 def('v', 'Regional train', 20, 3, ({B, W}, c) => { for (const x0 of [0.3, 10.2]){ wheels(W, [x0 + 1.4, x0 + 8], 3, 0.45);
   B(x0, 0.25, 0.6, 9.5, 2.5, 2.8, '#dfe2e5', {bv:0.5, win:[...[0.6, 2.3, 4, 5.7, 7.4].flatMap(a => sides(a, 1.3, 1.3, 0.85, GL)), ...sides(0.3, 0.45, 8.9, 0.26, '#b8322a'), ['E', 0.3, 1.2, 1.9, 0.9, GL], ['W', 0.3, 1.2, 1.9, 0.9, GL]]}); } }, 'Along the top of the valley.');
