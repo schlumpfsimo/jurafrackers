@@ -35,7 +35,7 @@ h2{font:700 15px/1 "Silkscreen",monospace;letter-spacing:.5px;margin:28px 0 12px
 <body>
 <header><div class="logo">JURA<span>FRACKERS</span> 2.0</div><nav><a href="#b">Buildings</a><a href="#v">Vehicles</a><a href="#p">People</a><a href="#f">Fonts</a></nav></header>
 <main>
-<p class="intro">Every building, vehicle and person, numbered, each in four orientations. Tell me by number what to change. Buildings and vehicles: views 1–4 are the object turned by a quarter each time. People: facing front-left, front-right, back-left, back-right.</p>
+<p class="intro">Every building, vehicle and person, numbered, each in four orientations. Tell me by number what to change. Views 1–4 show each one turned by a quarter.</p>
 <h2 id="b">Buildings</h2><div class="grid" id="gb"></div>
 <h2 id="v">Vehicles</h2><div class="grid" id="gv"></div>
 <h2 id="p">People</h2><div class="grid people" id="gp"></div>
@@ -50,21 +50,20 @@ function crisp(c){ const g = c.getContext('2d'), d = g.getImageData(0, 0, c.widt
 function card(host, num, title, note){ const el = document.createElement('div'); el.className = 'card'; el.innerHTML = '<h3><b>' + num + '</b>' + title + '</h3>' + (note ? '<p>' + note + '</p>' : '<p>&nbsp;</p>') + '<div class="views"></div>'; host.appendChild(el); return el.querySelector('.views'); }
 function addView(views, label, c){ const v = document.createElement('div'); v.className = 'view'; c.style.width = c.width*ZOOM + 'px'; c.style.height = c.height*ZOOM + 'px'; v.appendChild(c); v.appendChild(document.createTextNode(label)); views.appendChild(v); }
 function renderAll(){
-  let nb = 0, nv = 0;
+  const n = {b:0, v:0, p:0}, host = {b:'gb', v:'gv', p:'gp'}, pre = {b:'B', v:'V', p:'P'};
   for (const m of ART.models){
-    const isB = m.cat === 'b', num = isB ? 'B' + String(++nb).padStart(2, '0') : 'V' + String(++nv).padStart(2, '0');
-    const views = card(document.getElementById(isB ? 'gb' : 'gv'), num, m.n, m.note);
-    const zt = extent(m), span = m.W + m.D, pad = 6, s = Math.max(1.2, Math.min(m.cat === 'v' ? 11 : 7, 118/span, 150/(span/2 + Math.max(zt, 1))));
+    const num = pre[m.cat] + String(++n[m.cat]).padStart(2, '0'), views = card(document.getElementById(host[m.cat]), num, m.n, m.note);
+    const zt = extent(m), span = m.W + m.D, pad = 6;
+    const s = m.cat === 'p' ? 20 : m.cat === 'v' ? Math.min(7, 64/span) : Math.max(1.2, Math.min(7, 118/span, 150/(span/2 + Math.max(zt, 1))));
+    const zoom = m.cat === 'v' ? 3 : 2;
     for (let r = 0; r < 4; r++){
       const c = document.createElement('canvas'); c.width = Math.ceil(span*s + pad*2); c.height = Math.ceil(span*s/2 + Math.max(zt, 1)*s + pad*2);
-      const g = c.getContext('2d'), ox = (r % 2 ? m.D : m.W)*s + pad, oy = Math.max(zt, 1)*s + pad;
-      const post = ART.draw(g, m, r, s, ox - (r % 2 ? m.D : m.W)*s + (r % 2 ? m.W : m.D)*s, oy); crisp(c); post.forEach(f => f()); addView(views, String(r + 1), c);
+      const g = c.getContext('2d'), RD = r % 2 ? m.W : m.D;
+      const post = ART.draw(g, m, r, s, RD*s + pad, Math.max(zt, 1)*s + pad); crisp(c); if (m.cat !== 'b') ART.outline(c); post.forEach(f => f());
+      c.style.width = c.width*zoom + 'px'; c.style.height = c.height*zoom + 'px';
+      const v = document.createElement('div'); v.className = 'view'; v.appendChild(c); v.appendChild(document.createTextNode(String(r + 1))); views.appendChild(v);
     }
   }
-  ART.people.forEach((p, i) => {
-    const views = card(document.getElementById('gp'), 'P' + String(i + 1).padStart(2, '0'), p.n, p.note);
-    for (let d = 0; d < 4; d++){ const c = document.createElement('canvas'); c.width = 64; c.height = 100; ART.drawPerson(c.getContext('2d'), 32, 94, 2.9, p, d); addView(views, ['front-left', 'front-right', 'back-left', 'back-right'][d], c); }
-  });
 }
 (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(renderAll);
 </script>
