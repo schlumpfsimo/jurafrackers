@@ -129,7 +129,7 @@ function draw(g, model, rot, S, ox, oy, post){
         if (!set.has(x + ',' + y + ',' + (z + 1))) poly([P(X0, Y0, Z1), P(X1, Y0, Z1), P(X1, Y1, Z1), P(X0, Y1, Z1)], sh(c, fl ? 0.9 : 1.06)); } }});
     } else if (p.t === 'sdf'){
       const [x0, x1, y0, y1] = p.b, c0 = rp(x0, y0), c1 = rp(x1, y1); items.push({k:(c0[0] + c1[0])/2 + (c0[1] + c1[1])/2 + (p.k || 0), i, f(){ volume(g, p, rot, S, ox, oy, W, D); }});
-      if (p.badge){ const bd = p.badge, q = rp(bd.x, bd.y), at = P(q[0], q[1], bd.z); post.push(() => pixelPlate(g, Math.round(at[0]), Math.round(at[1]), bd.text, bd.bg, bd.fg, Math.max(1, Math.round(S/12)))); }
+      if (p.badge){ const bd = p.badge, q = rp(bd.x, bd.y), at = P(q[0], q[1], bd.z); post.push(S >= 7 ? () => pixelPlate(g, Math.round(at[0]), Math.round(at[1]), bd.text, bd.bg, bd.fg, Math.max(1, Math.round(S/12))) : () => { const w = Math.max(2, Math.round(0.9*S)), h = Math.max(1, Math.round(0.5*S)); g.fillStyle = bd.bg; g.fillRect(Math.round(at[0] - w/2), Math.round(at[1] - h/2), w, h); }); }
       for (const [f, a0, a1, z, hh, txt, tc, pl] of p.labels || []){ const fr = rf(f); if (fr !== 'E' && fr !== 'S') continue;
         const A = rp(...(f === 'S' ? [a0, pl] : f === 'N' ? [a1, pl] : f === 'E' ? [pl, a0] : [pl, a1])), Bq = rp(...(f === 'S' ? [a1, pl] : f === 'N' ? [a0, pl] : f === 'E' ? [pl, a1] : [pl, a0]));
         const m1 = P((A[0] + Bq[0])/2, (A[1] + Bq[1])/2, z + hh/2), len = Math.hypot(Bq[0] - A[0], Bq[1] - A[1])*S*1.12, fs = Math.max(6, Math.round(S*hh*0.8)), skew = fr === 'S' ? 0.5 : -0.5;
@@ -183,9 +183,10 @@ function volume(g, p, rot, S, ox, oy, W, D){
   const cs = [rpp(bx0, by0), rpp(bx1, by1)], RX0 = Math.min(cs[0][0], cs[1][0]), RX1 = Math.max(cs[0][0], cs[1][0]), RY0 = Math.min(cs[0][1], cs[1][1]), RY1 = Math.max(cs[0][1], cs[1][1]);
   const P = (x, y, z) => [ox + (x - y)*S, oy + (x + y)*S/2 - z*S], pts = []; for (const x of [RX0, RX1]) for (const y of [RY0, RY1]) for (const z of [z0, z1]) pts.push(P(x, y, z));
   const sx0 = Math.floor(Math.min(...pts.map(q => q[0]))), sx1 = Math.ceil(Math.max(...pts.map(q => q[0]))), sy0 = Math.floor(Math.min(...pts.map(q => q[1]))), sy1 = Math.ceil(Math.max(...pts.map(q => q[1])));
+  const cw = g.canvas.width, ch = g.canvas.height; if (sx1 < 0 || sy1 < 0 || sx0 >= cw || sy0 >= ch) return;
   const w = sx1 - sx0 + 1, h = sy1 - sy0 + 1, dz = p.step || Math.min(0.04, 0.5/S), hit = new Float32Array(w*h*3), col = new Array(w*h).fill(null);
   const at = (X, Y, z) => { const [x, y] = inv(X, Y); return p.fn(x, y, z); };
-  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++){ const a = (sx0 + i + 0.5 - ox)/S, b = (sy0 + j + 0.5 - oy)/S;
+  for (let j = Math.max(0, -sy0); j < Math.min(h, ch - sy0); j++) for (let i = Math.max(0, -sx0); i < Math.min(w, cw - sx0); i++){ const a = (sx0 + i + 0.5 - ox)/S, b = (sy0 + j + 0.5 - oy)/S;
     const zt = Math.min(z1, RX1 - a/2 - b, RY1 - b + a/2), zb = Math.max(z0, RX0 - a/2 - b, RY0 - b + a/2); if (zt < zb) continue;
     let zp = zt + dz, found = null;
     for (let z = zt; z >= zb; z -= dz){ const c = at(a/2 + b + z, b + z - a/2, z); if (c){ let lo = z, hi = Math.min(zp, zt); for (let k = 0; k < 5; k++){ const m = (lo + hi)/2; if (at(a/2 + b + m, b + m - a/2, m)) lo = m; else hi = m; } found = [lo, c]; break; } zp = z; }
@@ -215,7 +216,7 @@ function heightfield(g, p, rot, S, ox, oy, W, D){
   let zmin = Infinity, zmax = -Infinity; for (const v of heights){ if (v < zmin) zmin = v; if (v > zmax) zmax = v; } zmin -= p.base || 6;
   const RW = rot % 2 ? D : W, RD = rot % 2 ? W : D, P = (x, y, z) => [ox + (x - y)*S, oy + (x + y)*S/2 - z*S];
   const pts = []; for (const x of [0, RW]) for (const y of [0, RD]) for (const z of [zmin, zmax]) pts.push(P(x, y, z));
-  const sx0 = Math.floor(Math.min(...pts.map(q => q[0]))), sx1 = Math.ceil(Math.max(...pts.map(q => q[0]))), sy0 = Math.floor(Math.min(...pts.map(q => q[1]))), sy1 = Math.ceil(Math.max(...pts.map(q => q[1])));
+  const sx0 = Math.max(0, Math.floor(Math.min(...pts.map(q => q[0])))), sx1 = Math.min(g.canvas.width - 1, Math.ceil(Math.max(...pts.map(q => q[0])))), sy0 = Math.max(0, Math.floor(Math.min(...pts.map(q => q[1])))), sy1 = Math.min(g.canvas.height - 1, Math.ceil(Math.max(...pts.map(q => q[1]))));
   const w = sx1 - sx0 + 1, h = sy1 - sy0 + 1, img = g.createImageData(w, h), d = img.data;
   const hAt = (x, y) => { const fx = x/cell, fy = y/cell, i = Math.min(nx - 1, Math.max(0, Math.floor(fx))), j = Math.min(ny - 1, Math.max(0, Math.floor(fy))), u = fx - i, v = fy - j;
     return Hh(i, j)*(1 - u)*(1 - v) + Hh(i + 1, j)*u*(1 - v) + Hh(i, j + 1)*(1 - u)*v + Hh(i + 1, j + 1)*u*v; };
@@ -949,7 +950,7 @@ const SKIN = ['#f2d2b6', '#e8c09c', '#d9a882', '#c98e66', '#a8704a', '#8a5a3a', 
 const TOPS = ['#3f7a4a', '#c9622a', '#2c5f93', '#b8322a', '#e8b730', '#6a5a8a', '#3a4a63', '#7a8f6e', '#2c8a8a', '#b05a6a', '#4a4f55', '#8a6a4a', '#d9d4c8', '#5a7aa0'];
 const BOTS = ['#3a4a63', '#2b2f36', '#4a4f55', '#5a4632', '#2f3a52', '#6b5a44', '#7a7468'], SHOES = ['#2b2522', '#5a4632', '#3a3f45', '#d9d4c8', '#7a3a2a'];
 // a figure 180° turned (facing -x), for police facing a crowd
-const turned = (H, o, dx, dy, pose) => { const f = personVol(o, pose); H.SD(dx - 0.35, dx + 1.95, dy - 0.25, dy + 1.6, 0, 2.6*(o.tall || 1), (x, y, z) => f(1.5 - (x - dx), 1.5 - (y - dy), z), {step:0.035}); };
+const turned = (H, o, dx, dy, pose, lift) => { const f = personVol(o, pose); H.SD(dx - 0.35, dx + 1.95, dy - 0.25, dy + 1.6, 0, 2.6*(o.tall || 1), (x, y, z) => f(1.5 - (x - dx), 1.5 - (y - dy), z), {step:0.035, lift:lift || 0}); };
 const label = (H, x, y, txt) => H.T(x, y, 0, txt, {size:8, color:'#2a2d33', post:1});
 const sheet = (n, W, D, fn, note, views) => { def('c', n, W, D, fn, note); M[M.length - 1].views = views || [0]; };
 const protester = (r, i) => { const fem = r() < 0.55, old = r() < 0.15, o = {skin:pick(r, SKIN), top:pick(r, TOPS), bot:pick(r, BOTS), shoe:pick(r, SHOES), hair:old ? pick(r, ['#d9d4c8', '#9a9590', '#e6e2da']) : pick(r, HAIR), longHair:fem && r() < 0.75, bun:fem && r() < 0.15, beard:!fem && r() < 0.35 ? pick(r, ['#2b2522', '#5a4632', '#9a9590']) : null, bulk:0.95 + r()*0.2, tall:old ? 0.95 : 0.96 + r()*0.08};
@@ -1171,8 +1172,31 @@ const LOGOS = {
 function outline(c, col){ const g = c.getContext('2d'), W = c.width, Hh = c.height, d = g.getImageData(0, 0, W, Hh), a = d.data, o = new Uint8Array(W*Hh), rgb = hex(col || '#2a2d33');
   for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++){ const i = (y*W + x)*4; if (a[i + 3]) continue; if ((x > 0 && a[i - 1]) || (x < W - 1 && a[i + 7]) || (y > 0 && a[i - W*4 + 3]) || (y < Hh - 1 && a[i + W*4 + 3])) o[y*W + x] = 1; }
   for (let j = 0; j < o.length; j++) if (o[j]){ a[j*4] = rgb[0]; a[j*4 + 1] = rgb[1]; a[j*4 + 2] = rgb[2]; a[j*4 + 3] = 255; } g.putImageData(d, 0, 0); }
+/* House and farm variants for scenes: walls, roofs, gable direction, shutters, balconies, garages, woodpiles */
+const VARS = {house:[], farm:[]};
+for (let i = 0; i < 12; i++){ const r = rng(400 + i*17), Wm = 7 + Math.round(r()*3), Dm = 6 + Math.round(r()*2.5), two = r() < 0.5, ax = r() < 0.5 ? 'x' : 'y', wh = two ? 5.6 : 3.1;
+  const wall = pick(r, ['#efe9dc', '#f2ead2', '#e9e2cf', '#f4f0e6', '#e6dcc6', '#dfe3e4', '#efe2c8']), roof = pick(r, ['#a8473a', '#8e3f32', '#9a5a3a', '#b8553e', '#6e4b38', '#7d4d3c', '#59606a']), shut = pick(r, ['#3f6b45', '#7a3a2a', '#3a5f8a', '#5a4632', null]);
+  const garage = r() < 0.35, balcony = two && r() < 0.45, PW = Wm + (garage ? 4.5 : 0) + 3, PD = Dm + 3, name = 'House variant ' + (i + 1); VARS.house.push(name);
+  def('h', name, PW, PD, ({B, R, F, L}) => { F([[0, 0], [PW, 0], [PW, PD], [0, PD]], '#9db383'); const x0 = 1.5, y0 = 1.5, win = [];
+    const wins = (f, len) => { for (let a = 0.9; a < len - 1.2; a += 1.9) for (const z of two ? [0.9, 3.5] : [0.9]){ win.push([f, a, z, 0.9, 1.3]); if (shut) win.push([f, a - 0.32, z, 0.28, 1.3, shut], [f, a + 0.94, z, 0.28, 1.3, shut]); } };
+    wins('S', Wm); wins('E', Dm); wins('N', Wm); wins('W', Dm); win.push(['S', Wm/2 - 0.5, 0, 1.0, 2.1, '#8a5a3a']);
+    B(x0, y0, 0, Wm, Dm, wh, wall, {win}); R(x0, y0, wh, Wm, Dm, ax === 'x' ? Dm*0.45 : Wm*0.45, roof, ax, wall, 0.5);
+    B(x0 + (ax === 'x' ? Wm*0.7 : Wm*0.3), y0 + (ax === 'x' ? Dm*0.3 : Dm*0.7), wh + 0.6, 0.6, 0.6, (ax === 'x' ? Dm : Wm)*0.45 + 1.2, '#8d6e5a');
+    if (balcony){ B(x0 + 0.8, y0 + Dm, 2.9, Wm - 1.6, 1.0, 0.18, '#8a5a3a'); L([[x0 + 0.8, y0 + Dm + 1, 3.95], [x0 + Wm - 0.8, y0 + Dm + 1, 3.95]], '#6a4a32', 0.7); }
+    if (garage){ B(x0 + Wm + 0.3, y0 + Dm - 5, 0, 4, 5, 2.6, wall, {win:[['S', 0.4, 0, 3.2, 2.2, '#9aa3ab']]}); B(x0 + Wm + 0.1, y0 + Dm - 5.2, 2.6, 4.4, 5.4, [0.5, 0.2, 0.2, 0.5], roof); }
+  }, ''); }
+for (let i = 0; i < 4; i++){ const r = rng(900 + i*31), ax = i % 2 ? 'y' : 'x', L1 = 18 + Math.round(r()*6), L2 = 10 + Math.round(r()*3), Wm = ax === 'x' ? L1 : L2, Dm = ax === 'x' ? L2 : L1;
+  const wall = pick(r, ['#efe6d4', '#f2ead8', '#e8dcc4']), roof = pick(r, ['#6e4b38', '#7d4d3c', '#8e3f32', '#5a4a3e']), silo = r() < 0.6, PW = Wm + 8, PD = Dm + 7, name = 'Farm variant ' + (i + 1); VARS.farm.push(name);
+  def('h', name, PW, PD, ({B, R, F, C, L}) => { F([[0, 0], [PW, 0], [PW, PD], [0, PD]], '#b3a77f'); const x0 = 2, y0 = 2, win = [];
+    if (ax === 'x'){ for (let a = 1; a < Wm*0.4; a += 1.8) win.push(['S', a, 1, 1.0, 1.3]); win.push(['S', Wm*0.5, 0, 3.6, 3.2, '#8a5a3a'], ['S', Wm*0.78, 0, 2.6, 3.0, '#8a5a3a']); for (let a = 1; a < Dm - 1; a += 2.2) win.push(['E', a, 1, 1.0, 1.3]); }
+    else { for (let a = 1; a < Wm - 1; a += 2) win.push(['S', a, 1, 1.0, 1.3]); win.push(['E', Dm*0.45, 0, 3.6, 3.2, '#8a5a3a'], ['E', Dm*0.75, 0, 2.6, 3.0, '#8a5a3a']); for (let a = 1; a < Dm*0.35; a += 1.8) win.push(['E', a, 1, 1.0, 1.3]); }
+    B(x0, y0, 0, Wm, Dm, 3.8, wall, {win}); R(x0, y0, 3.8, Wm, Dm, (ax === 'x' ? Dm : Wm)*0.62, roof, ax, '#a07a55', 0.9);
+    if (silo) C(x0 + Wm + 3, y0 + 2.5, 0, 1.5, 7.5, '#cfd3d6', {top:'#9aa3ab'}); B(x0 + Wm + 1, y0 + Dm + 1, 0, 3, 2.5, 1.1, '#5a4632', {h:[1.1, 1.4, 0.8, 0.6]});
+    B(x0, y0 + Dm + 1.5, 0, 4, 0.9, 1.2, '#8a6a4a', {win:[['S', 0, 0.2, 4, 0.2, '#6a4a32'], ['S', 0, 0.7, 4, 0.2, '#6a4a32']]});
+  }, ''); }
+
 // composing scenes from the locked assets: a kit of the building blocks used above
-const KIT = {M, place:placeModel, figure:figure3, turned, PROT, VILL, BLOC, GOON, RIOT, POSE, cowM, sheepFn, chickFn, horseFn, dogAt, bikeAt, bench, barricade, beech, spruce, fruitTree, bareBeech, snowy, sway, at, firstOf, flame, grass, f35At, rng, pick, hsh, cell, leafy};
+const KIT = {M, VARS, place:placeModel, figure:figure3, turned, PROT, VILL, BLOC, GOON, RIOT, POSE, cowM, sheepFn, chickFn, horseFn, dogAt, bikeAt, bench, barricade, beech, spruce, fruitTree, bareBeech, snowy, sway, at, firstOf, flame, grass, f35At, rng, pick, hsh, cell, leafy};
 const compose = (W, D, fn) => ({cat:'s', n:'scene', W, D, parts:build(H => fn(H, KIT))});
 window.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose};
 })();

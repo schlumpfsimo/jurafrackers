@@ -18,21 +18,22 @@ const SCENE = ART.compose(W, D, (H, K) => {
   // settlements: one compact town, three hamlets, farms on the slopes
   const placed = []; const fits = (x, y, w, d) => placed.every(([a, b, c, e]) => x + w + 1 < a || x - 1 > c || y + d + 1 < b || y - 1 > e) && ROAD.every(pl => { for (let u = 0; u <= 1; u += 0.25) for (let v = 0; v <= 1; v += 0.25) if (segD(x + w*u, y + d*v, pl) < 3.0) return false; return true; }) && segD(x + w/2, y + d/2, STREAM) > 7;
   const items = [], yard = [], casters = [];
-  const building = (name, x, y, recol) => { const m = K.M.find(q => q.n === name); if (!fits(x, y, m.W, m.D)) return false; placed.push([x, y, x + m.W, y + m.D]); const z = level(x - 1, y - 1, x + m.W + 1, y + m.D + 1); items.push(() => K.place(H, name, x, y, z, recol, true)); yard.push([x, y, x + m.W, y + m.D, name === 'Farm' ? '#c2b48a' : null]); const zt = Math.max(...m.parts.filter(q => q.t === 'blk').map(q => q.z + Math.max(...q.h)), 3); casters.push([x + 1, y + 1, x + m.W - 1, y + m.D - 1, zt*0.8]); return true; };
+  const building = (name, x, y, recol) => { const m = K.M.find(q => q.n === name); if (!fits(x, y, m.W, m.D)) return false; placed.push([x, y, x + m.W, y + m.D]); const z = level(x - 1, y - 1, x + m.W + 1, y + m.D + 1); items.push(() => K.place(H, name, x, y, z, recol, true)); yard.push([x, y, x + m.W, y + m.D, name.startsWith('Farm') ? '#c2b48a' : null]); const zt = Math.max(...m.parts.filter(q => q.t === 'blk').map(q => q.z + Math.max(...q.h)), 3); casters.push([x + 1, y + 1, x + m.W - 1, y + m.D - 1, zt*0.8]); return true; };
+  const HOUSES = ['House, two storeys', 'House, small', ...K.VARS.house], FARMS = ['Farm', ...K.VARS.farm], house = () => HOUSES[Math.floor(r()*HOUSES.length)];
   const ROOFS = [null, {'#a8473a':'#b8553e'}, {'#a8473a':'#8e3f32'}, {'#a8473a':'#9a5a3a'}, {'#a8473a':'#c0624a'}];
   const village = (cx, cy, n, rad, extras) => { for (const [name, dx, dy] of extras) building(name, cx + dx, cy + dy);
-    let tries = 0, k = 0; while (k < n && tries < 4000){ tries++; const a = r()*Math.PI*2, d = Math.sqrt(r())*rad, x = cx + Math.cos(a)*d - 5, y = cy + Math.sin(a)*d*0.8 - 5; if (building(r() < 0.45 ? 'House, two storeys' : 'House, small', x, y, ROOFS[Math.floor(r()*ROOFS.length)])) k++; } };
+    let tries = 0, k = 0; while (k < n && tries < 4000){ tries++; const a = r()*Math.PI*2, d = Math.sqrt(r())*rad, x = cx + Math.cos(a)*d - 5, y = cy + Math.sin(a)*d*0.8 - 5; if (building(house(), x, y, ROOFS[Math.floor(r()*ROOFS.length)])) k++; } };
   // the town grows along its streets: buildings line both sides, a second row behind, dense in the middle and thinning out
   const frontage = (names, cx, cy, rx, ry, prob, rows) => { let k = 0; for (const pl of ROAD) for (let i = 0; i < pl.length - 1; i++){ const [ax, ay] = pl[i], [bx, by] = pl[i + 1], L = Math.hypot(bx - ax, by - ay), ux = (bx - ax)/L, uy = (by - ay)/L;
-      for (let s = 3; s < L - 2; s += 3.5) for (const side of [-1, 1]) for (let row = 0; row < rows; row++){ const name = names[k % names.length], m = K.M.find(q => q.n === name), off = 5.2 + (row ? 12 : 0) + Math.max(m.W, m.D)/2;
+      for (let s = 3; s < L - 2; s += 3.5) for (const side of [-1, 1]) for (let row = 0; row < rows; row++){ const name = names ? names[k % names.length] : house(), m = K.M.find(q => q.n === name), off = 5.2 + (row ? 12 : 0) + Math.max(m.W, m.D)/2;
         const px = ax + ux*s - uy*side*off, py = ay + uy*s + ux*side*off, d = Math.hypot((px - cx)/rx, (py - cy)/ry); if (d > 1 || r() > prob*(1.2 - d)) continue;
         if (building(name, px - m.W/2, py - m.D/2, ROOFS[Math.floor(r()*ROOFS.length)])) k++; } } return k; };
   for (const [name, x, y] of [['Church', 132, 120], ['Mairie', 156, 118], ['Fountain', 152, 132], ['Railway station', 150, 74]]) building(name, x, y);
   frontage(['Village shop', 'Bank', 'La Feuille de la Faille', 'Gendarmerie', 'Canton house', 'School'], 150, 125, 50, 34, 2.5, 1);
-  frontage(['House, two storeys', 'House, small', 'House, two storeys', 'House, small', 'House, small'], 150, 128, 62, 46, 1.6, 2);
-  for (let i = 0; i < 5000; i++){ const x = 150 + (r()*2 - 1)*58, y = 126 + (r()*2 - 1)*40, d = Math.hypot((x - 150)/58, (y - 126)/40); if (d < 1 && r() < 1.1 - d) building(r() < 0.5 ? 'House, two storeys' : 'House, small', x - 5, y - 5, ROOFS[Math.floor(r()*ROOFS.length)]); }
+  frontage(null, 150, 128, 62, 46, 1.6, 2);
+  for (let i = 0; i < 5000; i++){ const x = 150 + (r()*2 - 1)*58, y = 126 + (r()*2 - 1)*40, d = Math.hypot((x - 150)/58, (y - 126)/40); if (d < 1 && r() < 1.1 - d) building(house(), x - 5, y - 5, ROOFS[Math.floor(r()*ROOFS.length)]); }
   village(64, 180, 9, 16, [['Chapel', 4, 4]]); village(252, 102, 8, 15, [['Chapel', -4, -2]]); village(214, 192, 6, 14, []);
-  for (const [x, y] of [[20, 120], [96, 200], [276, 174], [292, 62], [30, 66], [120, 214]]) building('Farm', x, y);
+  for (const [x, y] of [[20, 120], [96, 200], [276, 174], [292, 62], [30, 66], [120, 214]]) building(FARMS[Math.floor(r()*FARMS.length)], x, y);
   // fields: a patchwork of plots; hedges where two plots meet; some plots are woods
   const seeds = Array.from({length:90}, () => ({x:r()*W, y:r()*D, kind:r()}));
   const FIELD = ['#dcc274', '#e6d08a', '#b8cb8c', '#a3c178', '#8fb862', '#b0946a', '#d6c99c', '#c2d39a'];
@@ -72,8 +73,30 @@ const SCENE = ART.compose(W, D, (H, K) => {
   // a little life: cows and sheep in pastures, a tractor, the post bus, villagers
   const pasture = []; for (let i = 0; i < 400 && pasture.length < 22; i++){ const x = r()*W, y = 100 + r()*(D - 100), p = plot(x, y), h = height(x, y); if (FIELD.indexOf(FIELD[Math.floor(p.s.kind*FIELD.length*0.999)]) === 3 && p.edge > 3 && !forestAt(x, y, h) && clear(x, y)) pasture.push([x, y, h]); }
   pasture.forEach(([x, y, h], i) => i % 3 ? H.SD(x, x + 2.8, y, y + 1, 0, 1.5, (px, py, pz) => K.cowM(i % 2 ? {graze:1} : {})(px - x, py - y, pz), {step:0.06, lift:h}) : H.SD(x, x + 1.4, y, y + 0.6, 0, 0.9, (px, py, pz) => K.sheepFn({graze:1})(px - x, py - y, pz), {step:0.05, lift:h}));
-  K.place(H, 'Post bus', 168, 136.2, height(172, 137)); K.place(H, 'Tractor with manure spreader', 84, 204, height(88, 205));
-  K.VILL.slice(0, 10).forEach((o, i) => { const x = 140 + r()*30, y = 118 + r()*26; if (clear(x, y) || ROAD.some(pl => segD(x, y, pl) < 4)) K.figure(H, o, x, y, i % 2 ? K.POSE.walkA : null, height(x + 0.75, y + 0.75)); });
+  K.place(H, 'Post bus', 108, 137.6, height(112, 138.5)); K.place(H, 'Tractor with manure spreader', 84, 204, height(88, 205));
+  // people: a lot of them. Walkers on the pavements, more in the town, hikers on the tracks, farmers in the fields
+  const inside = (x, y) => placed.some(([a, b, c2, e]) => x > a - 0.6 && x < c2 + 0.6 && y > b - 0.6 && y < e + 0.6);
+  const person = (o, x, y, pose, flip) => { if (inside(x, y) || inside(x + 1.5, y + 1.5)) return; (flip ? K.turned : K.figure)(H, o, x, y, pose, height(x + 0.75, y + 0.75)); };
+  const folk = () => { const o = K.VILL[Math.floor(r()*K.VILL.length)]; return r() < 0.15 ? Object.assign({}, o, {small:1, item:null}) : o; };
+  const along = (pl, t) => { const j = Math.min(pl.length - 2, Math.floor(t)), u = t - j, [ax, ay] = pl[j], [bx, by] = pl[j + 1], L = Math.hypot(bx - ax, by - ay); return [ax + (bx - ax)*u, ay + (by - ay)*u, (bx - ax)/L, (by - ay)/L]; };
+  const walkers = (pl, n, side) => { for (let i = 0; i < n; i++){ const [x, y, ux, uy] = along(pl, r()*(pl.length - 1)), sd = r() < 0.5 ? -1 : 1, off = side + r()*1.2, px = x - uy*sd*off - 0.75, py = y + ux*sd*off - 0.75, d = Math.hypot((px - 150)/62, (py - 128)/46);
+      if (d > 1 && r() < 0.6) continue; person(folk(), px, py, r() < 0.7 ? (r() < 0.5 ? K.POSE.walkA : K.POSE.walkB) : null, ux > 0 ? sd > 0 : sd < 0); } };
+  ROAD.forEach(pl => walkers(pl, 90, 2.2)); TRACK.forEach(pl => walkers(pl, 6, 0.4));
+  for (let i = 0; i < 160; i++){ const x = 150 + (r()*2 - 1)*40, y = 126 + (r()*2 - 1)*26; if (kindAt(x + 0.75, y + 0.75) === 'garden' || ROAD.some(pl => segD(x, y, pl) < 3.2)) person(folk(), x, y, r() < 0.5 ? K.POSE.walkA : null, r() < 0.5); }
+  for (let i = 0; i < 60; i++){ const x = r()*W, y = 100 + r()*(D - 100), h = height(x, y), p = plot(x, y); if (p.edge > 3 && !forestAt(x, y, h) && clear(x, y) && p.s.kind < 0.3) person(Object.assign({}, K.VILL[i % 20], {item:i % 3 ? 'fork' : null, hat:'cap', hatc:'#7a7468'}), x, y, i % 3 ? {armR:'forward', legs:['fwd', 'back']} : null, r() < 0.5); }
+  // life in the town square: the café, the market, the band by the fountain, pensioners
+  for (const [name, x, y] of [['Café terrace', 162, 125], ['Market stall with cheese seller', 140, 132], ['Market stall with cheese seller', 145, 134.5], ['Brass band (fanfare)', 128, 136], ['Pensioners on a bench', 158, 131], ['Kids playing', 120, 128], ['Woman with a pram', 106, 136], ['Dog walker', 196, 128], ['Cyclist', 70, 143.5], ['Road cyclist', 230, 121.5], ['Churchgoers', 136, 116]])
+    K.place(H, name, x, y, height(x + 1.5, y + 1.5), null, true);
+  // the protest: a corner of the main road east of the square. The crowd faces east, a barricade, the riot police line facing west
+  const RD = [0.985, -0.175], NM = [0.175, 0.985], at = (u, v) => [150 + RD[0]*u + NM[0]*v, 142 + RD[1]*u + NM[1]*v];
+  const HL = z => Object.assign(Object.create(H), {SD:(x0, x1, y0, y1, z0, z1, fn, o) => H.SD(x0, x1, y0, y1, z0, z1, fn, Object.assign({}, o, {lift:z}))});
+  { const [bx, by] = at(30, 0); K.barricade(HL(height(bx, by)), bx, by - 3.6, by + 3.6, false); }
+  for (let i = 0; i < 70; i++){ const u = 12 + r()*15.5, v = (r()*2 - 1)*(3 + (27.5 - u)*0.15), [x, y] = at(u, v), o = K.PROT[Math.floor(r()*20)]; person(o, x - 0.75, y - 0.75, o.item === 'sign' || o.item === 'flag' ? (r() < 0.5 ? {armR:'up'} : {armR:'up', legs:['fwd', 'back']}) : (r() < 0.5 ? {armR:'fist'} : null)); }
+  for (let i = 0; i < 9; i++){ const [x, y] = at(32.4 + (i % 2)*0.2, -3.6 + i*0.9); person(K.RIOT, x - 0.75, y - 0.75, i % 4 === 2 ? {armR:'strike'} : {armR:'down'}, true); }
+  for (let i = 0; i < 4; i++){ const [x, y] = at(34.6, -2.8 + i*1.9); person(K.RIOT, x - 0.75, y - 0.75, {armR:'strike'}, true); }
+  { const [x, y] = at(38, -1.4); K.place(H, 'Police van', x, y - 1.1, height(x + 2.6, y)); const [x2, y2] = at(45, -1.2); K.place(H, 'Riot police bus', x2, y2 - 1.2, height(x2 + 4, y2)); }
+  { const jo = K.M.find(q => q.n === 'Journalist (La Feuille)').o, [x, y] = at(24, 5.6); person(jo, x - 0.75, y - 0.75, {armR:'eye', armL:'eye'}, true); const [x3, y3] = at(36, 5.4); person(K.M.find(q => q.n === 'Police officer').o, x3 - 0.75, y3 - 0.75, {armR:'forward'}, true); }
+  for (let i = 0; i < 12; i++){ const [x, y] = at(8 + r()*6, (r() < 0.5 ? -1 : 1)*(4 + r()*2)); person(folk(), x - 0.75, y - 0.75, null, false); }
   // terrain: heights on a 1 m grid, a colour per cell (shading in tone steps, outlines between kinds of ground, shadows), traced per pixel
   const C1 = 1, nx = W/C1, ny = D/C1, CC = 0.5, cx = W/CC, cy = D/CC, heights = new Float32Array((nx + 1)*(ny + 1)), kinds = new Array(cx*cy), colours = new Array(cx*cy);
   for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) heights[j*(nx + 1) + i] = height(i*C1, j*C1);
@@ -86,7 +109,9 @@ const SCENE = ART.compose(W, D, (H, K) => {
   H.HF(W, D, C1, heights, colours, {base:6, ccell:CC});
 });
 (document.fonts && document.fonts.load ? Promise.all([document.fonts.load('bold 16px Silkscreen'), document.fonts.ready]) : Promise.resolve()).then(() => {
-  const S = +(new URLSearchParams(location.search).get('s') || 2.5), c = document.getElementById('c'), pad = 40; c.width = Math.ceil((W + D)*S) + pad*2; c.height = Math.ceil((W + D)/2*S + 60*S) + pad*2;
+  const Q = new URLSearchParams(location.search), S = +(Q.get('s') || 2.5), c = document.getElementById('c'), win = Q.get('win') ? Q.get('win').split(',').map(Number) : null;
+  let pad = 40, ox = D*S + pad, oy = 60*S + pad; c.width = Math.ceil((W + D)*S) + pad*2; c.height = Math.ceil((W + D)/2*S + 60*S) + pad*2;
+  if (win){ const [x0, y0, x1, y1] = win, zt = 14; c.width = Math.ceil((x1 - y0 - x0 + y1)*S); c.height = Math.ceil(((x1 + y1 - x0 - y0)/2 + zt)*S); ox = -(x0 - y1)*S; oy = -((x0 + y0)/2 - zt - 4)*S; }
   const g = c.getContext('2d'); const sky = g.createLinearGradient(0, 0, 0, c.height); sky.addColorStop(0, '#dfe6ec'); sky.addColorStop(1, '#eef0ea'); g.fillStyle = sky; g.fillRect(0, 0, c.width, c.height);
-  const t = Date.now(); const post = ART.draw(g, SCENE, 0, S, D*S + pad, 60*S + pad); post.forEach(f => f()); document.title += ' · ' + (Date.now() - t) + ' ms';
+  const t = Date.now(); const post = ART.draw(g, SCENE, 0, S, ox, oy); post.forEach(f => f()); document.title += ' · ' + (Date.now() - t) + ' ms';
 });
