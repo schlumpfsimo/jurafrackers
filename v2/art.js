@@ -127,6 +127,11 @@ function draw(g, model, rot, S, ox, oy, post){
         if (!set.has(x + ',' + y + ',' + (z + 1))) poly([P(X0, Y0, Z1), P(X1, Y0, Z1), P(X1, Y1, Z1), P(X0, Y1, Z1)], sh(c, fl ? 0.9 : 1.06)); } }});
     } else if (p.t === 'sdf'){
       const [x0, x1, y0, y1] = p.b, c0 = rp(x0, y0), c1 = rp(x1, y1); items.push({k:(c0[0] + c1[0])/2 + (c0[1] + c1[1])/2 + (p.k || 0), i, f(){ volume(g, p, rot, S, ox, oy, W, D); }});
+      for (const [f, a0, a1, z, hh, txt, tc, pl] of p.labels || []){ const fr = rf(f); if (fr !== 'E' && fr !== 'S') continue;
+        const A = rp(...(f === 'S' ? [a0, pl] : f === 'N' ? [a1, pl] : f === 'E' ? [pl, a0] : [pl, a1])), Bq = rp(...(f === 'S' ? [a1, pl] : f === 'N' ? [a0, pl] : f === 'E' ? [pl, a1] : [pl, a0]));
+        const m1 = P((A[0] + Bq[0])/2, (A[1] + Bq[1])/2, z + hh/2), len = Math.hypot(Bq[0] - A[0], Bq[1] - A[1])*S*1.12, fs = Math.max(6, Math.round(S*hh*0.8)), skew = fr === 'S' ? 0.5 : -0.5;
+        post.push(() => { g.save(); g.fillStyle = tc; g.font = fs + 'px "Silkscreen", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; const tw = g.measureText(txt).width, fit = Math.min(1, (len*0.9)/tw);
+          g.translate(m1[0], m1[1]); g.transform(1, skew, 0, 1, 0, 0); g.scale(fit, 1); g.fillText(txt, 0, 0.5); g.restore(); }); }
     } else if (p.t === 'fig'){
       const q = rp(p.x, p.y); items.push({k:q[0] + q[1] + (p.k || 0), i, f(){ figure(g, P(q[0], q[1], 0), S, rot, p.o); }});
     } else if (p.t === 'puff'){
@@ -438,71 +443,119 @@ def('v', 'Company car (old 911)', 4.3, 1.8, ({SD}, c) => { const ag = '#c9ced3',
     if (z < 0.34 && (x < 0.12 || x > 4.18)) return '#9aa1a8';                                                       // bumpers
     return ag; }, {step:0.02});
 }, 'The CEO\'s old silver 911: round headlights, sloping roof, wide hips. Not mentioned anywhere.');
-def('v', 'Geologist\'s pickup', 5.4, 1.9, ({B, W, L}, c) => { const wh = '#f4f3ee', bk = '#2b2f33'; wheels(W, [1.05, 4.35], 1.9, 0.5);
-  B(0.1, 0.17, 0.5, 5.15, 1.56, 0.6, wh, {bv:0.12, win:[['E', 0.45, 0.22, 0.66, 0.3, bk], ['E', 0.08, 0.25, 0.3, 0.18, '#fff4b8'], ['E', 1.18, 0.25, 0.3, 0.18, '#fff4b8'], ...lamps(1.56, 0.25).slice(2), ...sides(2.3, 0.15, 1.2, 0.3, c.co, 'ÉG', '#fff')]});
-  B(5.2, 0.2, 0.42, 0.14, 1.5, 0.28, bk, {bv:0.04}); B(0.0, 0.2, 0.42, 0.1, 1.5, 0.24, bk);
-  B(3.95, 0.2, 1.1, 1.2, 1.5, [0.14, 0.03, 0.03, 0.14], wh);
-  B(1.95, 0.22, 1.1, 2.05, 1.46, 0.8, wh, {bv:0.16, win:[...sides(0.12, 0.14, 0.82, 0.48, GL), ...sides(1.05, 0.14, 0.82, 0.48, GL), ['E', 0.12, 0.12, 1.22, 0.55, GL], ['W', 0.18, 0.2, 1.1, 0.4, GL]]});
-  B(0.12, 0.2, 1.1, 1.8, 1.5, 0.42, wh, {top:'#41464c', bv:0.04}); L([[1.75, 0.3, 1.52], [1.75, 0.3, 2.0], [1.75, 1.6, 2.0], [1.75, 1.6, 1.52]], bk, 1.1);
-  for (const y of [0.1, 1.62]){ B(0.65, y, 0.62, 0.85, 0.18, 0.42, bk, {bv:0.05}); B(3.95, y, 0.62, 0.85, 0.18, 0.42, bk, {bv:0.05}); } }, 'Toyota-style double cab: four doors, black grille and arches, a roll bar over the bed. Plants the prospect flags.');
-def('v', 'Supply lorry', 6.6, 2.4, ({B, W}, c) => { wheels(W, [1.1, 2.4, 5.4], 2.4, 0.55);
-  B(4.6, 0.2, 0.6, 1.9, 2, 2.2, c.co, {bv:0.38, win:[...allGlass(1.9, 2, 1.1, 0.75), ...lamps(2, 0.3)]}); B(0.2, 0.2, 0.75, 4.3, 2, 2.3, '#f2f2ee', {bv:0.22, win:sides(0.5, 0.8, 3.3, 0.6, c.co, 'ÉNERGIE-GÉO', '#fff')}); }, 'Brings drilling supplies from the depot.');
-def('v', 'Low-loader with rig', 11, 2.6, ({B, W}, c) => { wheels(W, [1, 2.1, 3.2, 9.8], 2.6, 0.48);
-  B(9.1, 0.25, 0.6, 1.8, 2.1, 2.2, '#d0663a', {bv:0.38, win:[...allGlass(1.8, 2.1, 1.1, 0.75), ...lamps(2.1, 0.3)]}); B(0.2, 0.4, 0.62, 8.9, 1.8, 0.3, '#3a3f45', {bv:0.08});
-  B(0.6, 0.7, 0.92, 7.4, 1.2, 0.85, '#7a828a', {bv:0.18}); B(0.4, 1.0, 1.77, 8.4, 0.6, 0.35, c.co2, {bv:0.1}); }, 'Brings a rig to a pad and back; the mast lies folded on top.');
-def('v', 'Vibro-truck', 7.4, 2.6, ({B, W, L}, c) => { const blue = '#2f6fbf'; wheels(W, [1.25, 6.2], 2.6, 0.72);
-  B(5.7, 0.25, 0.85, 1.5, 2.1, 2, blue, {bv:0.36, win:[...allGlass(1.5, 2.1, 1, 0.7), ...lamps(2.1, 0.3)]});
-  B(0.3, 0.5, 1.0, 5.4, 1.6, 0.38, '#3a3f45', {bv:0.06}); B(0.3, 0.35, 1.38, 2.3, 1.9, 1.45, blue, {bv:0.28, win:sides(0.2, 0.55, 1.9, 0.45, '#f2f2ee', 'VIBRO', blue)});
-  B(2.75, 0.55, 1.38, 1.4, 1.5, 0.95, '#d9dde0', {bv:0.3}); B(3.0, 0.25, 0.12, 2, 2.1, 0.32, '#2b2f33', {bv:0.08});
-  for (const [x, y] of [[3.2, 0.5], [4.8, 0.5], [3.2, 2.1], [4.8, 2.1]]) L([[x, y, 0.44], [x, y, 1.0]], '#f0c33c', 1.4); }, 'Blue off-road vibrator: the steel base plate between the axles is pressed onto the road and shaken.');
-def('v', 'Tipper (builders)', 6, 2.4, ({B, W}, c) => { wheels(W, [1, 2.2, 5.1], 2.4, 0.55);
-  B(4.3, 0.2, 0.6, 1.6, 2, 2, '#ece9e0', {bv:0.36, win:[...allGlass(1.6, 2, 1, 0.7), ...lamps(2, 0.3)]}); B(0.2, 0.25, 0.95, 4, 1.9, 1.3, '#b07a3e', {bv:0.18}); }, 'Roads, pads, flattening, buildings.');
-def('v', 'Excavator', 5, 3, ({B, L}, c) => { B(0.3, 0.2, 0, 3.6, 0.75, 0.65, '#33373b', {bv:0.3}); B(0.3, 2.05, 0, 3.6, 0.75, 0.65, '#33373b', {bv:0.3}); B(0.6, 0.6, 0.65, 2.8, 1.8, 0.8, '#f0c33c', {bv:0.28});
-  B(0.8, 0.75, 1.45, 1.3, 1.3, 1.25, '#f0c33c', {bv:0.22, win:allGlass(1.3, 1.3, 0.35, 0.7)}); L([[3.1, 1.5, 1.6], [4.6, 1.5, 3], [5.4, 1.5, 0.9]], '#d9a23a', 2.6); B(4.9, 1.1, 0.25, 0.8, 0.8, 0.55, '#3a3f45', {bv:0.12}); }, '');
-def('v', 'Post bus', 9, 2.5, ({B, W}, c) => { wheels(W, [1.7, 7.3], 2.5, 0.52);
-  B(0.2, 0.2, 0.4, 8.6, 2.1, 2.6, '#f5c636', {bv:0.5, win:[...[0.5, 2, 3.5, 5, 6.5].flatMap(a => sides(a, 1.2, 1.25, 0.85, GL)), ['E', 0.2, 1.05, 1.7, 1.1, GL], ['W', 0.25, 1.2, 1.6, 0.85, GL], ...sides(0.5, 0.42, 3.6, 0.45, '#f5c636', 'CAR POSTAL', '#b8322a'), ...lamps(2.1, 0.3)]}); }, 'Evening bus as a village gift.');
-def('v', 'Police car', 4.2, 1.9, ({B, W}, c) => { wheels(W, [0.95, 3.25], 1.9, 0.42);
-  B(0.1, 0.18, 0.32, 4, 1.54, 0.6, '#f6f6f3', {bv:0.25, win:[...lamps(1.54, 0.22), ...sides(0.3, 0.18, 3.4, 0.14, '#2a4fa0'), ...sides(1, 0.32, 2, 0.24, '#f6f6f3', 'POLICE', '#2a4fa0')]});
-  B(1.05, 0.32, 0.92, 2.1, 1.26, 0.56, '#f6f6f3', {bv:0.2, win:allGlass(2.1, 1.26, 0.08, 0.36)}); B(1.8, 0.66, 1.48, 0.6, 0.58, 0.16, '#3b7bf0', {bv:0.06}); }, 'From the gendarmerie.');
-def('v', 'Police van', 5.2, 2.2, ({B, W}, c) => { wheels(W, [1.1, 4.1], 2.2, 0.46);
-  B(0.15, 0.2, 0.4, 4.9, 1.8, 2.1, '#f6f6f3', {bv:0.42, win:[...allGlass(4.9, 1.8, 1.15, 0.6).slice(0, 2), ...sides(3.6, 1.15, 1, 0.6, GL), ...sides(0.3, 0.55, 4.3, 0.2, '#2a4fa0'), ...sides(1.2, 0.85, 2.2, 0.36, '#f6f6f3', 'POLICE', '#2a4fa0'), ...lamps(1.8, 0.3)]});
-  B(2.2, 0.8, 2.5, 0.8, 0.6, 0.15, '#3b7bf0', {bv:0.06}); }, '');
-def('v', 'Riot police bus', 8.4, 2.5, ({B, W}, c) => { wheels(W, [1.6, 6.8], 2.5, 0.52);
-  B(0.2, 0.2, 0.4, 8, 2.1, 2.6, '#33405e', {bv:0.5, win:[...[0.6, 2.4, 4.2, 6].flatMap(a => sides(a, 1.3, 1.4, 0.7, '#6a7ca3')), ['E', 0.25, 1.15, 1.6, 0.95, '#6a7ca3'], ...sides(0.8, 0.45, 3.4, 0.45, '#33405e', 'POLICE', '#e8e8e2'), ...lamps(2.1, 0.3)]}); B(3.6, 0.8, 3, 0.8, 0.8, 0.15, '#3b7bf0', {bv:0.06}); }, 'Shields, no batons.');
-def('v', 'Black van (the lender)', 4.8, 2.1, ({B, W}, c) => { wheels(W, [1, 3.8], 2.1, 0.44);
-  B(0.15, 0.2, 0.4, 4.5, 1.7, 1.85, '#1d2024', {bv:0.42, win:[['E', 0.14, 0.95, 1.42, 0.6, '#45505c'], ...sides(3.3, 0.95, 0.9, 0.55, '#45505c'), ...lamps(1.7, 0.25)]}); }, 'Three of them, slowly, from the villa. No plates.');
-def('v', 'Tractor with manure spreader', 8.6, 2.6, ({B, W}, c) => { W(7.6, 0.4, 0.42); W(7.6, 2.2, 0.42); W(5.5, 0.32, 0.78, 0.5); W(5.5, 2.28, 0.78, 0.5); W(1.6, 0.3, 0.5); W(1.6, 2.3, 0.5);
-  B(6.1, 0.65, 0.7, 2.2, 1.3, 0.8, '#c63a2c', {bv:0.28, win:lamps(1.3, 0.25).slice(0, 2)}); B(4.8, 0.6, 1.0, 1.4, 1.4, 1.75, '#c63a2c', {bv:0.25, win:allGlass(1.4, 1.4, 0.55, 0.95)});
-  B(0.2, 0.45, 0.65, 3.6, 1.7, 1.15, '#3f7a4a', {bv:0.25}); B(0.3, 0.55, 1.78, 3.4, 1.5, 0.16, '#5a4632'); }, 'The farmers\' blockade.');
-def('v', 'Fire engine', 7.8, 2.5, ({B, W, L}, c) => { wheels(W, [1.5, 5.6, 6.7], 2.5, 0.52);
-  B(0.2, 0.2, 0.45, 7.4, 2.1, 2.4, '#d02a20', {bv:0.42, win:[['E', 0.2, 1.1, 1.7, 0.8, GL], ...sides(6, 1.1, 1.2, 0.8, GL), ...sides(0.4, 0.38, 5.2, 0.2, '#f2f0ea'), ...sides(1, 0.8, 3.6, 0.42, '#d02a20', 'POMPIERS', '#fff'), ...lamps(2.1, 0.3)]}); L([[0.6, 1.25, 2.95], [6.2, 1.25, 2.95]], '#c9ccd0', 1.6); }, '');
-def('v', 'Army truck', 6.8, 2.5, ({B, W}, c) => { wheels(W, [1.1, 2.3, 5.6], 2.5, 0.58);
-  B(4.8, 0.2, 0.7, 1.8, 2.1, 2, '#5b6b45', {bv:0.36, win:[...allGlass(1.8, 2.1, 1.05, 0.65), ...lamps(2.1, 0.3)]}); B(0.2, 0.2, 0.8, 4.5, 2.1, 2.3, '#6b7a52', {bv:0.55}); }, 'Only in the secret ending.');
-def('v', 'Piranha (8×8)', 7.9, 2.8, ({B, W, L}, c) => { const ol = '#56603f', ol2 = '#4b5437', bk = '#262a24';
-  const camo = (f, len) => [[f, len*0.08, 0.12, len*0.16, 0.35, '#3a432c'], [f, len*0.3, 0.45, len*0.14, 0.4, '#6e5c3e'], [f, len*0.52, 0.08, len*0.12, 0.3, '#2b2f24'], [f, len*0.7, 0.4, len*0.18, 0.45, '#3a432c']];
-  wheels(W, [1.05, 2.35, 4.6, 5.9], 2.8, 0.56);
-  B(0.15, 0.3, 0.6, 6.05, 2.2, 0.95, ol, {win:[...camo('S', 6.05), ...camo('N', 6.05), ['W', 0.5, 0.1, 1.2, 0.8, ol2]]});
-  B(6.2, 0.3, 0.6, 1.55, 2.2, [0.95, 0.35, 0.35, 0.95], ol, {win:[['E', 0.15, 0.08, 0.3, 0.16, '#fff4b8'], ['E', 1.75, 0.08, 0.3, 0.16, '#fff4b8']]});
-  B(0.15, 0.55, 1.55, 6.05, 1.7, 0.45, ol, {win:[['W', 0.2, 0.05, 1.3, 0.3, ol2]]}); B(6.2, 0.55, 1.55, 0.9, 1.7, [0.45, 0, 0, 0.45], ol);
-  B(0.15, 0.3, 1.55, 6.05, 0.25, [0, 0, 0.45, 0.45], ol2); B(0.15, 2.25, 1.55, 6.05, 0.25, [0.45, 0.45, 0, 0], ol2);
-  B(5.2, 0.55, 2.0, 0.65, 0.65, 0.12, ol2, {win:[['E', 0.1, 0.03, 0.45, 0.07, '#1c1f1a']]}); B(5.25, 1.55, 2.0, 0.7, 0.75, 0.06, '#3f4730');
-  B(2.6, 1.0, 2.0, 0.85, 0.8, 0.42, ol2, {bv:0.08, win:[['E', 0.2, 0.18, 0.4, 0.12, '#1c1f1a']]}); L([[3.45, 1.4, 2.25], [4.6, 1.4, 2.27]], bk, 0.9);
-  B(1.3, 0.6, 2.0, 0.6, 0.6, 0.12, ol2); L([[0.6, 2.2, 2.0], [0.6, 2.2, 3.1]], bk, 0.5);
-  for (const y of [0.18, 2.52]) B(1.6, y, 1.35, 2.2, 0.1, 0.4, ol2);
-}, 'Swiss army 8×8 armoured personnel carrier: sloped nose, flat sides, small weapon station, rear door, camouflage. Only in the secret ending.');
-def('v', 'Police helicopter', 10.5, 2.6, ({B, X, C, L, Q}, c) => { const wh = '#f6f6f3', bl = '#2a4fa0', dk = '#3a3f45', m = 1.3;
-  for (const y of [0.4, 2.2]){ L([[3.3, y, 0.1], [6.9, y, 0.1], [7.3, y, 0.32]], dk, 1.1); for (const x of [4.1, 6.0]) L([[x, y, 0.1], [x, y < m ? 0.75 : 1.85, 0.62]], dk, 0.8); }
-  const body = (z, h, col, nose, half) => X([[2.8, m - half*0.5], [3.5, m - half], [nose - 1.1, m - half], [nose - 0.3, m - half*0.6], [nose, m], [nose - 0.3, m + half*0.6], [nose - 1.1, m + half], [3.5, m + half], [2.8, m + half*0.5]], z, h, col);
-  body(0.62, 0.45, wh, 7.9, 0.8); body(1.07, 0.16, bl, 7.85, 0.8);
-  X([[2.8, m - 0.38], [3.5, m - 0.76], [5.9, m - 0.76], [5.9, m + 0.76], [3.5, m + 0.76], [2.8, m + 0.38]], 1.23, 0.62, wh);
-  X([[5.9, m - 0.76], [6.6, m - 0.76], [7.35, m - 0.4], [7.6, m], [7.35, m + 0.4], [6.6, m + 0.76], [5.9, m + 0.76]], 1.23, 0.62, '#7fb6d6');
-  X([[3.4, m - 0.62], [5.8, m - 0.62], [6.3, m], [5.8, m + 0.62], [3.4, m + 0.62]], 1.85, 0.12, wh);
-  B(3.4, m - 0.45, 1.97, 2.2, 0.9, 0.38, wh, {bv:0.15}); C(4.6, m, 2.35, 0.09, 0.3, dk); C(4.6, m, 2.65, 0.24, 0.1, dk);
-  X([[3.2, m - 0.2], [0.7, m - 0.12], [0.7, m + 0.12], [3.2, m + 0.2]], 1.35, 0.3, wh);
-  B(1.0, m - 0.85, 1.65, 0.45, 1.7, 0.06, wh); B(0.05, m - 0.12, 1.2, 0.95, 0.24, [1.45, 0.75, 0.75, 1.45], bl);
-  for (const [y, f] of [[m + 0.13, 'S'], [m - 0.13, 'N']]){ const ring = []; for (let i = 0; i < 12; i++){ const a = i/12*Math.PI*2; ring.push([0.48 + Math.cos(a)*0.3, y, 1.72 + Math.sin(a)*0.3]); } Q(ring, '#22252a', {face:f}); }
-  for (let i = 0; i < 4; i++){ const a = i*Math.PI/2 + 0.4, ca = Math.cos(a), sa = Math.sin(a), w = 0.13; Q([[4.6 - sa*w, m + ca*w, 2.76], [4.6 + ca*5.2 - sa*w, m + sa*5.2 + ca*w, 2.76], [4.6 + ca*5.2 + sa*w, m + sa*5.2 - ca*w, 2.76], [4.6 + sa*w, m - ca*w, 2.76]], '#2b2f33', {k:8000}); }
-}, 'Cabin with a glass nose and a blue band, engine and rotor mast on the roof, tail boom, ducted tail rotor, skids. The last resort.');
+/* Vehicle kit for smooth volumes: parts are [test, colour or paint(p)], the first part that holds a point gives its colour. */
+const rbx = (x0, x1, y0, y1, z0, z1, r) => p => { const qx = Math.max(Math.abs(p[0] - (x0 + x1)/2) - ((x1 - x0)/2 - r), 0), qy = Math.max(Math.abs(p[1] - (y0 + y1)/2) - ((y1 - y0)/2 - r), 0), qz = Math.max(Math.abs(p[2] - (z0 + z1)/2) - ((z1 - z0)/2 - r), 0);
+  return Math.abs(p[0] - (x0 + x1)/2) <= (x1 - x0)/2 && Math.abs(p[1] - (y0 + y1)/2) <= (y1 - y0)/2 && Math.abs(p[2] - (z0 + z1)/2) <= (z1 - z0)/2 && qx*qx + qy*qy + qz*qz <= r*r; };
+const cyY = (x, z, r, y0, y1) => p => (p[0] - x)**2 + (p[2] - z)**2 <= r*r && p[1] >= y0 && p[1] <= y1;
+const cyZ = (x, y, r, z0, z1) => p => (p[0] - x)**2 + (p[1] - y)**2 <= r*r && p[2] >= z0 && p[2] <= z1;
+const cap3 = (a, b, r) => p => inCap(p, a, b, r, r);
+const both = (...t) => p => t.every(f => f(p)), but = (t, u) => p => t(p) && !u(p);
+const tyres = (xs, D, r, w) => xs.flatMap(x => [[cyY(x, r, r, 0.02, w || 0.32), p => Math.hypot(p[0] - x, p[2] - r) < r*0.45 ? '#aab1b8' : '#1f2226'], [cyY(x, r, r, D - (w || 0.32), D - 0.02), p => Math.hypot(p[0] - x, p[2] - r) < r*0.45 ? '#aab1b8' : '#1f2226']]);
+const scene = parts => (x, y, z) => { const p = [x, y, z]; for (const [t, c] of parts) if (t(p)) return typeof c === 'function' ? c(p) : c; return null; };
+const VG = '#8fb3c9', LAMP = '#fff4c8', TAIL = '#c8322a';
+// paint helper: windows band on a box (sides and both ends), with pillars every 'pitch' metres
+const glassBand = (base, z0, z1, x0, x1, pitch, frontX, rearX) => p => { if (p[2] > z0 && p[2] < z1){ if (frontX !== undefined && p[0] > frontX) return VG; if (rearX !== undefined && p[0] < rearX) return VG;
+  if (p[0] > x0 && p[0] < x1 && (!pitch || ((p[0] - x0) % pitch) > 0.14)) return VG; } return typeof base === 'function' ? base(p) : base; };
+const veh = (n, W, D, H, parts, note, o) => def('v', n, W, D, ({SD, Q}, c) => { SD(-0.3, W + 0.3, -0.1, D + 0.1, 0, H, scene(parts(c)), Object.assign({step:0.03}, o || {})); if (o && o.extra) o.extra(Q); }, note);
+
+veh('Geologist\'s pickup', 5.4, 1.9, 2.1, c => { const wh = '#f4f3ee', bk = '#2b2f33', cy = 0.95; return [
+  ...tyres([1.05, 4.35], 1.9, 0.42, 0.34),
+  [p => p[0] > 1.68 && p[0] < 1.82 && p[2] > 1.45 && p[2] < 2.05 && (p[2] > 1.95 || Math.abs(p[1] - cy) > 0.62) && Math.abs(p[1] - cy) < 0.72, bk],          // roll bar
+  [but(rbx(0.1, 1.95, 0.14, 1.76, 0.95, 1.5, 0.06), rbx(0.24, 1.82, 0.28, 1.62, 1.1, 1.6, 0.02)), p => p[0] < 0.16 && p[2] > 1.25 && Math.abs(p[1] - cy) > 0.62 ? TAIL : wh],      // bed
+  [both(rbx(1.9, 4.05, 0.2, 1.7, 0.95, 1.9, 0.18), p => p[2] < 1.9 - Math.max(0, p[0] - 3.55)*1.05), glassBand(wh, 1.28, 1.78, 2.0, 3.95, 1.0, 3.62)],   // double cab
+  [rbx(0.08, 5.32, 0.12, 1.78, 0.45, 1.12, 0.16), p => p[0] > 5.15 && p[2] > 0.62 && p[2] < 0.98 ? (Math.abs(p[1] - cy) > 0.55 && p[2] > 0.84 ? LAMP : bk) : p[2] < 0.6 && (p[0] > 5.2 || p[0] < 0.2) ? bk : p[0] > 2.4 && p[0] < 3.4 && p[2] > 0.7 && p[2] < 0.95 ? c.co : wh]]; },
+  'Toyota-style double cab: four doors, black grille, a roll bar over the bed. Plants the prospect flags.');
+veh('Supply lorry', 6.6, 2.4, 3.2, c => [
+  ...tyres([1.1, 2.4, 5.4], 2.4, 0.52, 0.42),
+  [rbx(4.6, 6.5, 0.2, 2.2, 0.6, 2.85, 0.32), glassBand(p => p[0] > 6.35 && p[2] < 1.0 && Math.abs(p[1] - 1.2) > 0.6 ? LAMP : c.co, 1.75, 2.5, 4.75, 6.3, 0, 6.35)],
+  [rbx(0.2, 4.5, 0.2, 2.2, 0.8, 3.1, 0.14), p => p[2] > 1.8 && p[2] < 2.25 ? c.co : p[0] < 0.26 && p[2] < 1.05 ? TAIL : '#f2f2ee'],
+  [rbx(0.3, 6.4, 0.55, 1.85, 0.45, 0.82, 0.05), '#33373b']], 'Brings drilling supplies from the depot.');
+veh('Low-loader with rig', 11, 2.6, 2.9, c => [
+  ...tyres([1, 2.1, 3.2, 9.8], 2.6, 0.46, 0.42),
+  [rbx(9.1, 10.9, 0.25, 2.35, 0.6, 2.8, 0.32), glassBand(p => p[0] > 10.75 && p[2] < 1.0 && Math.abs(p[1] - 1.3) > 0.6 ? LAMP : '#d0663a', 1.75, 2.5, 9.25, 10.7, 0, 10.75)],
+  [rbx(0.35, 8.85, 1.0, 1.6, 1.77, 2.1, 0.08), c.co2],
+  [p => rbx(0.6, 8.0, 0.7, 1.9, 0.92, 1.78, 0.1)(p) && (((p[0] - 0.6) % 0.9) < 0.16 || Math.abs(p[1] - 1.3) > 0.5 || p[2] > 1.68 || p[2] < 1.02), '#7a828a'],     // the folded lattice mast
+  [rbx(0.2, 9.1, 0.4, 2.2, 0.55, 0.92, 0.06), '#3a3f45']], 'Brings a rig to a pad and back; the mast lies folded on top.');
+veh('Vibro-truck', 7.4, 2.6, 2.9, c => { const blue = '#2f6fbf'; return [
+  ...tyres([1.25, 6.2], 2.6, 0.7, 0.5),
+  [p => [[3.2, 0.5], [4.8, 0.5], [3.2, 2.1], [4.8, 2.1]].some(([x, y]) => cyZ(x, y, 0.07, 0.44, 1.0)(p)), '#f0c33c'],
+  [rbx(3.0, 5.0, 0.25, 2.35, 0.12, 0.44, 0.06), '#2b2f33'],
+  [rbx(5.7, 7.2, 0.25, 2.35, 0.85, 2.85, 0.3), glassBand(p => p[0] > 7.05 && p[2] < 1.2 && Math.abs(p[1] - 1.3) > 0.6 ? LAMP : blue, 1.85, 2.55, 5.85, 7.0, 0, 7.05)],
+  [rbx(2.75, 4.15, 0.55, 2.05, 1.38, 2.33, 0.45), '#d9dde0'],
+  [rbx(0.3, 2.6, 0.35, 2.25, 1.38, 2.83, 0.25), p => p[2] > 1.95 && p[2] < 2.4 ? '#f2f2ee' : blue],
+  [rbx(0.3, 5.7, 0.5, 2.1, 1.0, 1.38, 0.05), '#3a3f45']]; }, 'Blue off-road vibrator: the steel base plate between the axles is pressed onto the road and shaken.');
+veh('Tipper (builders)', 6, 2.4, 2.7, c => [
+  ...tyres([1, 2.2, 5.1], 2.4, 0.52, 0.42),
+  [rbx(4.3, 5.9, 0.2, 2.2, 0.6, 2.6, 0.32), glassBand(p => p[0] > 5.75 && p[2] < 1.0 && Math.abs(p[1] - 1.2) > 0.6 ? LAMP : '#ece9e0', 1.6, 2.35, 4.45, 5.7, 0, 5.75)],
+  [but(rbx(0.2, 4.2, 0.25, 2.15, 0.95, 2.25, 0.12), rbx(0.36, 4.04, 0.41, 1.99, 1.25, 2.4, 0.05)), p => p[2] < 1.3 && p[2] > 1.2 ? '#8a5e2e' : '#b07a3e'],
+  [rbx(0.3, 4.3, 0.55, 1.85, 0.5, 0.95, 0.05), '#33373b']], 'Roads, pads, flattening, buildings.');
+veh('Excavator', 5.6, 3, 3.3, c => [
+  [cap3([3.1, 1.5, 1.6], [4.6, 1.5, 3.0], 0.16), '#e0b030'], [cap3([4.6, 1.5, 3.0], [5.15, 1.5, 1.0], 0.13), '#e0b030'],
+  [rbx(4.8, 5.6, 1.1, 1.9, 0.25, 0.85, 0.14), '#3a3f45'],
+  [rbx(0.8, 2.1, 0.75, 2.05, 1.4, 2.7, 0.15), glassBand('#f0c33c', 1.75, 2.5, 0.9, 2.0, 0, 1.95, 0.95)],
+  [rbx(0.6, 3.4, 0.6, 2.4, 0.65, 1.45, 0.22), '#f0c33c'],
+  [rbx(0.3, 3.9, 0.15, 0.95, 0, 0.68, 0.3), p => (Math.floor(p[0]*5) % 2) && p[2] < 0.1 ? '#22262a' : '#33373b'], [rbx(0.3, 3.9, 2.05, 2.85, 0, 0.68, 0.3), '#33373b']], '');
+veh('Post bus', 9, 2.5, 3.1, c => [
+  ...tyres([1.7, 7.3], 2.5, 0.5, 0.36),
+  [rbx(0.2, 8.8, 0.2, 2.3, 0.4, 3.0, 0.45), glassBand(p => p[0] > 8.6 && p[2] < 1.0 && Math.abs(p[1] - 1.25) > 0.6 ? LAMP : p[0] < 0.26 && p[2] < 1.0 && Math.abs(p[1] - 1.25) > 0.6 ? TAIL : p[2] < 0.75 ? '#e2b42a' : '#f5c636', 1.55, 2.45, 0.5, 8.4, 1.5, 8.62, 0.3)]],
+  'Evening bus as a village gift.');
+veh('Police car', 4.2, 1.9, 1.75, c => [
+  ...tyres([0.95, 3.25], 1.9, 0.36, 0.3),
+  [rbx(1.8, 2.4, 0.62, 1.28, 1.42, 1.62, 0.05), '#3b7bf0'],
+  [both(rbx(1.05, 3.15, 0.3, 1.6, 0.85, 1.48, 0.2), p => p[2] < 1.48 - Math.max(0, p[0] - 2.75)*1.2 && p[2] < 1.48 - Math.max(0, 1.35 - p[0])*1.0), glassBand('#f6f6f3', 1.0, 1.38, 1.15, 3.05, 0.95, 2.85, 1.3)],
+  [rbx(0.1, 4.1, 0.18, 1.72, 0.28, 0.95, 0.25), p => p[0] > 3.98 && p[2] > 0.62 && Math.abs(p[1] - 0.95) > 0.45 ? LAMP : p[0] < 0.12 && p[2] > 0.62 && Math.abs(p[1] - 0.95) > 0.45 ? TAIL : p[2] > 0.5 && p[2] < 0.62 ? '#2a4fa0' : '#f6f6f3']],
+  'From the gendarmerie.');
+veh('Police van', 5.2, 2.2, 2.75, c => [
+  ...tyres([1.1, 4.1], 2.2, 0.44, 0.34),
+  [rbx(2.2, 3.0, 0.8, 1.4, 2.45, 2.62, 0.05), '#3b7bf0'],
+  [rbx(0.15, 5.05, 0.2, 2.0, 0.4, 2.5, 0.4), p => p[0] > 4.86 && p[2] > 1.5 && p[2] < 2.25 ? VG : p[0] > 3.7 && p[0] < 4.7 && p[2] > 1.55 && p[2] < 2.15 ? VG : p[0] > 4.9 && p[2] < 0.95 && Math.abs(p[1] - 1.1) > 0.55 ? LAMP : p[2] > 0.95 && p[2] < 1.15 ? '#2a4fa0' : '#f6f6f3']],
+  '', {labels:[['S', 1.0, 3.4, 1.4, 0.36, 'POLICE', '#2a4fa0', 2.0], ['N', 1.0, 3.4, 1.4, 0.36, 'POLICE', '#2a4fa0', 0.2]]});
+veh('Riot police bus', 8.4, 2.5, 3.2, c => [
+  ...tyres([1.6, 6.8], 2.5, 0.5, 0.36),
+  [rbx(3.6, 4.4, 0.85, 1.65, 2.95, 3.12, 0.05), '#3b7bf0'],
+  [rbx(0.2, 8.2, 0.2, 2.3, 0.4, 3.0, 0.45), glassBand(p => p[0] > 8.0 && p[2] < 1.0 && Math.abs(p[1] - 1.25) > 0.6 ? LAMP : '#33405e', 1.65, 2.4, 0.5, 7.8, 1.8, 8.02)]],
+  'Shields, no batons.', {labels:[['S', 0.8, 4.2, 1.05, 0.45, 'POLICE', '#e8e8e2', 2.3], ['N', 0.8, 4.2, 1.05, 0.45, 'POLICE', '#e8e8e2', 0.2]]});
+veh('Black van (the lender)', 4.8, 2.1, 2.45, c => [
+  ...tyres([1, 3.8], 2.1, 0.42, 0.32),
+  [rbx(0.15, 4.65, 0.2, 1.9, 0.4, 2.25, 0.4), p => p[0] > 4.45 && p[2] > 1.35 && p[2] < 1.95 ? '#3e4852' : p[0] > 3.3 && p[0] < 4.3 && p[2] > 1.35 && p[2] < 1.9 ? '#3e4852' : p[0] > 4.5 && p[2] < 0.9 && Math.abs(p[1] - 1.05) > 0.5 ? LAMP : '#1d2024']],
+  'Three of them, slowly, from the villa. No plates.');
+veh('Tractor with manure spreader', 8.6, 2.6, 2.9, c => [
+  [cyY(7.6, 0.42, 0.42, 0.25, 0.6), p => Math.hypot(p[0] - 7.6, p[2] - 0.42) < 0.2 ? '#d9b23a' : '#1f2226'], [cyY(7.6, 0.42, 0.42, 2.0, 2.35), p => Math.hypot(p[0] - 7.6, p[2] - 0.42) < 0.2 ? '#d9b23a' : '#1f2226'],
+  [cyY(5.5, 0.78, 0.78, 0.05, 0.55), p => Math.hypot(p[0] - 5.5, p[2] - 0.78) < 0.36 ? '#d9b23a' : '#1f2226'], [cyY(5.5, 0.78, 0.78, 2.05, 2.55), p => Math.hypot(p[0] - 5.5, p[2] - 0.78) < 0.36 ? '#d9b23a' : '#1f2226'],
+  ...tyres([1.6], 2.6, 0.48, 0.36),
+  [rbx(4.8, 6.2, 0.6, 2.0, 1.0, 2.75, 0.18), p => p[2] > 1.45 && p[2] < 2.55 && ((p[0] > 4.95 && p[0] < 6.05) || (p[1] > 0.75 && p[1] < 1.85)) ? VG : '#c63a2c'],
+  [rbx(6.1, 8.3, 0.65, 1.95, 0.7, 1.5, 0.25), p => p[0] > 8.15 && p[2] > 1.1 && Math.abs(p[1] - 1.3) > 0.35 ? LAMP : '#c63a2c'],
+  [but(rbx(0.2, 3.8, 0.45, 2.15, 0.65, 1.8, 0.2), both(rbx(0.35, 3.65, 0.6, 2.0, 1.65, 2.0, 0.02))), p => p[2] > 1.6 && p[0] > 0.35 && p[0] < 3.65 && p[1] > 0.6 && p[1] < 2.0 ? '#5a4632' : '#3f7a4a']],
+  'The farmers\' blockade.');
+veh('Fire engine', 7.8, 2.5, 3.15, c => [
+  ...tyres([1.5, 5.6, 6.7], 2.5, 0.5, 0.36),
+  [p => rbx(0.6, 6.2, 0.75, 1.75, 2.85, 3.05, 0.03)(p) && (Math.abs(p[1] - 0.8) < 0.06 || Math.abs(p[1] - 1.7) < 0.06 || ((p[0] - 0.6) % 0.4) < 0.07), '#c9ccd0'],
+  [rbx(0.2, 7.6, 0.2, 2.3, 0.45, 2.85, 0.4), p => p[0] > 7.4 && p[2] > 1.55 && p[2] < 2.35 ? VG : p[0] > 6.1 && p[0] < 7.3 && p[2] > 1.55 && p[2] < 2.35 ? VG : p[0] > 7.45 && p[2] < 1.0 && Math.abs(p[1] - 1.25) > 0.6 ? LAMP : p[2] > 0.83 && p[2] < 1.03 ? '#f2f0ea' : '#d02a20']],
+  '', {labels:[['S', 1.0, 4.6, 1.5, 0.42, 'POMPIERS', '#fff', 2.3], ['N', 1.0, 4.6, 1.5, 0.42, 'POMPIERS', '#fff', 0.2]]});
+veh('Army truck', 6.8, 2.5, 3.2, c => [
+  ...tyres([1.1, 2.3, 5.6], 2.5, 0.56, 0.42),
+  [rbx(4.8, 6.6, 0.2, 2.3, 0.7, 2.7, 0.35), glassBand(p => p[0] > 6.45 && p[2] < 1.1 && Math.abs(p[1] - 1.25) > 0.6 ? '#e8e2b8' : '#5b6b45', 1.75, 2.45, 4.95, 6.4, 0, 6.45)],
+  [rbx(0.2, 4.7, 0.2, 2.3, 0.8, 3.1, 0.5), p => ((p[0] - 0.2) % 1.1) < 0.06 ? '#5e6d48' : '#6b7a52'],
+  [rbx(0.3, 6.5, 0.6, 1.9, 0.5, 0.85, 0.05), '#2f3329']], 'Only in the secret ending.');
+const camoP = p => { const v = Math.sin(p[0]*1.9 + p[1]*0.7) + Math.sin(p[2]*3.3 - p[0]*1.1 + p[1]*1.3); return v > 1.1 ? '#3a432c' : v < -1.2 ? '#6e5c3e' : v < -0.5 && v > -0.7 ? '#2b2f24' : '#56603f'; };
+veh('Piranha (8×8)', 7.9, 2.8, 3.2, c => [
+  ...tyres([1.05, 2.35, 4.6, 5.9], 2.8, 0.55, 0.42),
+  [cyZ(0.6, 2.2, 0.03, 2.0, 3.1), '#262a24'], [cap3([3.45, 1.4, 2.25], [4.7, 1.4, 2.28], 0.05), '#262a24'],
+  [rbx(2.6, 3.45, 1.0, 1.8, 1.98, 2.42, 0.08), p => p[0] > 3.38 && p[2] > 2.15 && p[2] < 2.28 ? '#1c1f1a' : '#4b5437'],
+  [rbx(5.2, 5.85, 0.55, 1.2, 1.98, 2.1, 0.03), '#4b5437'], [rbx(1.3, 1.9, 0.6, 1.2, 1.98, 2.1, 0.03), '#4b5437'],
+  [p => p[0] >= 0.15 && p[0] <= 7.75 && p[1] >= 0.3 && p[1] <= 2.5 && p[2] >= 0.6 && p[2] <= Math.min(2.0 - Math.max(0, Math.abs(p[1] - 1.4) - 0.85)*1.8, 1.55 + 0.45 - Math.max(0, p[0] - 6.2)*0.75) && (p[2] <= 1.55 || Math.abs(p[1] - 1.4) <= 1.1),
+    p => p[0] > 7.55 && p[2] < 0.95 && Math.abs(p[1] - 1.4) > 0.7 ? LAMP : camoP(p)]],
+  'Swiss army 8×8 armoured personnel carrier: sloped nose, flat sides, small weapon station, camouflage. Only in the secret ending.');
+veh('Police helicopter', 10.5, 2.6, 2.8, c => { const wh = '#f6f6f3', bl = '#2a4fa0', dk = '#3a3f45', m = 1.3; return [
+  ...[0.4, 2.2].flatMap(y => [[cap3([3.3, y, 0.1], [6.9, y, 0.1], 0.05), dk], [cap3([6.9, y, 0.1], [7.25, y, 0.3], 0.05), dk], [cap3([4.1, y, 0.1], [4.1, y < m ? 0.75 : 1.85, 0.62], 0.04), dk], [cap3([6.0, y, 0.1], [5.85, y < m ? 0.75 : 1.85, 0.62], 0.04), dk]]),
+  [cyZ(4.6, m, 0.09, 2.2, 2.62), dk], [cyZ(4.6, m, 0.25, 2.6, 2.72), dk],
+  [rbx(3.4, 5.6, m - 0.45, m + 0.45, 1.8, 2.3, 0.18), wh],
+  [p => inEll(p, [5.2, m, 1.25], 2.6, 0.82, 0.68) && p[2] > 0.62, p => p[0] > 6.4 && p[2] > 1.15 ? '#7fb6d6' : p[0] > 4.6 && p[0] < 6.2 && p[2] > 1.3 && p[2] < 1.72 && Math.abs(p[1] - m) > 0.55 ? '#7fb6d6' : p[2] > 1.05 && p[2] < 1.2 ? bl : wh],
+  [p => inCap(p, [3.0, m, 1.45], [0.6, m, 1.6], 0.2, 0.11), wh],
+  [rbx(0.95, 1.45, 0.45, 2.15, 1.58, 1.66, 0.03), wh],
+  [p => p[0] >= 0.05 && p[0] <= 1.0 && Math.abs(p[1] - m) <= 0.11 && p[2] >= 1.2 && p[2] <= 2.65 - (p[0] - 0.05)*0.7, p => Math.hypot(p[0] - 0.48, p[2] - 1.72) < 0.3 && Math.hypot(p[0] - 0.48, p[2] - 1.72) > 0.18 ? '#22252a' : bl]]; },
+  'Cabin with a glass nose and a blue band, engine and rotor mast on the roof, tail boom, ducted tail rotor, skids. The last resort.',
+  {extra: Q => { const m = 1.3; for (let i = 0; i < 4; i++){ const a = i*Math.PI/2 + 0.4, ca = Math.cos(a), sa = Math.sin(a), w = 0.07; Q([[4.6 - sa*w, m + ca*w, 2.78], [4.6 + ca*5.2 - sa*w, m + sa*5.2 + ca*w, 2.78], [4.6 + ca*5.2 + sa*w, m + sa*5.2 - ca*w, 2.78], [4.6 + sa*w, m - ca*w, 2.78]], '#2b2f33', {k:8000}); } }});
 def('v', 'F-35', 15.6, 11, ({SD, W, L}, c) => { const m = 5.5, g = '#80827e', gt = '#8c8e8a', gb = '#6c6e6a', lt = '#a9aba6', dk = '#262725', zc = 1.45;
   // after a three-view drawing and photos: wide flat body blending into the wings, short cone nose, big bubble canopy with a hump behind,
   // bulging intakes under the canopy, broad trapezoid tails leaning out, lighter sawtooth panel edges on top
@@ -531,8 +584,10 @@ def('v', 'F-35', 15.6, 11, ({SD, W, L}, c) => { const m = 5.5, g = '#80827e', gt
     return null; });
 }, 'Unmistakably an F-35: wide flat body blending into the wings, short light cone nose, big bubble canopy with a hump behind, bulging intakes under it, broad trapezoid tails leaning out, lighter sawtooth panels. Only in the secret ending.');
 M[M.length - 1].big = 2.4;
-def('v', 'Regional train', 20, 3, ({B, W}, c) => { for (const x0 of [0.3, 10.2]){ wheels(W, [x0 + 1.4, x0 + 8], 3, 0.45);
-  B(x0, 0.25, 0.6, 9.5, 2.5, 2.8, '#dfe2e5', {bv:0.5, win:[...[0.6, 2.3, 4, 5.7, 7.4].flatMap(a => sides(a, 1.3, 1.3, 0.85, GL)), ...sides(0.3, 0.45, 8.9, 0.26, '#b8322a'), ['E', 0.3, 1.2, 1.9, 0.9, GL], ['W', 0.3, 1.2, 1.9, 0.9, GL]]}); } }, 'Along the top of the valley.');
+veh('Regional train', 20, 3, 3.6, c => [
+  ...[0.3, 10.2].flatMap(x0 => [...tyres([x0 + 1.4, x0 + 8.1], 3, 0.45, 0.4),
+    [rbx(x0, x0 + 9.5, 0.25, 2.75, 0.6, 3.45, 0.5), p => p[2] > 1.95 && p[2] < 2.75 && ((((p[0] - x0) % 1.7) > 0.2) || p[0] < x0 + 0.4 || p[0] > x0 + 9.1) ? VG : p[2] > 1.05 && p[2] < 1.3 ? '#b8322a' : '#dfe2e5']])],
+  'Along the top of the valley.');
 
 /* People drawn as figures (not built from parts): smooth shapes in a three-quarter view, lit from the upper left like the
    buildings. Views 1 and 2 show the front, 3 and 4 the back; the figure is mirrored for the two sides. Units are metres. */
@@ -586,132 +641,100 @@ function figure(g, base, S, rot, o){
     g.beginPath(); c.forEach((p, k) => k ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.fillStyle = front ? '#f4f2ec' : '#d9d6cc'; g.fill(); g.strokeStyle = '#8a8478'; g.lineWidth = 1; g.stroke();
     if (front){ const m = U(hu, 2.43), fs = Math.max(6, Math.round(S*0.3)); g.save(); g.translate(m[0], m[1]); g.transform(1, -0.12*dir*2, 0, 1, 0, 0); g.font = fs + 'px "Silkscreen", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#c63a2c'; g.fillText(o.sign || 'NON', 0, 0); g.restore(); } }
 }
-/* People as volumes sampled into small cubes: rounded limbs, real proportions, no faces. Front at +x. */
-const volPerson = (o) => (x, y, z) => { const cx = 0.75, cy = 0.75, p = [x, y, z], bk = o.bulk || 1; let c = null;
-  const put = (test, col) => { if (test) c = col; };
-  for (const s of [-1, 1]){ const ly = cy + s*0.09;
-    put(inCap(p, [cx, ly, 0.92], [cx + 0.01, ly, 0.5], 0.08, 0.06) || inCap(p, [cx + 0.01, ly, 0.5], [cx, ly, 0.1], 0.058, 0.045), o.bot);
-    if (o.legBand && z > o.legBand[0] && z < o.legBand[0] + o.legBand[1]) put(inCap(p, [cx + 0.01, ly, 0.5], [cx, ly, 0.1], 0.06, 0.047), o.band);
-    put(z >= 0 && (inEll(p, [cx + 0.05, ly, 0.045], 0.135, 0.06, 0.07) || (o.boots && inCap(p, [cx, ly, 0.05], [cx, ly, 0.24], 0.055, 0.055))), o.shoe); }
-  put(inEll(p, [cx, cy, 0.95], 0.11, 0.17, 0.1), o.bot);
-  put(inEll(p, [cx, cy, 1.1], 0.105*bk, 0.155*bk, 0.15) || inEll(p, [cx, cy, 1.3], 0.125*bk, 0.19*bk, 0.17) || inCap(p, [cx, cy - 0.16*bk, 1.42], [cx, cy + 0.16*bk, 1.42], 0.065*bk, 0.065*bk), o.top);
-  if (o.belt) put(inEll(p, [cx, cy, 0.98], 0.115, 0.175, 0.03), o.belt);
-  if (o.topBand) put(z > o.topBand[0] && z < o.topBand[0] + o.topBand[1] && inEll(p, [cx, cy, 1.15], 0.115*bk, 0.17*bk, 0.2), o.band);
-  if (o.hood) put(inEll(p, [cx - 0.11, cy, 1.5], 0.07, 0.14, 0.08), o.top);
-  put(inCap(p, [cx, cy, 1.44], [cx, cy, 1.56], 0.05, 0.048), o.skin);
-  if (o.scarf) put(inEll(p, [cx, cy, 1.5], 0.09, 0.1, 0.045) || inCap(p, [cx + 0.08, cy + 0.04, 1.48], [cx + 0.1, cy + 0.05, 1.3], 0.03, 0.03), o.scarf);
-  // head and hair: hair covers the back and the top; a hat replaces the top
-  const hc = [cx + 0.01, cy, 1.665];
-  put(inEll(p, hc, 0.1, 0.085, 0.115), o.skin);
-  put(inEll(p, hc, 0.112, 0.097, 0.125) && (z > 1.7 || x < cx - 0.01), o.hair);
-  if (o.longHair) put(inCap(p, [cx - 0.07, cy, 1.66], [cx - 0.09, cy, 1.4], 0.085, 0.07) && x < cx - 0.02, o.hair);
-  if (o.beard) put(inEll(p, [cx + 0.06, cy, 1.585], 0.06, 0.08, 0.05) && x > cx + 0.02, o.beard);
-  if (o.hat === 'hard'){ put(inEll(p, [cx + 0.01, cy, 1.73], 0.125, 0.11, 0.12) && z > 1.73, o.hatc); put(z > 1.72 && z < 1.765 && inEll(p, [cx + 0.03, cy, 1.74], 0.16, 0.13, 0.1), o.hatc); }
-  if (o.hat === 'beanie'){ put(inEll(p, [cx + 0.005, cy, 1.72], 0.115, 0.1, 0.12) && z > 1.7, o.hatc); put(inEll(p, [cx, cy, 1.86], 0.035, 0.035, 0.035), '#f4f2ec'); }
-  // arms: hanging, or the right one raised
-  for (const s of [-1, 1]){ const ay = cy + s*0.235*bk;
-    if (s > 0 && o.raise){ put(inCap(p, [cx, ay, 1.42], [cx + 0.03, ay + 0.06, 1.7], 0.055, 0.047) || inCap(p, [cx + 0.03, ay + 0.06, 1.7], [cx + 0.04, ay + 0.08, 1.96], 0.045, 0.038), o.top); put(inEll(p, [cx + 0.04, ay + 0.08, 2.01], 0.04, 0.035, 0.055), o.hand || o.skin); }
-    else { put(inCap(p, [cx, ay, 1.42], [cx, ay + s*0.02, 1.15], 0.055, 0.047) || inCap(p, [cx, ay + s*0.02, 1.15], [cx + 0.02, ay + s*0.02, 0.9], 0.045, 0.037), o.top);
-      if (o.armBand && z > o.armBand[0] && z < o.armBand[0] + o.armBand[1]) put(inCap(p, [cx, ay, 1.42], [cx, ay + s*0.02, 1.15], 0.058, 0.05), o.band);
-      put(inEll(p, [cx + 0.02, ay + s*0.02, 0.85], 0.04, 0.032, 0.055), o.hand || o.skin); } }
-  // things carried
-  const ry = cy + 0.255*bk;
-  if (o.item === 'wrench'){ put(Math.abs(x - cx - 0.02) < 0.02 && Math.abs(y - ry) < 0.02 && z > 0.5 && z < 0.82, '#b8322a'); put(Math.abs(x - cx - 0.02) < 0.08 && Math.abs(y - ry) < 0.025 && z > 0.44 && z < 0.52, '#8f979e'); }
-  if (o.item === 'sign'){ const sy = ry + 0.08, sx = cx + 0.04; put(Math.abs(x - sx) < 0.02 && Math.abs(y - sy) < 0.02 && z > 1.7 && z < 2.2, '#8a6a4a');
-    if (Math.abs(y - sy) < 0.66 && z > 2.15 && z < 2.68 && x > sx - 0.04 && x < sx + 0.04){ let col = '#f4f2ec';
-      if (x > sx && z > 2.3 && z < 2.5 && Math.abs(y - sy) < 0.5) col = '#c63a2c';
-      c = col; } }
-  return c; };
-const volP = (n, o, note) => def('p', n, 1.5, 1.5, ({SD}) => SD(0, 1.5, 0, o.item === 'sign' ? 2 : 1.5, 0, o.item === 'sign' ? 2.7 : 1.95, volPerson(o), {step:0.02}), note);
-volP('Driller', {skin:'#d9a882', top:'#e07a2c', bot:'#e07a2c', shoe:'#4a3626', boots:1, hand:'#c9a24a', hair:'#3a2b20', beard:'#3a2b20', hat:'hard', hatc:'#f2c230', belt:'#2b2522', band:'#e8ece4', topBand:[1.12, 0.04], legBand:[0.3, 0.04], armBand:[1.24, 0.035], bulk:1.08, item:'wrench'}, 'Trial, volumetric: orange coveralls with reflective bands, hard hat, beard, gloves, boots, pipe wrench.');
-volP('Protester', {skin:'#f2d2b6', top:'#3f7a4a', bot:'#3a4a63', shoe:'#5a4632', hair:'#9a4a2a', longHair:1, hat:'beanie', hatc:'#c63a2c', scarf:'#e8b730', hood:1, bulk:1.12, raise:1, item:'sign'}, 'Trial, volumetric: green parka with a hood, jeans, red beanie, yellow scarf, long red hair, sign held up.');
-
-/* People, built from 0.1 m voxels: square heads with pixel faces, front at +x. Each type has its own silhouette. */
-const personModel = (p) => ({V}, c) => {
-  const leg = p.small ? 3 : 5 + (p.tall > 1 ? 1 : p.tall < 1 ? -1 : 0), tor = p.small ? 4 : 5 + (p.tall > 1.1 ? 1 : 0), wide = p.wide > 1.1, hw = wide ? 3 : 2;   // half torso width
-  const z0 = leg, zt = leg + tor, hz = zt, SH = p.boots || '#2b2522', hand = p.gloves || p.skin, ay = 7 + hw + 1;   // right arm column
-  // legs, shoes or boots
-  for (const y of [5, 8]){ if (p.skirt){ V(6, y, 1, 2, 2, leg - 2, p.skin); } else V(6, y, 1, 2, 2, leg - 1, p.bot); V(6, y, 0, 3, 2, p.boots ? 2 : 1, SH); if (p.knee) V(8, y, 2, 1, 2, 1, p.knee); }
-  if (p.skirt){ V(5, 4, leg - 2, 5, 7, 1, p.bot); V(6, 5, leg - 1, 3, 5, 1, p.bot); }
-  // torso
-  V(6, 7 - hw, z0, 3, hw*2 + 1, tor, p.top); if (p.belly) V(9, 7 - hw + 1, z0, 1, hw*2 - 1, 3, p.top);
-  if (p.vest) for (const [x, y, w, d] of [[6, 7 - hw, 3, hw*2 + 1]]) V(x, y, z0 + 2, w, d, 1, '#f2e23a');
-  if (p.shirt) V(8, 6, zt - 2, 1, 3, 2, p.shirt);
-  if (p.tie) V(8, 7, z0 + 1, 1, 1, tor - 2, p.tie);
-  if (p.bow){ V(8, 6, zt - 1, 1, 3, 1, p.bow); V(8, 7, zt - 1, 1, 1, 1, '#1c1f22'); }
-  if (p.chain) V(8, 6, zt - 2, 1, 3, 1, '#e3c05a');
-  if (p.lanyard) V(8, 7, z0 + 2, 1, 1, 1, '#f4f2ec');
-  if (p.sash) for (let i = 0; i < tor; i++) V(8, 7 - hw + Math.round(i*(hw*2)/(tor - 1)), zt - 1 - i, 1, 1, 1, '#c63a2c');
-  if (p.armor){ V(9, 5, z0 + 1, 1, 5, tor - 1, p.armor); V(6, 7 - hw, z0 + tor - 2, 3, hw*2 + 1, 1, p.armor2 || p.armor); for (const y of [7 - hw - 2, 7 + hw + 1]) V(5, y, zt - 2, 4, 2, 3, p.armor2 || p.armor); }
-  // arms with hands
-  for (const y of [7 - hw - 1, ay]){ V(6, y, z0 + 1, 2, 1, tor - 1, p.armor && p.armor2 ? p.armor : p.top); V(6, y, z0, 2, 1, 1, hand); }
-  // head: 7 wide, 5 deep, 6 tall, face on the front
-  if (p.visor){ V(5, 4, hz, 5, 7, 6, p.hat); V(10, 4, hz + 2, 1, 7, 2, '#16181b'); V(10, 9, hz + 3, 1, 1, 1, '#c63a2c'); V(10, 5, hz, 1, 5, 1, p.armor2 || p.hat); V(6, 6, hz + 6, 3, 3, 1, p.armor2 || p.hat); V(4, 5, hz + 1, 1, 5, 4, p.armor2 || p.hat); }
-  else {
-    V(5, 4, hz, 5, 7, 6, p.skin);
-    V(9, 6, hz + 2, 1, 1, 1, '#22252a'); V(9, 8, hz + 2, 1, 1, 1, '#22252a'); V(9, 5, hz + 1, 1, 1, 1, '#f2a7a0'); V(9, 9, hz + 1, 1, 1, 1, '#f2a7a0');
-    if (p.glasses === 'dark') V(9, 5, hz + 2, 1, 5, 1, '#16181b');
-    else if (p.glasses){ V(9, 5, hz + 2, 1, 5, 1, '#2a2d33'); V(9, 6, hz + 2, 1, 1, 1, '#cfe6f2'); V(9, 8, hz + 2, 1, 1, 1, '#cfe6f2'); }
-    if (p.beard){ V(9, 5, hz, 1, 5, 2, p.beard); V(9, 7, hz + 1, 1, 1, 1, '#a8584e'); V(8, 4, hz, 1, 1, 3, p.beard); V(8, 10, hz, 1, 1, 3, p.beard); } else V(9, 7, hz + 1, 1, 1, 1, '#a8584e');
-    const hairTop = !(p.hat && (p.helmet || p.beanie));
-    if (hairTop){ V(5, 4, hz + 5, 5, 7, 1, p.hair); V(9, 4, hz + 4, 1, 3, 1, p.hair); }
-    V(5, 4, hz + 2, 1, 7, 4, p.hair); V(6, 4, hz + 3, 2, 1, 3, p.hair); V(6, 10, hz + 3, 2, 1, 3, p.hair);
-    if (p.long){ V(4, 4, hz - 2, 1, 7, 7, p.hair); V(5, 3, hz - 1, 3, 1, 6, p.hair); V(5, 11, hz - 1, 3, 1, 6, p.hair); }
-    if (p.bun) V(3, 6, hz + 4, 2, 3, 2, p.hair);
-    if (p.hat){ const t = hz + 6;
-      if (p.helmet && p.camo){ V(4, 3, hz + 3, 7, 9, 3, p.hat); V(5, 4, t, 5, 7, 1, p.hat); V(10, 4, hz + 3, 1, 7, 1, p.hat); for (const [x, y, z] of [[4, 4, hz + 4], [6, 3, hz + 3], [7, 9, t], [5, 6, t], [10, 8, hz + 3], [8, 11, hz + 4]]) V(x, y, z, 1, 1, 1, p.camo); }
-      else if (p.helmet){ V(4, 3, hz + 5, 7, 9, 1, p.hat); V(5, 4, t, 5, 7, 1, p.hat); V(6, 5, t + 1, 3, 5, 1, p.hat); V(11, 5, hz + 5, 1, 5, 1, p.hat); }
-      else if (p.cap){ V(5, 4, hz + 5, 5, 7, 1, p.hat); V(5, 5, t, 4, 5, 1, p.hat); V(10, 5, hz + 5, 2, 5, 1, p.hat); }
-      else if (p.beanie){ V(5, 4, hz + 4, 5, 7, 2, p.hat); V(6, 5, t, 3, 5, 1, p.hat); V(7, 7, t + 1, 1, 1, 1, '#f4f2ec'); }
-      else { V(3, 2, t, 9, 11, 1, p.hat); V(5, 4, t + 1, 5, 7, 2, p.hat); if (p.band) V(5, 4, t + 1, 5, 7, 1, p.band); } } }
-  // things they carry, in the right hand (+y) unless noted
-  const hz0 = z0;
-  if (p.item === 'case') V(5, ay, hz0 - 3, 4, 1, 3, '#6a4a32');
-  if (p.item === 'board'){ V(9, ay - 3, hz0 + 1, 1, 3, 4, '#8a6a3a'); V(10, ay - 3, hz0 + 2, 1, 2, 2, '#f4f2ec'); }
-  if (p.item === 'bottle') V(7, ay, hz0 - 2, 1, 1, 2, '#9fd0e8');
-  if (p.item === 'cup') V(8, ay, hz0, 1, 1, 2, '#f4f2ec');
-  if (p.item === 'laptop'){ V(9, ay - 3, hz0 + 1, 3, 3, 1, '#3a3f45'); V(9, ay - 3, hz0 + 2, 1, 3, 2, '#5a6068'); }
-  if (p.item === 'camera'){ V(10, 5, hz + 1, 2, 5, 3, '#1c1f22'); V(12, 7, hz + 2, 1, 1, 1, '#4a6a8a'); }
-  if (p.item === 'cane') V(8, ay, 0, 1, 1, hz0, '#6a4a32');
-  if (p.item === 'fork'){ V(8, ay, 0, 1, 1, hz + 9, '#8a6a4a'); V(8, ay - 1, hz + 9, 1, 3, 1, '#9aa3ab'); for (const y of [ay - 1, ay + 1]) V(8, y, hz + 10, 1, 1, 2, '#9aa3ab'); V(8, ay, hz + 10, 1, 1, 2, '#9aa3ab'); }
-  if (p.item === 'rifle') for (let i = 0; i < 7; i++) V(9, 4 + i, z0 + 1 + Math.round(i*0.6), 1, 1, 1, '#2f3329');
-  if (p.item === 'radio'){ V(3, 5, z0, 3, 5, tor, '#4a5838'); V(3, 5, z0 + tor, 1, 1, 8, '#2b2f33'); }
-  if (p.pack) V(3, 5, z0 + 1, 3, 5, tor - 1, p.pack);
-  if (p.item === 'shield'){ V(7, 1, 1, 4, 1, hz - 1, '#a9c7e8'); V(7, 1, 1, 4, 1, 1, '#6a7f96'); V(7, 1, hz - 1, 4, 1, 1, '#6a7f96'); V(8, 1, hz - 6, 2, 1, 1, '#f4f2ec'); }
-  if (p.item === 'sign'){ const sc = p.sc || ['#f4f2ec', '#c63a2c']; V(8, ay, z0, 1, 1, hz + 6 - z0, '#8a6a4a'); V(8, ay - 4, hz + 6, 1, 9, 5, sc[0]);
-    if (p.sign === 'STOP') for (let i = 0; i < 5; i++){ V(8, ay - 2 + i, hz + 6 + i, 1, 1, 1, sc[1]); V(8, ay + 2 - i, hz + 6 + i, 1, 1, 1, sc[1]); }
-    else { for (let i = 0; i < 5; i++) V(8, ay - 2 + i, hz + 6 + i, 1, 1, 1, sc[1]); V(8, ay - 2, hz + 7, 1, 1, 3, sc[1]); V(8, ay + 2, hz + 7, 1, 1, 3, sc[1]); V(8, ay - 1, hz + 6, 1, 3, 1, sc[1]); V(8, ay - 1, hz + 10, 1, 3, 1, sc[1]); } } };
-
-const person = (n, o, note) => def('p', n, 1.5, 1.5, personModel(o), note);
-person('The CEO', {top:'#2f343c', bot:'#2f343c', hair:'#9a9590', skin:'#efc9a8', tie:'#b8322a', shirt:'#f4f2ec', item:'case', tall:1.1, glasses:1}, 'Tall, grey at the temples, dark suit, glasses.');
-person('Suit (woman)', {top:'#1f2329', bot:'#1f2329', hair:'#3a2b20', long:1, skin:'#f2d2b6', item:'case', skirt:1, bun:1}, 'Lent by the association.');
-person('Suit (man)', {top:'#1f2329', bot:'#1f2329', hair:'#2b2522', skin:'#e8c09c', tie:'#2c5f93', shirt:'#f4f2ec', item:'case'}, '');
-person('Geologist', {top:'#e07a2c', bot:'#3a4a63', hair:'#7a4a2a', long:1, skin:'#f2d2b6', hat:'#f4f4f2', helmet:1, item:'board', vest:1}, 'White helmet, clipboard. Drives the pickup.');
-person('Driller', {top:'#e07a2c', bot:'#e07a2c', hair:'#3a2b20', skin:'#d9a882', hat:'#f2c230', helmet:1, vest:1, wide:1.15, beard:'#3a2b20', boots:'#3a2b20', gloves:'#c9a24a'}, 'Orange overalls, beard, work boots.');
-person('Driller (woman)', {top:'#e07a2c', bot:'#e07a2c', hair:'#c9a24a', long:1, skin:'#f2d2b6', hat:'#f2c230', helmet:1, vest:1, boots:'#3a2b20', gloves:'#c9a24a'}, '');
-person('Mud engineer', {top:'#3a5f8a', bot:'#3a4a63', hair:'#2b2522', skin:'#c98e66', hat:'#f4f4f2', helmet:1, item:'bottle'}, '');
-person('Water officer', {top:'#2c8a8a', bot:'#3a4a63', hair:'#8a5a3a', long:1, skin:'#f2d2b6', item:'bottle', boots:'#2f5f3a'}, 'Samples springs; green rubber boots.');
-person('Community liaison', {top:'#b05a6a', bot:'#4a4f55', hair:'#2b2522', long:1, skin:'#a8704a', item:'cup'}, 'Coffee with the neighbours.');
-person('Security guard', {top:'#2b2f36', bot:'#2b2f36', hair:'#2b2522', skin:'#e8c09c', hat:'#2b2f36', cap:1, vest:1, wide:1.2}, '');
-person('Seismologist', {top:'#6a5a8a', bot:'#4a4f55', hair:'#d9d4c8', skin:'#f2d2b6', item:'laptop', glasses:1, beard:'#d9d4c8'}, 'From the university station.');
-person('Plant operator', {top:'#3a5f8a', bot:'#3a5f8a', hair:'#5a4632', long:1, skin:'#e8c09c', hat:'#f4f4f2', helmet:1}, '');
-person('Villager (woman)', {top:'#7a8f6e', bot:'#4a4f55', hair:'#8a5a3a', long:1, skin:'#f2d2b6', skirt:1}, '');
-person('Villager (man), elderly', {top:'#8a6a4a', bot:'#3a4a63', hair:'#e6e2da', skin:'#e8c09c', hat:'#5a4632', cap:1, item:'cane', tall:0.92}, 'With a cane and a flat cap.');
-person('Farmer', {top:'#2c5f93', bot:'#2c5f93', hair:'#5a4632', skin:'#d9a882', hat:'#3a3f45', cap:1, item:'fork', wide:1.25, belly:1, boots:'#2f5f3a'}, 'Blue work jacket, rubber boots, a belly.');
-person('Mayor', {top:'#3a3f45', bot:'#3a3f45', hair:'#c9c4b6', long:1, skin:'#f2d2b6', sash:1, wide:1.15, bun:1}, 'With the sash on fête days.');
-person('Protester with sign', {top:'#3f7a4a', bot:'#3a4a63', hair:'#c94c3a', long:1, skin:'#f2d2b6', item:'sign', sign:'NON', hat:'#c63a2c', beanie:1}, 'In a march.');
-person('Protester with sign (2)', {top:'#c9622a', bot:'#4a4f55', hair:'#2b2522', skin:'#a8704a', item:'sign', sign:'STOP', sc:['#e8b730', '#1c1f22'], beard:'#2b2522'}, '');
-person('Police officer', {top:'#2a4fa0', bot:'#1f2a44', hair:'#2b2522', skin:'#e8c09c', hat:'#1f2a44', cap:1}, '');
-person('Riot police', {top:'#2d3440', bot:'#2d3440', hair:'#1f2a44', skin:'#e8c09c', hat:'#8f9aa8', visor:1, armor:'#6f7c8c', armor2:'#b9c3ce', knee:'#b9c3ce', gloves:'#1c1f22', boots:'#16181b', wide:1.4, tall:1.12, item:'shield'}, 'Full armour, closed helmet with a black visor, shoulder plates, a big shield.');
-person('Journalist (La Feuille)', {top:'#c9a24a', bot:'#3a3f45', hair:'#3a2b20', long:1, skin:'#f2d2b6', item:'camera', pack:'#5a4632'}, '');
-person('Banker', {top:'#3a4a63', bot:'#3a4a63', hair:'#5a4632', skin:'#e8c09c', bow:'#c9a23a', item:'case', glasses:1, belly:1}, 'Bow tie.');
-person('The lender', {top:'#f4f2ec', bot:'#f4f2ec', hair:'#1c1f22', skin:'#d9a882', tie:'#1c1f22', shirt:'#1c1f22', hat:'#f4f2ec', band:'#1c1f22', glasses:'dark', chain:1, wide:1.1}, 'White suit, white hat with a black band, dark glasses, a gold chain.');
-person('Association presenter', {top:'#3d6b45', bot:'#4a4f55', hair:'#7a4a2a', long:1, skin:'#f2d2b6', item:'board', lanyard:1}, 'Gives the slide show.');
-person('Soldier', {top:'#5b6b45', bot:'#5b6b45', hair:'#2b2522', skin:'#e8c09c', hat:'#4a5838', helmet:1, camo:'#3a4529', boots:'#2b2a22', item:'rifle', pack:'#4a5838'}, 'Helmet, pack, rifle. Only in the secret ending.');
-person('Soldier with radio', {top:'#5b6b45', bot:'#5b6b45', hair:'#5a4632', skin:'#d9a882', hat:'#4a5838', helmet:1, camo:'#3a4529', boots:'#2b2a22', item:'radio'}, '');
-person('Officer', {top:'#4f5d3c', bot:'#4f5d3c', hair:'#9a9590', skin:'#efc9a8', hat:'#4a5838', helmet:1, camo:'#3a4529', boots:'#2b2a22', item:'board', tall:1.05}, 'Reads the evacuation order.');
-person('Soldier (woman)', {top:'#5b6b45', bot:'#5b6b45', hair:'#3a2b20', long:1, skin:'#f2d2b6', hat:'#4a5838', helmet:1, camo:'#3a4529', boots:'#2b2a22', pack:'#4a5838'}, '');
-person('Child', {top:'#e8b730', bot:'#3a4a63', hair:'#8a5a3a', skin:'#f2d2b6', small:1}, '');
+/* People as smooth volumes: rounded limbs, real proportions, no faces. Front at +x. Children and tall people are scaled. */
+const personVol = (o) => { const cx = 0.75, cy = 0.75, k = o.small ? 0.62 : (o.tall || 1), kw = o.small ? 0.78 : 1;
+  const f = (x, y, z) => { const p = [x, y, z], bk = o.bulk || 1; let c = null; const put = (t, col) => { if (t) c = col; };
+    // legs (bare under a skirt), shoes or boots
+    for (const s of [-1, 1]){ const ly = cy + s*0.09;
+      put(inCap(p, [cx, ly, 0.92], [cx + 0.01, ly, 0.5], 0.08, 0.06) || inCap(p, [cx + 0.01, ly, 0.5], [cx, ly, 0.1], 0.058, 0.045), o.skirt ? o.skin : o.bot);
+      if (o.legBand && z > o.legBand && z < o.legBand + 0.045) put(inCap(p, [cx + 0.01, ly, 0.5], [cx, ly, 0.1], 0.062, 0.05), o.band);
+      if (o.knee) put(inEll(p, [cx + 0.05, ly, 0.5], 0.06, 0.07, 0.08), o.knee);
+      put(z >= 0 && (inEll(p, [cx + 0.05, ly, 0.045], 0.135, 0.06, 0.07) || (o.boots && inCap(p, [cx, ly, 0.05], [cx, ly, 0.26], 0.06, 0.06))), o.shoe || '#2b2522'); }
+    put(inEll(p, [cx, cy, 0.95], 0.11, 0.17, 0.1), o.bot);
+    if (o.skirt) put(z > 0.45 && z < 1.0 && Math.hypot((x - cx)/0.15, (y - cy)/0.2) <= 1 + (1.0 - z)*0.9, o.bot);
+    // torso, belly, shoulders
+    const torso = inEll(p, [cx, cy, 1.1], 0.105*bk, 0.155*bk, 0.15) || inEll(p, [cx, cy, 1.3], 0.125*bk, 0.19*bk, 0.17) || inCap(p, [cx, cy - 0.16*bk, 1.42], [cx, cy + 0.16*bk, 1.42], 0.065*bk, 0.065*bk) || (o.belly && inEll(p, [cx + 0.05, cy, 1.1], 0.13, 0.15, 0.14));
+    put(torso, o.top);
+    if (torso && o.shirt && x > cx + 0.05 && Math.abs(y - cy) < 0.045 && z > 1.2) c = o.shirt;
+    if (torso && o.tie && x > cx + 0.05 && Math.abs(y - cy) < 0.018 && z > 1.12 && z < 1.43) c = o.tie;
+    if (torso && o.band && o.topBand && z > o.topBand && z < o.topBand + 0.045) c = o.band;
+    if (torso && o.vest && z > 1.0 && z < 1.42) c = (z > 1.18 && z < 1.22) ? '#e8ece4' : o.vest;
+    if (torso && o.sash && Math.abs((y - cy) - (z - 1.25)*1.3) < 0.035 && x > cx) c = '#c63a2c';
+    if (o.belt) put(inEll(p, [cx, cy, 0.98], 0.115, 0.175, 0.03), o.belt);
+    if (o.armor){ put(inEll(p, [cx + 0.02, cy, 1.25], 0.15, 0.2, 0.22), o.armor); for (const s of [-1, 1]) put(inEll(p, [cx, cy + s*0.22, 1.43], 0.11, 0.1, 0.07), o.armor2); }
+    if (o.hood) put(inEll(p, [cx - 0.11, cy, 1.5], 0.07, 0.14, 0.08), o.top);
+    if (o.pack) put(inEll(p, [cx - 0.17, cy, 1.22], 0.08, 0.15, 0.17), o.pack);
+    if (o.item === 'radio'){ put(inEll(p, [cx - 0.17, cy, 1.22], 0.08, 0.14, 0.17), '#4a5838'); put(Math.hypot(x - cx + 0.2, y - cy + 0.08) < 0.015 && z > 1.3 && z < 2.1, '#2b2f33'); }
+    put(inCap(p, [cx, cy, 1.44], [cx, cy, 1.56], 0.05, 0.048), o.skin);
+    if (o.scarf) put(inEll(p, [cx, cy, 1.5], 0.09, 0.1, 0.045) || inCap(p, [cx + 0.08, cy + 0.04, 1.48], [cx + 0.1, cy + 0.05, 1.3], 0.03, 0.03), o.scarf);
+    // head; hair on the back and top; hats replace the top
+    const hc = [cx + 0.01, cy, 1.665];
+    put(inEll(p, hc, 0.1, 0.085, 0.115), o.skin);
+    put(inEll(p, hc, 0.112, 0.097, 0.125) && (z > 1.7 || x < cx - 0.01), o.hair);
+    if (o.longHair) put(inCap(p, [cx - 0.07, cy, 1.66], [cx - 0.09, cy, 1.4], 0.085, 0.07) && x < cx - 0.02, o.hair);
+    if (o.bun) put(inEll(p, [cx - 0.12, cy, 1.72], 0.06, 0.06, 0.06), o.hair);
+    if (o.beard) put(inEll(p, [cx + 0.06, cy, 1.585], 0.06, 0.08, 0.05) && x > cx + 0.02, o.beard);
+    const h = o.hat;
+    if (h === 'hard'){ put(inEll(p, [cx + 0.01, cy, 1.73], 0.125, 0.11, 0.12) && z > 1.73, o.hatc); put(z > 1.72 && z < 1.765 && inEll(p, [cx + 0.03, cy, 1.74], 0.16, 0.13, 0.1), o.hatc); }
+    if (h === 'beanie'){ put(inEll(p, [cx + 0.005, cy, 1.72], 0.115, 0.1, 0.12) && z > 1.7, o.hatc); put(inEll(p, [cx, cy, 1.86], 0.035, 0.035, 0.035), '#f4f2ec'); }
+    if (h === 'cap'){ put(inEll(p, [cx + 0.005, cy, 1.73], 0.112, 0.098, 0.09) && z > 1.72, o.hatc); put(z > 1.72 && z < 1.745 && x > cx && inEll(p, [cx + 0.1, cy, 1.73], 0.12, 0.08, 0.1), o.hatc); }
+    if (h === 'army'){ put(inEll(p, [cx + 0.01, cy, 1.69], 0.135, 0.12, 0.15) && z > 1.66, ((Math.floor(x*40) + Math.floor(y*40) + Math.floor(z*40)) % 4 === 0) ? '#3a4529' : o.hatc); }
+    if (h === 'fedora'){ put(z > 1.74 && z < 1.765 && inEll(p, [cx, cy, 1.75], 0.2, 0.18, 0.1), o.hatc); put(inEll(p, [cx, cy, 1.76], 0.105, 0.095, 0.12) && z > 1.745, z < 1.79 ? o.band2 : o.hatc); }
+    if (h === 'visor'){ put(inEll(p, [cx + 0.01, cy, 1.67], 0.135, 0.12, 0.15), x > cx + 0.06 && z > 1.63 && z < 1.71 ? '#16181b' : o.hatc); }
+    // arms; the right one may be raised
+    for (const s of [-1, 1]){ const ay = cy + s*0.235*bk, armC = o.armor ? o.armor : o.top;
+      if (s > 0 && o.raise){ put(inCap(p, [cx, ay, 1.42], [cx + 0.03, ay + 0.06, 1.7], 0.055, 0.047) || inCap(p, [cx + 0.03, ay + 0.06, 1.7], [cx + 0.04, ay + 0.08, 1.96], 0.045, 0.038), armC); put(inEll(p, [cx + 0.04, ay + 0.08, 2.01], 0.04, 0.035, 0.055), o.hand || o.skin); }
+      else { put(inCap(p, [cx, ay, 1.42], [cx, ay + s*0.02, 1.15], 0.055, 0.047) || inCap(p, [cx, ay + s*0.02, 1.15], [cx + 0.02, ay + s*0.02, 0.9], 0.045, 0.037), armC);
+        if (o.armBand && z > o.armBand && z < o.armBand + 0.04) put(inCap(p, [cx, ay, 1.42], [cx, ay + s*0.02, 1.15], 0.058, 0.05), o.band);
+        put(inEll(p, [cx + 0.02, ay + s*0.02, 0.85], 0.04, 0.032, 0.055), o.hand || o.skin); } }
+    // things carried (right hand at +y unless noted)
+    const ry = cy + 0.255*(o.bulk || 1), it = o.item;
+    if (it === 'wrench'){ put(Math.abs(x - cx - 0.02) < 0.02 && Math.abs(y - ry) < 0.02 && z > 0.5 && z < 0.82, '#b8322a'); put(Math.abs(x - cx - 0.02) < 0.08 && Math.abs(y - ry) < 0.025 && z > 0.44 && z < 0.52, '#8f979e'); }
+    if (it === 'case') put(Math.abs(x - cx - 0.02) < 0.2 && Math.abs(y - ry - 0.02) < 0.05 && z > 0.55 && z < 0.82, '#5a3f2a');
+    if (it === 'board') put(Math.abs(x - cx - 0.17) < 0.02 && Math.abs(y - cy - 0.1) < 0.12 && z > 1.05 && z < 1.38, z > 1.33 ? '#8a6a3a' : '#f4f2ec');
+    if (it === 'bottle') put(Math.hypot(x - cx - 0.03, y - ry) < 0.035 && z > 0.62 && z < 0.82, '#9fd0e8');
+    if (it === 'cup') put(Math.hypot(x - cx - 0.07, y - ry) < 0.04 && z > 0.84 && z < 0.95, '#f4f2ec');
+    if (it === 'laptop') put(x > cx + 0.1 && x < cx + 0.4 && Math.abs(y - cy) < 0.17 && z > 1.0 && z < 1.03, '#3a3f45');
+    if (it === 'camera') put(x > cx + 0.1 && x < cx + 0.24 && Math.abs(y - cy) < 0.08 && z > 1.6 && z < 1.72, '#1c1f22');
+    if (it === 'cane') put(Math.hypot(x - cx - 0.05, y - ry) < 0.018 && z < 0.84, '#6a4a32');
+    if (it === 'fork'){ put(Math.hypot(x - cx - 0.04, y - ry) < 0.02 && z < 2.05, '#8a6a4a'); put(Math.abs(x - cx - 0.04) < 0.02 && Math.abs(y - ry) < 0.12 && z > 2.0 && z < 2.25 && (Math.abs(y - ry) > 0.09 || Math.abs(y - ry) < 0.025 || z < 2.04), '#9aa3ab'); }
+    if (it === 'rifle') put(inCap(p, [cx + 0.17, cy - 0.15, 1.05], [cx + 0.17, cy + 0.18, 1.4], 0.025, 0.025), '#2f3329');
+    if (it === 'shield') put(x > cx + 0.22 && x < cx + 0.26 && y > cy - 0.48 && y < cy + 0.12 && z > 0.25 && z < 1.5, (y < cy - 0.44 || y > cy + 0.08 || z < 0.29 || z > 1.46) ? '#5f7896' : '#a9c7e8');
+    if (it === 'sign'){ const sy = ry + 0.08, sx = cx + 0.04; put(Math.abs(x - sx) < 0.02 && Math.abs(y - sy) < 0.02 && z > 1.7 && z < 2.2, '#8a6a4a');
+      if (Math.abs(y - sy) < 0.6 && z > 2.15 && z < 2.68 && Math.abs(x - sx) < 0.04) c = x > sx && z > 2.32 && z < 2.5 && Math.abs(y - sy) < 0.48 ? (o.signInk || '#c63a2c') : (o.signBoard || '#f4f2ec'); }
+    return c; };
+  return (x, y, z) => f(cx + (x - cx)/kw, cy + (y - cy)/kw, z/k); };
+const volP = (n, o, note) => { const k = o.small ? 0.62 : (o.tall || 1); def('p', n, 1.5, 1.5, ({SD}) => SD(0, 1.5, 0, o.item === 'sign' ? 2.1 : 1.5, 0, (o.item === 'sign' ? 2.75 : o.item === 'fork' || o.item === 'radio' ? 2.3 : 1.95)*k, personVol(o), {step:0.02}), note); };
+const hi = '#e8ece4';
+volP('The CEO', {top:'#2f343c', bot:'#2f343c', hair:'#9a9590', skin:'#efc9a8', tie:'#b8322a', shirt:'#f4f2ec', item:'case', tall:1.06, shoe:'#1c1f22'}, 'Tall, grey at the temples, dark suit.');
+volP('Suit (woman)', {top:'#1f2329', bot:'#1f2329', hair:'#3a2b20', longHair:1, bun:1, skin:'#f2d2b6', item:'case', skirt:1, shirt:'#f4f2ec', shoe:'#1c1f22'}, 'Lent by the association.');
+volP('Suit (man)', {top:'#1f2329', bot:'#1f2329', hair:'#2b2522', skin:'#e8c09c', tie:'#2c5f93', shirt:'#f4f2ec', item:'case', shoe:'#1c1f22'}, '');
+volP('Geologist', {top:'#e07a2c', bot:'#3a4a63', hair:'#7a4a2a', longHair:1, skin:'#f2d2b6', hat:'hard', hatc:'#f4f4f2', item:'board', vest:'#e07a2c', shoe:'#5a4632', boots:1}, 'White hard hat, clipboard. Drives the pickup.');
+volP('Driller', {skin:'#d9a882', top:'#e07a2c', bot:'#e07a2c', shoe:'#4a3626', boots:1, hand:'#c9a24a', hair:'#3a2b20', beard:'#3a2b20', hat:'hard', hatc:'#f2c230', belt:'#2b2522', band:hi, topBand:1.12, legBand:0.3, armBand:1.24, bulk:1.08, item:'wrench'}, 'Orange coveralls with reflective bands, hard hat, beard, gloves, boots, pipe wrench.');
+volP('Driller (woman)', {skin:'#f2d2b6', top:'#e07a2c', bot:'#e07a2c', shoe:'#4a3626', boots:1, hand:'#c9a24a', hair:'#c9a24a', longHair:1, hat:'hard', hatc:'#f2c230', belt:'#2b2522', band:hi, topBand:1.12, legBand:0.3, armBand:1.24}, '');
+volP('Mud engineer', {top:'#3a5f8a', bot:'#3a4a63', hair:'#2b2522', skin:'#c98e66', hat:'hard', hatc:'#f4f4f2', item:'bottle', shoe:'#3a2b20', boots:1}, '');
+volP('Water officer', {top:'#2c8a8a', bot:'#3a4a63', hair:'#8a5a3a', longHair:1, skin:'#f2d2b6', item:'bottle', shoe:'#2f5f3a', boots:1}, 'Samples springs; green rubber boots.');
+volP('Community liaison', {top:'#b05a6a', bot:'#4a4f55', hair:'#2b2522', longHair:1, skin:'#a8704a', item:'cup'}, 'Coffee with the neighbours.');
+volP('Security guard', {top:'#2b2f36', bot:'#2b2f36', hair:'#2b2522', skin:'#e8c09c', hat:'cap', hatc:'#2b2f36', vest:'#e8d23a', bulk:1.15, shoe:'#1c1f22'}, '');
+volP('Seismologist', {top:'#6a5a8a', bot:'#4a4f55', hair:'#d9d4c8', beard:'#d9d4c8', skin:'#f2d2b6', item:'laptop'}, 'From the university station.');
+volP('Plant operator', {top:'#3a5f8a', bot:'#3a5f8a', hair:'#5a4632', longHair:1, skin:'#e8c09c', hat:'hard', hatc:'#f4f4f2', band:hi, topBand:1.12, shoe:'#3a2b20', boots:1}, '');
+volP('Villager (woman)', {top:'#7a8f6e', bot:'#4a4f55', hair:'#8a5a3a', longHair:1, skin:'#f2d2b6', skirt:1}, '');
+volP('Villager (man), elderly', {top:'#8a6a4a', bot:'#3a4a63', hair:'#e6e2da', skin:'#e8c09c', hat:'cap', hatc:'#5a4632', item:'cane', tall:0.95}, 'With a cane and a flat cap.');
+volP('Farmer', {top:'#2c5f93', bot:'#2c5f93', hair:'#5a4632', skin:'#d9a882', hat:'cap', hatc:'#3a3f45', item:'fork', bulk:1.15, belly:1, shoe:'#2f5f3a', boots:1}, 'Blue work jacket, rubber boots, a belly, a pitchfork.');
+volP('Mayor', {top:'#3a3f45', bot:'#3a3f45', hair:'#c9c4b6', bun:1, skin:'#f2d2b6', sash:1, bulk:1.08}, 'With the sash on fête days.');
+volP('Protester with sign', {skin:'#f2d2b6', top:'#3f7a4a', bot:'#3a4a63', shoe:'#5a4632', hair:'#9a4a2a', longHair:1, hat:'beanie', hatc:'#c63a2c', scarf:'#e8b730', hood:1, bulk:1.12, raise:1, item:'sign'}, 'Green parka, red beanie, yellow scarf, sign held up.');
+volP('Protester with sign (2)', {top:'#c9622a', bot:'#4a4f55', hair:'#2b2522', beard:'#2b2522', skin:'#a8704a', raise:1, item:'sign', signBoard:'#e8b730', signInk:'#1c1f22'}, 'Yellow sign.');
+volP('Police officer', {top:'#2a4fa0', bot:'#1f2a44', hair:'#2b2522', skin:'#e8c09c', hat:'cap', hatc:'#1f2a44', belt:'#1c1f22', shoe:'#1c1f22'}, '');
+volP('Riot police', {top:'#2d3440', bot:'#2d3440', hair:'#1f2a44', skin:'#e8c09c', hat:'visor', hatc:'#8f9aa8', armor:'#6f7c8c', armor2:'#b9c3ce', knee:'#b9c3ce', hand:'#1c1f22', shoe:'#16181b', boots:1, bulk:1.3, tall:1.06, item:'shield'}, 'Full armour, closed helmet with a black visor, shoulder plates, a big shield.');
+volP('Journalist (La Feuille)', {top:'#c9a24a', bot:'#3a3f45', hair:'#3a2b20', longHair:1, skin:'#f2d2b6', item:'camera', pack:'#5a4632'}, '');
+volP('Banker', {top:'#3a4a63', bot:'#3a4a63', hair:'#5a4632', skin:'#e8c09c', shirt:'#f4f2ec', tie:'#c9a23a', item:'case', belly:1, shoe:'#1c1f22'}, '');
+volP('The lender', {top:'#f4f2ec', bot:'#f4f2ec', hair:'#1c1f22', skin:'#d9a882', shirt:'#1c1f22', hat:'fedora', hatc:'#f4f2ec', band2:'#1c1f22', bulk:1.1, shoe:'#f4f2ec'}, 'White suit, white hat with a black band.');
+volP('Association presenter', {top:'#3d6b45', bot:'#4a4f55', hair:'#7a4a2a', longHair:1, skin:'#f2d2b6', item:'board'}, 'Gives the slide show.');
+volP('Soldier', {top:'#5b6b45', bot:'#5b6b45', hair:'#2b2522', skin:'#e8c09c', hat:'army', hatc:'#4a5838', shoe:'#2b2a22', boots:1, item:'rifle', pack:'#4a5838'}, 'Helmet, pack, rifle. Only in the secret ending.');
+volP('Soldier with radio', {top:'#5b6b45', bot:'#5b6b45', hair:'#5a4632', skin:'#d9a882', hat:'army', hatc:'#4a5838', shoe:'#2b2a22', boots:1, item:'radio'}, '');
+volP('Officer', {top:'#4f5d3c', bot:'#4f5d3c', hair:'#9a9590', skin:'#efc9a8', hat:'army', hatc:'#4a5838', shoe:'#2b2a22', boots:1, item:'board', tall:1.04, belt:'#2b2a22'}, 'Reads the evacuation order.');
+volP('Soldier (woman)', {top:'#5b6b45', bot:'#5b6b45', hair:'#3a2b20', longHair:1, skin:'#f2d2b6', hat:'army', hatc:'#4a5838', shoe:'#2b2a22', boots:1, pack:'#4a5838'}, '');
+volP('Child', {top:'#e8b730', bot:'#3a4a63', hair:'#8a5a3a', skin:'#f2d2b6', small:1}, '');
 
 function outline(c, col){ const g = c.getContext('2d'), W = c.width, Hh = c.height, d = g.getImageData(0, 0, W, Hh), a = d.data, o = new Uint8Array(W*Hh), rgb = hex(col || '#2a2d33');
   for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++){ const i = (y*W + x)*4; if (a[i + 3]) continue; if ((x > 0 && a[i - 1]) || (x < W - 1 && a[i + 7]) || (y > 0 && a[i - W*4 + 3]) || (y < Hh - 1 && a[i + W*4 + 3])) o[y*W + x] = 1; }
