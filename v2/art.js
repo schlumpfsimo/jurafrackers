@@ -41,9 +41,9 @@ function build(fn){
   fn(H, PAL);
   if (vox.size){ const cells = [...vox].map(([k, c]) => [...k.split(',').map(Number), c]); push({t:'vox', u:0.1, cells, zt:(Math.max(...cells.map(q => q[2])) + 1)*0.1}); }
   // anything standing on top of a block is drawn after the ground-level parts
-  for (const p of parts){ if (p.z === undefined || p.z <= 0 || p.t === 'ln' || p.t === 'txt' || p.t === 'puff') continue; const pc = p.pts ? [p.pts.reduce((a, q) => a + q[0], 0)/p.pts.length, p.pts.reduce((a, q) => a + q[1], 0)/p.pts.length] : null;
+  for (const p of parts){ if (p.terrain || p.par || p.z === undefined || p.z <= 0 || p.t === 'ln' || p.t === 'txt' || p.t === 'puff') continue; const pc = p.pts ? [p.pts.reduce((a, q) => a + q[0], 0)/p.pts.length, p.pts.reduce((a, q) => a + q[1], 0)/p.pts.length] : null;
     const cx = p.kx ?? (pc ? pc[0] : p.t === 'cyl' ? p.x : p.x + (p.w || 0)/2), cy = p.ky ?? (pc ? pc[1] : p.t === 'cyl' ? p.y : p.y + (p.d || 0)/2);
-    for (const q of parts){ if (q === p || (q.t !== 'blk' && q.t !== 'prism') || q.z >= p.z) continue; const top = q.z + (q.t === 'prism' ? q.h : Math.max(...q.h)); if (q.t === 'prism'){ const xs = q.pts.map(v => v[0]), ys = q.pts.map(v => v[1]); if (Math.abs(top - p.z) < 0.2 && cx >= Math.min(...xs) && cx <= Math.max(...xs) && cy >= Math.min(...ys) && cy <= Math.max(...ys)){ p.up = (q.up || 0) + 1; p.par = q; break; } continue; } if (Math.abs(top - p.z) < 0.35 && cx >= q.x - 0.01 && cx <= q.x + q.w + 0.01 && cy >= q.y - 0.01 && cy <= q.y + q.d + 0.01){ p.up = (q.up || 0) + 1; p.par = q; break; } } }
+    for (const q of parts){ if (q === p || q.terrain || (q.t !== 'blk' && q.t !== 'prism') || q.z >= p.z) continue; const top = q.z + (q.t === 'prism' ? q.h : Math.max(...q.h)); if (q.t === 'prism'){ const xs = q.pts.map(v => v[0]), ys = q.pts.map(v => v[1]); if (Math.abs(top - p.z) < 0.2 && cx >= Math.min(...xs) && cx <= Math.max(...xs) && cy >= Math.min(...ys) && cy <= Math.max(...ys)){ p.up = (q.up || 0) + 1; p.par = q; break; } continue; } if (Math.abs(top - p.z) < 0.35 && cx >= q.x - 0.01 && cx <= q.x + q.w + 0.01 && cy >= q.y - 0.01 && cy <= q.y + q.d + 0.01){ p.up = (q.up || 0) + 1; p.par = q; break; } } }
   return parts;
 }
 
@@ -52,7 +52,7 @@ function draw(g, model, rot, S, ox, oy, post){
   post = post || [];
   const W = model.W, D = model.D, rp = (x, y) => rot === 0 ? [x, y] : rot === 1 ? [D - y, x] : rot === 2 ? [W - x, D - y] : [y, W - x];
   const P = (x, y, z) => [ox + (x - y)*S, oy + (x + y)*S/2 - z*S];
-  const poly = (pts, fill, line) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.fillStyle = fill; g.fill(); if (line){ g.strokeStyle = line; g.lineWidth = model.lines ? 0.9 : Math.max(0.6, S*0.12); g.stroke(); } };
+  const poly = (pts, fill, line) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.fillStyle = fill; g.fill(); if (line){ g.strokeStyle = line; g.lineWidth = model.lines ? 0.9 : model.cat === 's' ? 1 : Math.max(0.6, S*0.12); g.stroke(); } };
   const rf = f => FACES[(FACES.indexOf(f) + rot) % 4];
   const items = [];
   const cen = p => { let x, y; if (p.kx !== undefined){ x = p.kx; y = p.ky; } else if (p.t === 'prism'){ x = p.pts.reduce((a, q) => a + q[0], 0)/p.pts.length; y = p.pts.reduce((a, q) => a + q[1], 0)/p.pts.length; } else if (p.t === 'cyl'){ x = p.x; y = p.y; } else { x = p.x + (p.w || 0)/2; y = p.y + (p.d || 0)/2; } const q = rp(x, y); return q[0] + q[1]; };
@@ -76,12 +76,12 @@ function draw(g, model, rot, S, ox, oy, post){
           poly([P(x1, y0, zb), P(x1, y1, zb), P(x1 - b, y1 - b, zt), P(x1 - b, y0 + b, zt)], sh(c, 0.86), line);
           poly([P(x0 + b, y0 + b, zt), P(x1 - b, y0 + b, zt), P(x1 - b, y1 - b, zt), P(x0 + b, y1 - b, zt)], p.top || sh(c, 1.14), line); }
         else {
-        if (h01 > 0 || h11 > 0) poly([P(x0, y1, z), P(x1, y1, z), P(x1, y1, z + h11), P(x0, y1, z + h01)], sh(sideS, 0.9), line);
-        if (h10 > 0 || h11 > 0) poly([P(x1, y0, z), P(x1, y1, z), P(x1, y1, z + h11), P(x1, y0, z + h10)], sh(sideE, 0.74), line);
+        if (!p.topOnly && (h01 > 0 || h11 > 0)) poly([P(x0, y1, z), P(x1, y1, z), P(x1, y1, z + h11), P(x0, y1, z + h01)], sh(sideS, 0.9), line);
+        if (!p.topOnly && (h10 > 0 || h11 > 0)) poly([P(x1, y0, z), P(x1, y1, z), P(x1, y1, z + h11), P(x1, y0, z + h10)], sh(sideE, 0.74), line);
         if (model.cat === 'b' && z === 0 && h00 >= 2.4 && !p.roof && h00 === h11){ const pb = 0.45; poly([P(x0, y1, 0), P(x1, y1, 0), P(x1, y1, pb), P(x0, y1, pb)], sh(sideS, 0.72), null); poly([P(x1, y0, 0), P(x1, y1, 0), P(x1, y1, pb), P(x1, y0, pb)], sh(sideE, 0.6), null); }
         const sx = (h10 + h11) - (h00 + h01), sy = (h01 + h11) - (h00 + h10), top = p.top || (sx + sy < -1e-6 ? sh(c, 1.1) : sx + sy > 1e-6 ? sh(c, 0.72) : sh(c, 1.1));
         const faces = !p.roof || 1 - (h10 - h00)/(x1 - x0) - (h01 - h00)/(y1 - y0) > 0;   // a steep roof slope facing away is hidden behind its gable
-        if (faces) poly([P(x0, y0, z + h00), P(x1, y0, z + h10), P(x1, y1, z + h11), P(x0, y1, z + h01)], top, line);
+        if (faces) poly([P(x0, y0, z + h00), P(x1, y0, z + h10), P(x1, y1, z + h11), P(x0, y1, z + h01)], top, p.seam ? top : line);
         if (p.roof && faces){ const cr = [[x0, y0, h00], [x1, y0, h10], [x1, y1, h11], [x0, y1, h01]]; for (let e = 0; e < 4; e++) if (cr[e][2] < 1e-6 && cr[(e + 1) % 4][2] < 1e-6){ const a0 = cr[e], a1 = cr[(e + 1) % 4], b1 = cr[(e + 2) % 4], b0 = cr[(e + 3) % 4], nL = Math.max(2, Math.round(Math.hypot(b0[0] - a0[0], b0[1] - a0[1], b0[2] - a0[2])/0.55));
             g.strokeStyle = sh(c, 0.82); g.lineWidth = Math.max(0.6, S*0.08); for (let t = 1; t < nL; t++){ const u = t/nL, pA = P(a0[0] + (b0[0] - a0[0])*u, a0[1] + (b0[1] - a0[1])*u, z + b0[2]*u), pB = P(a1[0] + (b1[0] - a1[0])*u, a1[1] + (b1[1] - a1[1])*u, z + b1[2]*u); g.beginPath(); g.moveTo(pA[0], pA[1]); g.lineTo(pB[0], pB[1]); g.stroke(); } break; }
           g.strokeStyle = sh(c, 0.55); g.lineWidth = Math.max(1, S*0.22); const lo = [[x0, y0, h00], [x1, y0, h10], [x1, y1, h11], [x0, y1, h01]].filter(q => q[2] < 1e-6); if (lo.length === 2){ g.beginPath(); const a = P(lo[0][0], lo[0][1], z), b = P(lo[1][0], lo[1][1], z); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); } }
@@ -902,10 +902,11 @@ site('Crater', 6, 6, ({F, B}) => { F([[0, 0], [6, 0], [6, 6], [0, 6]], '#9db383'
   ring(2.7, '#8a7458'); ring(1.9, '#5a4a38'); ring(1.0, '#3a3028'); for (const [x, y] of [[0.6, 1.2], [5.2, 4.6], [4.6, 0.8]]) B(x, y, 0, 0.4, 0.3, 0.25, '#7a6a58'); }, '');
 
 /* Air and scale: the F-35 flies low, so on the map it is not much bigger than a house */
-const placeModel = (H, name, dx, dy) => { const m = M.find(q => q.n === name), map = new Map();
-  for (const q of m.parts){ const c = Object.assign({}, q); for (const k of ['x', 'kx']) if (c[k] !== undefined) c[k] += dx; for (const k of ['y', 'ky']) if (c[k] !== undefined) c[k] += dy;
-    if (c.pts) c.pts = c.pts.map(v => v.length === 3 ? [v[0] + dx, v[1] + dy, v[2]] : [v[0] + dx, v[1] + dy]);
-    if (c.t === 'sdf'){ const f = q.fn; c.b = [q.b[0] + dx, q.b[1] + dx, q.b[2] + dy, q.b[3] + dy, q.b[4], q.b[5]]; c.fn = (x, y, z) => f(x - dx, y - dy, z); if (q.badge) c.badge = Object.assign({}, q.badge, {x:q.badge.x + dx, y:q.badge.y + dy}); delete c.labels; }
+const placeModel = (H, name, dx, dy, dz, recol, noPad) => { const m = M.find(q => q.n === name), map = new Map(); dz = dz || 0;
+  for (const q of m.parts){ if (noPad && q.t === 'flat') continue; const c = Object.assign({}, q); if (recol){ for (const k of ['c', 'top', 'side']) if (c[k] && recol[c[k]]) c[k] = recol[c[k]]; }
+    if (dz){ if (c.t === 'flat') c.z = (q.z || 0) + dz; else if (c.z !== undefined) c.z = q.z + dz; } for (const k of ['x', 'kx']) if (c[k] !== undefined) c[k] += dx; for (const k of ['y', 'ky']) if (c[k] !== undefined) c[k] += dy;
+    if (c.pts) c.pts = c.pts.map(v => v.length === 3 ? [v[0] + dx, v[1] + dy, v[2] + dz] : [v[0] + dx, v[1] + dy]);
+    if (c.t === 'sdf'){ const f = q.fn; c.b = [q.b[0] + dx, q.b[1] + dx, q.b[2] + dy, q.b[3] + dy, q.b[4] + dz, q.b[5] + dz]; c.zt = q.zt + dz; c.fn = (x, y, z) => f(x - dx, y - dy, z - dz); if (q.badge) c.badge = Object.assign({}, q.badge, {x:q.badge.x + dx, y:q.badge.y + dy, z:q.badge.z + dz}); delete c.labels; }
     map.set(q, c); H.raw(c); }
   for (const [q, c] of map) if (q.par) c.par = map.get(q.par); };
 def('x', 'Scale check: F-35 flying low over a house, a car, a driller and cows', 40, 22, (H) => { grass(H.F, 40, 22); placeModel(H, 'House, small', 2, 9); placeModel(H, 'Company car (old 911)', 14, 15); placeModel(H, 'Driller', 19, 15.5); placeModel(H, 'Cow (Simmental)', 22, 16); f35At(H, 16, 2, 12); }, 'All at the same scale. The jet at 12 m: its shadow on the ground, the jet above it.');
