@@ -263,9 +263,9 @@ function capHit(O, d, A, B, r){ const ba = [B[0] - A[0], B[1] - A[1], B[2] - A[2
   return null; }
 const nearestOnSeg = (P, A, B) => { const ab = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], L2 = ab[0]*ab[0] + ab[1]*ab[1] + ab[2]*ab[2] || 1, t = Math.max(0, Math.min(1, ((P[0] - A[0])*ab[0] + (P[1] - A[1])*ab[1] + (P[2] - A[2])*ab[2])/L2)); return [A[0] + ab[0]*t, A[1] + ab[1]*t, A[2] + ab[2]*t]; };
 // the parts of a model as things a ray can hit; each hit: [t, nx, ny, nz (0,0,0: estimate from neighbours), colour, tag]
-function prims(model, S, rc, noPad){ const out = [], texts = [], mt = 1/S, house = model.cat === 'b' || model.cat === 'h';
+function prims(model, S, rc, noPad, skip){ const out = [], texts = [], mt = 1/S, house = model.cat === 'b' || model.cat === 'h';
   model.parts.forEach((p, pi) => {
-    if (p.terrain) return;
+    if (p.terrain || (skip && skip(p))) return;
     if (p.t === 'blk'){ let x = p.x, y = p.y, w = p.w, d = p.d; if (w < mt){ x -= (mt - w)/2; w = mt; } if (d < mt){ y -= (mt - d)/2; d = mt; }
       const z = p.z, [h00, h10, h11, h01] = p.h, Bx = h10 - h00, By = h01 - h00, zt = z + Math.max(h00, h10, h11, h01);
       const pl = [[-1, 0, 0, -x], [1, 0, 0, x + w], [0, -1, 0, -y], [0, 1, 0, y + d], [0, 0, -1, -z], [-Bx/w, -By/d, 1, z + h00 - Bx*x/w - By*y/d]];
@@ -330,10 +330,28 @@ function prims(model, S, rc, noPad){ const out = [], texts = [], mt = 1/S, house
     }
   });
   return {out, texts}; }
+
+/* ---------------------------------------------------------------- models made for the valley: trees of a given size, bridges and
+   fences of a given length, street things. Not in the catalogue; made once and kept. */
+const RUNTIME = new Map();
+function makeModel(n, W, D, fn, cat){ let m = RUNTIME.get(n); if (!m){ m = {cat:cat || 'g', n, W, D, parts:build(fn)}; RUNTIME.set(n, m); } return m; }
+const TREE_H = {b:7.6, s:10.5, f:4.2, h:3.2};
+function treeModel(kind, s){ s = Math.round(s*20)/20; const n = 'tree:' + kind + ':' + s;
+  if (kind === 'h'){ const R = 1.6*s*2.6, k = 1.6; return makeModel(n, 2*R, 2*R, H => H.SD(0, 2*R, 0, 2*R, 0, 8*s - 1.2*s*k, (x, y, z) => beech((x - R)/k, (y - R)/k, z + 1.2*s*k, s), {step:0.1})); }
+  const R = (kind === 'f' ? 1.7 : 2.6)*s, h = TREE_H[kind]*s + 0.3, f = kind === 's' ? spruce : kind === 'f' ? (x, y, z) => fruitTree(x/s, y/s, z/s) : beech;
+  return makeModel(n, 2*R, 2*R, H => H.SD(0, 2*R, 0, 2*R, 0, h, (x, y, z) => f(x - R, y - R, z, s), {step:0.1})); }
+function bridgeModel(len, w, road){ const n = 'bridge:' + len.toFixed(1) + ':' + w.toFixed(1) + ':' + (road ? 1 : 0); return makeModel(n, len, w + 0.6, ({B}) => {
+  const deck = road ? '#9a958a' : '#8a6a4a', rail = road ? '#b0aba0' : '#6a4a32'; B(0, 0.3, 0, len, w, 0.4, deck, {top:road ? '#6d7176' : '#9a7a52'}); for (const y of [0.18, w + 0.3]) B(0, y, 0.4, len, 0.12, road ? 0.7 : 0.75, rail); }); }
+function fenceModel(len){ len = Math.round(len*10)/10; return makeModel('fence:' + len, len, 0.2, ({B, L}) => { for (const x of [0.05, len - 0.05]) B(x - 0.05, 0.05, 0, 0.1, 0.1, 0.95, '#7a5a3a'); for (const z of [0.4, 0.8]) L([[0.05, 0.1, z], [len - 0.05, 0.1, z]], '#8a6a4a', 0.45); }); }
+function siteFenceModel(len){ len = Math.round(len*10)/10; return makeModel('sitefence:' + len, len, 0.2, ({B, L}) => { for (const x of [0.04, len - 0.04]) B(x - 0.04, 0.06, 0, 0.08, 0.08, 2, '#8a9096'); for (const z of [0.3, 1.0, 1.9]) L([[0.04, 0.1, z], [len - 0.04, 0.1, z]], '#a9afb5', 0.3); }); }
+const lampModel = () => makeModel('street lamp', 0.6, 0.6, ({B}) => { B(0.24, 0.24, 0, 0.12, 0.12, 4.2, '#3a3f45'); B(0.05, 0.18, 4.1, 0.5, 0.24, 0.14, '#4a4f55', {top:'#5a5f65'}); B(0.1, 0.22, 4.02, 0.4, 0.16, 0.08, '!#fff4c8'); });
+const washingModel = () => makeModel('washing line', 3.6, 0.3, ({B, L}) => { for (const x of [0.1, 3.5]) B(x - 0.04, 0.11, 0, 0.08, 0.08, 1.8, '#7a5a3a'); L([[0.1, 0.15, 1.75], [3.5, 0.15, 1.75]], '#d9d4c8', 0.3);
+  [['#f4f2ec', 0.4], ['#c63a2c', 1.1], ['#2c5f93', 1.7], ['#e8b730', 2.4], ['#f4f2ec', 2.9]].forEach(([c, x]) => B(x, 0.13, 1.2, 0.45, 0.04, 0.55, c)); });
+const woodpileModel = () => makeModel('woodpile', 2.4, 0.7, ({B}) => B(0, 0, 0, 2.4, 0.7, 1.1, '#a87a4c', {top:'#6a4a32'}));
 const SPRITES = new Map();
 function sprite(model, view, S, o){ o = o || {}; const key = model.n + '|' + view + '|' + S + '|' + (o.key || '') + (o.noPad ? '|n' : ''); const had = SPRITES.get(key); if (had) return had;
   const th = view*Math.PI/8, ca = Math.cos(th), sa = Math.sin(th), cx = model.W/2, cy = model.D/2, rc = o.recol ? (c => o.recol[c] || c) : (c => c);
-  const {out, texts} = prims(model, S, rc, o.noPad); const toW = (x, y) => [cx + ca*(x - cx) - sa*(y - cy), cy + sa*(x - cx) + ca*(y - cy)];
+  const {out, texts} = prims(model, S, rc, o.noPad, o.skip); const toW = (x, y) => [cx + ca*(x - cx) - sa*(y - cy), cy + sa*(x - cx) + ca*(y - cy)];
   let sx0 = 1e9, sx1 = -1e9, sy0 = 1e9, sy1 = -1e9, zTop = 0; const sb = out.map(p => { const [x0, x1, y0, y1, z0, z1] = p.box; let a0 = 1e9, a1 = -1e9, b0 = 1e9, b1 = -1e9; zTop = Math.max(zTop, z1);
     for (const x of [x0, x1]) for (const y of [y0, y1]){ const [X, Y] = toW(x, y); for (const z of [z0, z1]){ const sx = (X - Y)*S, sy = (X + Y)*S/2 - z*S; a0 = Math.min(a0, sx); a1 = Math.max(a1, sx); b0 = Math.min(b0, sy); b1 = Math.max(b1, sy); } }
     sx0 = Math.min(sx0, a0); sx1 = Math.max(sx1, a1); sy0 = Math.min(sy0, b0); sy1 = Math.max(sy1, b1); return [a0, a1, b0, b1]; });
@@ -1343,5 +1361,5 @@ for (let i = 0; i < 4; i++){ const r = rng(900 + i*31), ax = i % 2 ? 'y' : 'x', 
 // composing scenes from the locked assets: a kit of the building blocks used above
 const KIT = {M, VARS, place:placeModel, figure:figure3, turned, PROT, VILL, BLOC, GOON, RIOT, POSE, cowM, sheepFn, chickFn, horseFn, dogAt, bikeAt, bench, barricade, beech, spruce, fruitTree, bareBeech, snowy, sway, at, firstOf, flame, grass, f35At, rng, pick, hsh, cell, leafy};
 const compose = (W, D, fn) => ({cat:'s', n:'scene', W, D, parts:build(H => fn(H, KIT))});
-globalThis.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose, plates:PLATES, plateText, texts:TEXTS, wallText, sprite, spriteCanvas, spriteTexts, sprites:SPRITES};
+globalThis.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose, plates:PLATES, plateText, texts:TEXTS, wallText, sprite, spriteCanvas, spriteTexts, sprites:SPRITES, makeModel, treeModel, bridgeModel, fenceModel, siteFenceModel, lampModel, washingModel, woodpileModel, TREE_H, VARS, KIT};
 })();
