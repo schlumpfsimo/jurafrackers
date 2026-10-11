@@ -33,13 +33,14 @@ h2{font:700 15px/1 "Silkscreen",monospace;letter-spacing:.5px;margin:28px 0 12px
 </style>
 </head>
 <body>
-<header><div class="logo">JURA<span>FRACKERS</span> 2.0</div><nav><a href="#b">Buildings</a><a href="#v">Vehicles</a><a href="#p">People</a><a href="#c">Crowds</a><a href="#n">Nature</a><a href="#a">Animals</a><a href="#g">Ground</a><a href="#e">Site</a><a href="#x">Air</a><a href="#f">Fonts</a></nav></header>
+<header><div class="logo">JURA<span>FRACKERS</span> 2.0</div><nav><a href="#b">Buildings</a><a href="#v">Vehicles</a><a href="#p">People</a><a href="#c">Crowds</a><a href="#l">Life</a><a href="#n">Nature</a><a href="#a">Animals</a><a href="#g">Ground</a><a href="#e">Site</a><a href="#x">Air</a><a href="#f">Fonts</a></nav></header>
 <main>
 <p class="intro">Every building, vehicle and person, numbered, each in four orientations. Tell me by number what to change. Views 1–4 show each one turned by a quarter.</p>
 <h2 id="b">Buildings</h2><div class="grid" id="gb"></div>
 <h2 id="v">Vehicles</h2><div class="grid" id="gv"></div>
 <h2 id="p">People</h2><div class="grid people" id="gp"></div>
 <h2 id="c">Variations, poses, crowds</h2><div class="grid" id="gc"></div>
+<h2 id="l">Life in the valley</h2><div class="grid people" id="gl"></div>
 <h2 id="n">Nature</h2><div class="grid" id="gn"></div>
 <h2 id="a">Animals</h2><div class="grid people" id="ga"></div>
 <h2 id="g">Ground, roads, lines</h2><div class="grid" id="gg"></div>
@@ -58,12 +59,12 @@ function trim(c, pad){ const d = c.getContext('2d').getImageData(0, 0, c.width, 
 function card(host, num, title, note){ const el = document.createElement('div'); el.className = 'card'; el.innerHTML = '<h3><b>' + num + '</b>' + title + '</h3>' + (note ? '<p>' + note + '</p>' : '<p>&nbsp;</p>') + '<div class="views"></div>'; host.appendChild(el); return el.querySelector('.views'); }
 function addView(views, label, c){ const v = document.createElement('div'); v.className = 'view'; c.style.width = c.width*ZOOM + 'px'; c.style.height = c.height*ZOOM + 'px'; v.appendChild(c); v.appendChild(document.createTextNode(label)); views.appendChild(v); }
 function renderAll(){
-  const n = {b:0, v:0, p:0, c:0, n:0, a:0, g:0, e:0, x:0}, host = {b:'gb', v:'gv', p:'gp', c:'gc', n:'gn', a:'ga', g:'gg', e:'ge', x:'gx'}, pre = {b:'B', v:'V', p:'P', c:'C', n:'N', a:'A', g:'G', e:'E', x:'X'};
+  const n = {b:0, v:0, p:0, c:0, l:0, n:0, a:0, g:0, e:0, x:0}, host = {b:'gb', v:'gv', p:'gp', c:'gc', l:'gl', n:'gn', a:'ga', g:'gg', e:'ge', x:'gx'}, pre = {b:'B', v:'V', p:'P', c:'C', l:'L', n:'N', a:'A', g:'G', e:'E', x:'X'};
   for (const m of ART.models){
     const num = pre[m.cat] + String(++n[m.cat]).padStart(2, '0'), views = card(document.getElementById(host[m.cat]), num, m.n, m.note);
     const zt = extent(m), span = m.W + m.D, pad = 6;
-    const s = m.s ? m.s : m.cat === 'p' || m.cat === 'a' || m.cat === 'c' ? 10 : m.cat === 'v' ? Math.min(7, 64/span)*(m.big || 1) : Math.max(1.2, Math.min(7, 118/span, 150/(span/2 + Math.max(zt, 1))));
-    const zoom = m.cat === 'c' ? 2 : m.cat === 'v' ? 3 : m.cat === 'p' || m.cat === 'a' ? 4 : 2;
+    const s = m.s ? m.s : m.cat === 'p' || m.cat === 'a' || m.cat === 'c' || m.cat === 'l' ? 10 : m.cat === 'v' ? Math.min(7, 64/span)*(m.big || 1) : Math.max(1.2, Math.min(7, 118/span, 150/(span/2 + Math.max(zt, 1))));
+    const zoom = m.cat === 'c' || m.cat === 'l' ? 2 : m.cat === 'v' ? 3 : m.cat === 'p' || m.cat === 'a' ? 4 : 2;
     for (const r of m.views || [0, 1, 2, 3]){
       const big = document.createElement('canvas'), ex = span*s*0.6 + 20; big.width = Math.ceil(span*s + ex*2); big.height = Math.ceil(span*s/2 + Math.max(zt, 1)*s + ex*2);
       const g = big.getContext('2d'), RD = r % 2 ? m.W : m.D;

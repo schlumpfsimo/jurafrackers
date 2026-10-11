@@ -167,7 +167,7 @@ const inEll = (p, c, rx, ry, rz) => ((p[0] - c[0])/rx)**2 + ((p[1] - c[1])/ry)**
 const lerpT = (tab, x) => { if (x <= tab[0][0]) return tab[0][1]; for (let i = 1; i < tab.length; i++) if (x <= tab[i][0]){ const [x0, y0] = tab[i - 1], [x1, y1] = tab[i]; return y0 + (y1 - y0)*(x - x0)/(x1 - x0); } return tab[tab.length - 1][1]; };
 
 /* 4×5 pixel letters for plates that must stay readable */
-const GLYPH = {N:['1001', '1101', '1011', '1001', '1001'], O:['0110', '1001', '1001', '1001', '0110'], S:['0111', '1000', '0110', '0001', '1110'], T:['1111', '0110', '0110', '0110', '0110'], P:['1110', '1001', '1110', '1000', '1000'], E:['1111', '1000', '1110', '1000', '1111'], A:['0110', '1001', '1111', '1001', '1001'], U:['1001', '1001', '1001', '1001', '0110'], J:['0011', '0001', '0001', '1001', '0110'], R:['1110', '1001', '1110', '1010', '1001']};
+const GLYPH = {N:['1001', '1101', '1011', '1001', '1001'], O:['0110', '1001', '1001', '1001', '0110'], S:['0111', '1000', '0110', '0001', '1110'], T:['1111', '0110', '0110', '0110', '0110'], P:['1110', '1001', '1110', '1000', '1000'], E:['1111', '1000', '1110', '1000', '1111'], A:['0110', '1001', '1111', '1001', '1001'], U:['1001', '1001', '1001', '1001', '0110'], J:['0011', '0001', '0001', '1001', '0110'], R:['1110', '1001', '1110', '1010', '1001'], I:['1110', '0100', '0100', '0100', '1110']};
 function pixelPlate(g, cx, cy, text, bg, fg, k){ const w = (text.length*5 + 3)*k, h = 9*k, x0 = cx - Math.floor(w/2), y0 = cy - Math.floor(h/2);
   g.fillStyle = '#2a2d33'; g.fillRect(x0 - k, y0 - k, w + 2*k, h + 2*k); g.fillStyle = bg; g.fillRect(x0, y0, w, h); g.fillStyle = fg;
   [...text].forEach((ch, i) => (GLYPH[ch] || []).forEach((row, r) => [...row].forEach((b, cc) => { if (b === '1') g.fillRect(x0 + (2 + i*5 + cc)*k, y0 + (2 + r)*k, k, k); }))); }
@@ -523,10 +523,19 @@ veh('Riot police bus', 8.4, 2.5, 3.2, c => [
   [rbx(3.6, 4.4, 0.85, 1.65, 2.95, 3.12, 0.05), '#3b7bf0'],
   [rbx(0.2, 8.2, 0.2, 2.3, 0.4, 3.0, 0.45), glassBand(p => p[0] > 8.0 && p[2] < 1.0 && Math.abs(p[1] - 1.25) > 0.6 ? LAMP : '#33405e', 1.65, 2.4, 0.5, 7.8, 1.8, 8.02)]],
   'Shields, no batons.', {labels:[['S', 0.8, 4.2, 1.05, 0.45, 'POLICE', '#e8e8e2', 2.3], ['N', 0.8, 4.2, 1.05, 0.45, 'POLICE', '#e8e8e2', 0.2]]});
-veh('Black van (the lender)', 4.8, 2.1, 2.45, c => [
-  ...tyres([1, 3.8], 2.1, 0.42, 0.32),
-  [rbx(0.15, 4.65, 0.2, 1.9, 0.4, 2.25, 0.4), p => p[0] > 4.45 && p[2] > 1.35 && p[2] < 1.95 ? '#3e4852' : p[0] > 3.3 && p[0] < 4.3 && p[2] > 1.35 && p[2] < 1.9 ? '#3e4852' : p[0] > 4.5 && p[2] < 0.9 && Math.abs(p[1] - 1.05) > 0.5 ? LAMP : '#1d2024']],
-  'Three of them, slowly, from the villa. No plates.');
+def('v', 'Black van (the lender)', 5.1, 1.95, ({SD}, c) => { const bk = '#1a1c1f', gl = '#2a3036', cy = 0.975;
+  // a Vito-like van: short sloping bonnet, steep raked windscreen, long flat roof, sliding door, tinted glass all round
+  const topT = [[0, 1.86], [0.1, 1.92], [3.55, 1.93], [3.85, 1.86], [4.35, 1.25], [4.95, 1.0], [5.1, 0.82]];
+  SD(-0.1, 5.2, -0.1, 2.05, 0, 2.0, (x, y, z) => { const ay = Math.abs(y - cy);
+    for (const wx of [0.9, 4.15]){ const rr = Math.hypot(x - wx, z - 0.33); if (rr < 0.33 && ay > 0.68 && ay < 0.96) return rr < 0.18 && ay > 0.88 ? '#6a7078' : '#141517'; if (rr < 0.42 && ay > 0.68) return null; }
+    if (z < 0.2) return null; const top = lerpT(topT, x), hw = 0.96 - Math.max(0, z - 1.0)*0.12; if (ay > hw || z > top) return null;
+    if (x > 5.0 && z > 0.45 && z < 0.78) return Math.abs(y - cy) < 0.08 && z > 0.58 && z < 0.68 ? '#c9ced3' : Math.abs(y - cy) > 0.62 && z > 0.6 ? '#e8e8de' : '#0f1012';   // grille, star, lamps
+    if (z > 1.08 && z < top - 0.06 && x > 0.15 && x < 4.38 && !(x > 3.15 && x < 3.3) && !(x > 1.65 && x < 1.75)) return gl;                                          // glass
+    if (x < 0.08 && z > 0.9 && z < 1.35 && ay > 0.7) return '#8a2420';                                                                                               // tail lights
+    if (z < 0.42) return '#111214';
+    if (Math.abs(x - 2.4) < 0.015 && z < 1.05 && ay > 0.9) return '#0f1012';                                                                                        // sliding door line
+    return bk; }, {step:0.025});
+}, 'Three black Vito-like vans, slowly, from the villa. Tinted glass, no plates.');
 veh('Tractor with manure spreader', 8.6, 2.6, 2.9, c => [
   [cyY(7.6, 0.42, 0.42, 0.25, 0.6), p => Math.hypot(p[0] - 7.6, p[2] - 0.42) < 0.2 ? '#d9b23a' : '#1f2226'], [cyY(7.6, 0.42, 0.42, 2.0, 2.35), p => Math.hypot(p[0] - 7.6, p[2] - 0.42) < 0.2 ? '#d9b23a' : '#1f2226'],
   [cyY(5.5, 0.78, 0.78, 0.05, 0.55), p => Math.hypot(p[0] - 5.5, p[2] - 0.78) < 0.36 ? '#d9b23a' : '#1f2226'], [cyY(5.5, 0.78, 0.78, 2.05, 2.55), p => Math.hypot(p[0] - 5.5, p[2] - 0.78) < 0.36 ? '#d9b23a' : '#1f2226'],
@@ -660,7 +669,8 @@ const ARM = { // elbow and hand offsets from the shoulder: [dx, dy outward, z] f
   forward:[[0.2, 0, 1.3], [0.42, -0.04, 1.33]], up:[[0.03, 0.06, 1.7], [0.04, 0.08, 1.97]], fist:[[0.06, 0.13, 1.62], [0.09, 0.08, 1.9]],
   strike:[[-0.06, 0.06, 1.68], [-0.14, 0.02, 1.93]], throw:[[-0.13, 0.06, 1.6], [-0.27, 0.06, 1.84]], shield:[[0.18, 0.02, 1.2], [0.3, -0.02, 1.22]],
   point:[[0.21, 0.01, 1.45], [0.46, 0.0, 1.5]], eye:[[0.12, 0.08, 1.45], [0.17, -0.18, 1.66]], ear:[[0.06, 0.12, 1.42], [0.03, -0.12, 1.67]],
-  carry:[[0.12, 0.01, 1.2], [0.26, -0.12, 1.15]], hip:[[-0.02, 0.13, 1.2], [0.04, 0.03, 1.0]], wave:[[0.04, 0.14, 1.66], [0.02, 0.22, 1.93]] };
+  carry:[[0.12, 0.01, 1.2], [0.26, -0.12, 1.15]], hip:[[-0.02, 0.13, 1.2], [0.04, 0.03, 1.0]], wave:[[0.04, 0.14, 1.66], [0.02, 0.22, 1.93]],
+  bars:[[0.24, 0, 1.2], [0.46, -0.05, 1.1]], mouth:[[0.16, 0.1, 1.38], [0.2, -0.17, 1.6]], sticks:[[0.12, 0.06, 1.15], [0.32, -0.1, 1.12]], push:[[0.2, 0, 1.15], [0.42, -0.02, 1.02]], lap:[[0.14, 0.02, 1.12], [0.26, -0.1, 1.0]] };
 const LEG = { stand:[[0.01, 0.5], [0, 0.1]], fwd:[[0.12, 0.52], [0.2, 0.08]], back:[[-0.05, 0.5], [-0.18, 0.12]], runF:[[0.2, 0.6], [0.26, 0.18]], runB:[[-0.08, 0.48], [-0.26, 0.2]] };
 const POSE = {stand:{}, walkA:{legs:['fwd', 'back'], armR:'swingB', armL:'swingF'}, walkB:{legs:['back', 'fwd'], armR:'swingF', armL:'swingB'}, run:{legs:['runF', 'runB'], armR:'swingB', armL:'swingF'}};
 const personVol = (o, pose) => { const cx = 0.75, cy = 0.75, k = o.small ? 0.62 : (o.tall || 1), kw = o.small ? 0.78 : 1, bk = o.bulk || 1, ps = Object.assign({}, POSE.stand, pose || {});
@@ -668,15 +678,16 @@ const personVol = (o, pose) => { const cx = 0.75, cy = 0.75, k = o.small ? 0.62 
   const armR = ps.armR || o.armR || defR, armL = ps.armL || o.armL || defL, legs = ps.legs || ['stand', 'stand'];
   const J = {}; for (const s of [-1, 1]){ const ay = cy + s*0.235*bk, [e, h] = ARM[s > 0 ? armR : armL]; J[s] = {sh:[cx, ay, 1.42], el:[cx + e[0], ay + s*e[1], e[2]], ha:[cx + h[0], ay + s*h[1], h[2]]}; }
   const hR = J[1].ha, hL = J[-1].ha, dir = (a, b) => { const v = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], L = Math.hypot(...v) || 1; return v.map(q => q/L); };
-  const f = (x, y, z) => { const p = [x, y, z]; let c = null; const put = (t, col) => { if (t) c = col; };
+  const f = (x, y, z, noLegs) => { const p = [x, y, z]; let c = null; const put = (t, col) => { if (t) c = col; };
     // legs (bare under a skirt), shoes or boots
-    [-1, 1].forEach((s, i) => { const ly = cy + s*0.09, [kn, ft] = LEG[legs[i]], knee = [cx + kn[0], ly, kn[1]], foot = [cx + ft[0], ly, ft[1]];
-      put(inCap(p, [cx, ly, 0.92], knee, 0.08, 0.06) || inCap(p, knee, foot, 0.058, 0.045), o.skirt ? o.skin : o.bot);
+    if (!noLegs) [-1, 1].forEach((s, i) => { const ly = cy + s*0.09, [kn, ft] = LEG[legs[i]], knee = [cx + kn[0], ly, kn[1]], foot = [cx + ft[0], ly, ft[1]];
+      put(inCap(p, [cx, ly, 0.92], knee, 0.08, 0.06) || inCap(p, knee, foot, 0.058, 0.045), o.skirt ? o.skin : o.bot); if (o.shorts) put(inCap(p, knee, foot, 0.058, 0.045) && z < 0.55, o.skin);
       if (o.legBand && z > o.legBand && z < o.legBand + 0.045) put(inCap(p, knee, foot, 0.062, 0.05), o.band);
       if (o.knee) put(inEll(p, [knee[0] + 0.05, ly, knee[2]], 0.06, 0.07, 0.08), o.knee);
       put(z >= 0 && (inEll(p, [foot[0] + 0.05, ly, foot[2] - 0.055], 0.135, 0.06, 0.07) || (o.boots && inCap(p, [foot[0], ly, foot[2] - 0.05], [foot[0], ly, foot[2] + 0.14], 0.06, 0.06))), o.shoe || '#2b2522'); });
     put(inEll(p, [cx, cy, 0.95], 0.11, 0.17, 0.1), o.bot);
     if (o.skirt) put(z > 0.45 && z < 1.0 && Math.hypot((x - cx)/0.15, (y - cy)/0.2) <= 1 + (1.0 - z)*0.9, o.bot);
+    if (o.robe) put(z > 0.06 && z < 1.05 && Math.hypot((x - cx)/0.15, (y - cy)/0.2) <= 1 + (1.05 - z)*0.35, o.top);
     // torso
     const torso = inEll(p, [cx, cy, 1.1], 0.105*bk, 0.155*bk, 0.15) || inEll(p, [cx, cy, 1.3], 0.125*bk, 0.19*bk, 0.17) || inCap(p, [cx, cy - 0.16*bk, 1.42], [cx, cy + 0.16*bk, 1.42], 0.065*bk, 0.065*bk) || (o.belly && inEll(p, [cx + 0.05, cy, 1.1], 0.13, 0.15, 0.14));
     put(torso, o.top);
@@ -735,13 +746,30 @@ const personVol = (o, pose) => { const cx = 0.75, cy = 0.75, k = o.small ? 0.62 
     if (it === 'flare') if (inEll(p, [hR[0], hR[1], hR[2] + 0.08], 0.05, 0.05, 0.07)) c = '!#ff4a3a';
     if (it === 'stone') put(inEll(p, [hR[0], hR[1], hR[2] + 0.05], 0.045, 0.045, 0.045), '#8a8a84');
     if (o.jerrycan) put(Math.abs(x - hL[0]) < 0.1 && Math.abs(y - hL[1]) < 0.05 && z > hL[2] - 0.32 && z < hL[2] - 0.02, '#c63a2c');
+    if (it === 'rod'){ const tip = [hR[0] + 1.5, hR[1], hR[2] + 1.0]; put(inCap(p, hR, tip, 0.02, 0.02), '#5a4632'); put(inCap(p, tip, [tip[0] + 0.3, tip[1], 0.05], 0.008, 0.008), '#d9d4c8'); }
+    if (it === 'parcel') put(Math.abs(x - hR[0] + 0.05) < 0.15 && Math.abs(y - cy) < 0.18 && z > hR[2] && z < hR[2] + 0.22, '#b58a5a');
+    if (it === 'trumpet') put(inCap(p, [cx + 0.16, cy, 1.6], [cx + 0.5, cy, 1.58], 0.025, 0.06), '#d9b23a');
+    if (it === 'tuba') put(inEll(p, [cx + 0.18, cy + 0.05, 1.3], 0.12, 0.12, 0.2) || inCap(p, [cx + 0.1, cy + 0.1, 1.45], [cx + 0.05, cy + 0.15, 1.72], 0.06, 0.16), '#d9b23a');
+    if (it === 'drum'){ put(Math.hypot(x - cx - 0.3, z - 1.05) < 0.22 && Math.abs(y - cy) < 0.17, Math.abs(y - cy) > 0.14 ? '#f4f2ec' : '#c63a2c'); for (const s of [-1, 1]) put(inCap(p, J[s].ha, [J[s].ha[0] + 0.15, J[s].ha[1], J[s].ha[2] + 0.1], 0.015, 0.015), '#d9d4c8'); }
+    if (it === 'rake'){ put(inCap(p, [hR[0] - 0.6, hR[1], hR[2] + 0.5], [hR[0] + 0.7, hR[1], 0.05], 0.02, 0.02), '#8a6a4a'); put(Math.abs(x - hR[0] - 0.7) < 0.03 && Math.abs(y - hR[1]) < 0.25 && z < 0.12, '#8a6a4a'); }
+    if (it === 'shovel'){ put(inCap(p, hR, [hR[0] + 0.5, hR[1], 0.25], 0.02, 0.02), '#8a6a4a'); put(inEll(p, [hR[0] + 0.56, hR[1], 0.15], 0.04, 0.12, 0.14), '#7a828a'); }
+    if (it === 'hammer'){ put(Math.abs(x - hR[0] - 0.05) < 0.07 && Math.abs(y - cy) < 0.1 && z > 0.25 && z < hR[2], '#d0663a'); put(inCap(p, [hR[0] + 0.05, cy, 0.25], [hR[0] + 0.05, cy, 0.02], 0.015, 0.015), '#3a3f45'); }
+    if (it === 'hose'){ put(inCap(p, [cx + 0.2, cy, 1.0], [cx - 0.6, cy - 0.3, 0.05], 0.04, 0.04) || inCap(p, [cx + 0.2, cy, 1.0], [cx + 0.45, cy - 0.05, 1.08], 0.04, 0.03), '#c8322a'); }
+    if (it === 'megaphone') put(inCap(p, [hR[0] + 0.02, hR[1], hR[2]], [hR[0] + 0.25, hR[1], hR[2] + 0.02], 0.03, 0.08), '#f4f2ec');
+    if (it === 'tvcam') put(Math.abs(x - cx - 0.12) < 0.22 && Math.abs(y - cy - 0.2) < 0.07 && z > 1.6 && z < 1.76, x > cx + 0.3 ? '#3a3f45' : '#1c1f22');
+    if (it === 'boom'){ put(inCap(p, hR, [hR[0] + 1.0, hR[1] - 0.2, hR[2] + 0.9], 0.016, 0.016), '#9aa3ab'); put(inEll(p, [hR[0] + 1.05, hR[1] - 0.2, hR[2] + 0.88], 0.11, 0.05, 0.05), '#7a7468'); }
+    if (it === 'pole') put(inCap(p, hR, [hR[0] + 0.2, hR[1] + 0.02, 0.02], 0.016, 0.016), '#9aa3ab');
+    if (it === 'ball') put(inEll(p, [hR[0] + 0.1, hR[1], hR[2] + 0.1], 0.09, 0.09, 0.09), (Math.floor(x*30) + Math.floor(z*30)) % 2 ? '#f4f2ec' : '#1c1f22');
+    if (it === 'leash') put(inCap(p, hR, [hR[0] + 0.7, hR[1], 0.45], 0.008, 0.008), '#c63a2c');
     return c; };
-  return (x, y, z) => f(cx + (x - cx)/kw, cy + (y - cy)/kw, z/k); };
+  const g = ps.sit ? (x, y, z) => { const p = [x, y, z]; for (const s of [-1, 1]){ const ly = cy + s*0.09; if (inCap(p, [cx, ly, 0.5], [cx + 0.42, ly, 0.52], 0.08, 0.065) || inCap(p, [cx + 0.42, ly, 0.52], [cx + 0.45, ly, 0.1], 0.058, 0.045)) return o.skirt || o.robe ? (z > 0.4 ? (o.robe ? o.top : o.bot) : o.skin) : o.bot;
+      if (inEll(p, [cx + 0.5, ly, 0.045], 0.135, 0.06, 0.07) && z >= 0) return o.shoe || '#2b2522'; } return f(x, y, z + 0.42, true); } : f;
+  return (x, y, z) => g(cx + (x - cx)/kw, cy + (y - cy)/kw, z/k); };
 // the sign plate sits on top of the stick
 const signTop = (o, pose) => { const k = o.small ? 0.62 : (o.tall || 1), bk = o.bulk || 1, ps = pose || {}, a = ARM[ps.armR || o.armR || 'up'][1]; return {x:0.75 + a[0], y:0.75 + 0.235*bk + a[1], z:(a[2] + 0.5)*k}; };
-const figure3 = (H, o, dx, dy, pose, lift) => { const k = o.small ? 0.62 : (o.tall || 1), tall = o.item === 'sign' || o.item === 'flag' || o.item === 'fork' || o.item === 'radio' || (pose && (pose.armR === 'up' || pose.armR === 'wave' || pose.armR === 'strike' || pose.armR === 'fist'));
+const figure3 = (H, o, dx, dy, pose, lift) => { lift = lift || 0; const k = o.small ? 0.62 : (o.tall || 1), tall = o.item === 'sign' || o.item === 'flag' || o.item === 'fork' || o.item === 'radio' || (pose && (pose.armR === 'up' || pose.armR === 'wave' || pose.armR === 'strike' || pose.armR === 'fist'));
   const f = personVol(o, pose), st = o.item === 'sign' ? signTop(o, pose) : null;
-  H.SD(dx - (o.item === 'fork' ? 0.1 : 0.45), dx + (o.item === 'fork' || o.item === 'rifle' ? 2.6 : 1.85), dy - 0.1, dy + 1.75, 0, (o.item === 'flag' ? 3.3 : tall ? 2.6 : 1.95)*k, (x, y, z) => f(x - dx, y - dy, z), {step:0.035, badge:st ? {x:st.x + dx, y:st.y + dy, z:st.z + 0.08, text:o.signText || 'NON', bg:o.signBoard || '#f4f2ec', fg:o.signInk || '#c63a2c'} : null}); };
+  H.SD(dx - (o.item === 'fork' || o.item === 'hose' || o.item === 'rake' ? 0.3 : 0.45), dx + (o.item === 'fork' || o.item === 'rifle' || o.item === 'rod' || o.item === 'boom' ? 3.3 : 1.85), dy - 0.1, dy + 1.75, 0, (o.item === 'flag' ? 3.3 : tall ? 2.6 : 1.95)*k, (x, y, z) => f(x - dx, y - dy, z), {step:0.035, lift, badge:st ? {x:st.x + dx, y:st.y + dy, z:st.z + 0.08 + lift, text:o.signText || 'NON', bg:o.signBoard || '#f4f2ec', fg:o.signInk || '#c63a2c'} : null}); };
 const volP = (n, o, note) => { def('p', n, 1.5, 1.5, (H) => figure3(H, o, 0, 0), note); M[M.length - 1].o = o; };
 const hi = '#e8ece4';
 volP('The CEO', {top:'#2f343c', bot:'#2f343c', hair:'#9a9590', skin:'#efc9a8', tie:'#b8322a', shirt:'#f4f2ec', item:'case', tall:1.06, shoe:'#1c1f22'}, 'Tall, grey at the temples, dark suit.');
@@ -907,7 +935,7 @@ const blackBloc = (r, i) => { const o = {skin:pick(r, SKIN), top:'#1c1f22', bot:
   if (r() < 0.4) o.pack = '#2b2f33'; const what = i % 5; if (what === 0){ o.item = 'flag'; o.flagA = '#1c1f22'; o.flagB = '#c63a2c'; } else if (what === 1){ o.item = 'flare'; o.armR = 'up'; } else if (what === 2){ o.item = 'stone'; o.armR = 'throw'; } else if (what === 3){ o.item = 'sign'; o.signText = 'NON'; o.signBoard = '#1c1f22'; o.signInk = '#f4f2ec'; } else o.armR = 'fist';
   return o; };
 // rows run straight across the screen: along (1, -1) in the ground plane; the next row sits lower on the screen
-const gridOf = (H, list, cols, sx, sy, poseOf) => list.forEach((o, i) => { const c = i % cols, r = Math.floor(i/cols), x = 0.6 + c*sx + r*sy, y = 0.6 + (cols - 1 - c)*sx + r*sy; figure3(H, o, x, y, poseOf ? poseOf(o, i) : null); label(H, x + 1.75, y + 1.75, String(i + 1)); });
+const gridOf = (H, list, cols, sx, sy, poseOf) => list.forEach((o, i) => { const c = i % cols, r = Math.floor(i/cols), x = 0.6 + c*sx + r*sy, y = 0.6 + (cols - 1 - c)*sx + r*sy; figure3(H, o, x, y, poseOf ? poseOf(o, i) : null); });
 const gridWD = (n, cols, sx, sy) => { const rows = Math.ceil(n/cols); return [cols*sx + rows*sy + 1.5, cols*sx + rows*sy + 1.5]; };
 const PROT = Array.from({length:20}, (_, i) => protester(rng(1000 + i*7), i)), VILL = Array.from({length:20}, (_, i) => villager(rng(5000 + i*13), i)), BLOC = Array.from({length:10}, (_, i) => blackBloc(rng(9000 + i*5), i));
 const GOON = [{skin:'#d9a882', top:'#2a2522', bot:'#1c1f22', shoe:'#141517', hair:'#1c1f22', hat:'cap', hatc:'#1c1f22', bulk:1.15, item:'torch', armR:'throw'}, {skin:'#e8c09c', top:'#2a2522', bot:'#2b2f36', shoe:'#141517', hair:'#5a4632', bulk:1.2, belly:1, item:'torch', armR:'up', jerrycan:1},
@@ -949,6 +977,129 @@ sheet('The lender\'s men set a house ablaze', 16, 12, (H) => { grass(H.F, 16, 12
   for (const [x, z, r] of [[5, 9, 1.4], [6, 10.5, 1.8], [7.5, 12, 2.2]]) H.S(x, 4.5, z, r, 'rgba(120,120,120,.85)');
   GOON.forEach((o, i) => figure3(H, o, 11 + (i % 2)*1.5, 3 + i*1.7, i % 2 ? {legs:['fwd', 'back'], armR:o.armR} : {armR:o.armR})); placeModel(H, 'Black van (the lender)', 11, 9.5); }, 'Late at night. The vans wait with the engines running.', [0, 1]);
 M[M.length - 1].s = 6;
+
+/* ---------------------------------------------------------------- life in the valley: everyday people, village life, work, crisis */
+const life = (n, W, D, fn, note, views, s) => { def('l', n, W, D, fn, note); const m = M[M.length - 1]; m.views = views || [0, 1, 2, 3]; if (s) m.s = s; };
+const one = (n, o, pose, note) => life(n, 2.5, 2.5, (H) => figure3(H, o, 0.5, 0.5, pose), note);
+const sk = (r) => pick(r, SKIN);
+const bench = (H, x, y) => { H.B(x, y, 0.42, 0.5, 1.6, 0.06, '#8a6a4a'); H.B(x - 0.05, y, 0.48, 0.06, 1.6, 0.45, '#8a6a4a'); for (const yy of [y + 0.1, y + 1.4]) H.B(x + 0.05, yy, 0, 0.4, 0.08, 0.42, '#3a3f45'); };
+const bikeAt = (H, x, y, col) => H.SD(x, x + 1.9, y - 0.1, y + 0.2, 0, 1.15, (px, py, pz) => { const p = [px, py, pz], cy0 = y + 0.05;
+  for (const wx of [x + 0.35, x + 1.45]){ const rr = Math.hypot(px - wx, pz - 0.35); if (rr < 0.35 && rr > 0.29 && Math.abs(py - cy0) < 0.03) return '#1c1f22'; }
+  if ([[[x + 0.35, cy0, 0.35], [x + 0.85, cy0, 0.4]], [[x + 0.85, cy0, 0.4], [x + 1.35, cy0, 0.85]], [[x + 0.85, cy0, 0.4], [x + 0.75, cy0, 0.9]], [[x + 0.75, cy0, 0.9], [x + 1.35, cy0, 0.85]], [[x + 1.35, cy0, 0.85], [x + 1.45, cy0, 0.35]], [[x + 0.35, cy0, 0.35], [x + 0.75, cy0, 0.9]]].some(([a, b]) => inCap(p, a, b, 0.025, 0.025))) return col;
+  if (inCap(p, [x + 1.32, cy0 - 0.25, 1.0], [x + 1.32, cy0 + 0.25, 1.0], 0.02, 0.02) || inEll(p, [x + 0.72, cy0, 0.94], 0.12, 0.05, 0.03)) return '#1c1f22'; return null; }, {step:0.02});
+const dogFn = (col, run) => (x, y, z) => { const p = [x, y, z]; if (inEll(p, [0.95, 0.2, 0.5], 0.13, 0.09, 0.1) || inEll(p, [1.06, 0.2, 0.47], 0.07, 0.05, 0.05)) return x > 1.1 ? '#1c1f22' : col;
+  for (const [lx, sw] of [[0.35, run ? -0.15 : 0], [0.7, run ? 0.15 : 0]]) for (const ly of [0.13, 0.27]) if (inCap(p, [lx, ly, 0.35], [lx + sw, ly, 0], 0.035, 0.03)) return col;
+  if (inCap(p, [0.25, 0.2, 0.4], [0.05, 0.2, run ? 0.4 : 0.55], 0.025, 0.02)) return col; return inEll(p, [0.55, 0.2, 0.38], 0.35, 0.12, 0.12) ? col : null; };
+const dogAt = (H, x, y, col, run) => { const f = dogFn(col, run); H.SD(x, x + 1.3, y, y + 0.4, 0, 0.65, (px, py, pz) => f(px - x, py - y, pz), {step:0.015}); };
+
+// everyday
+one('Hiker', {skin:'#e8c09c', top:'#c9622a', bot:'#5a4632', shoe:'#3a2b20', boots:1, hair:'#7a4a2a', hat:'cap', hatc:'#3f7a4a', pack:'#2c5f93', item:'pole'}, {legs:['fwd', 'back'], armR:'swingF', armL:'swingB'}, 'Backpack and walking pole, on the yellow-signposted paths.');
+one('Hiker (woman)', {skin:'#f2d2b6', top:'#2c8a8a', bot:'#3a4a63', shoe:'#3a2b20', boots:1, hair:'#c9a24a', longHair:1, pack:'#c63a2c', item:'pole'}, {legs:['back', 'fwd'], armR:'swingB', armL:'swingF'}, '');
+life('Cyclist', 2.5, 1.5, (H) => { bikeAt(H, 0.3, 0.6, '#2c5f93'); figure3(H, {skin:'#e8c09c', top:'#e8b730', bot:'#2b2f36', shoe:'#1c1f22', hair:'#5a4632', hat:'cap', hatc:'#c63a2c'}, 0.05, -0.15, {legs:['fwd', 'back'], armR:'bars', armL:'bars'}, 0.15); }, 'On the valley road.');
+life('Road cyclist', 2.5, 1.5, (H) => { bikeAt(H, 0.3, 0.6, '#c63a2c'); figure3(H, {skin:'#d9a882', top:'#c63a2c', bot:'#1c1f22', shorts:1, shoe:'#f4f2ec', hair:'#2b2522', hat:'cap', hatc:'#f4f2ec', stripe:'#f4f2ec'}, 0.05, -0.15, {legs:['back', 'fwd'], armR:'bars', armL:'bars'}, 0.15); }, 'Lycra and a white helmet.');
+one('Jogger', {skin:'#a8704a', top:'#3f7a4a', bot:'#1c1f22', shorts:1, shoe:'#f4f2ec', hair:'#1c1f22'}, POSE.run, '');
+life('Dog walker', 3.5, 2.5, (H) => { figure3(H, {skin:'#f2d2b6', top:'#7a8f6e', bot:'#3a4a63', shoe:'#5a4632', hair:'#9a9590', bun:1, item:'leash'}, 0.3, 0.6, {legs:['fwd', 'back'], armR:'forward'}); dogAt(H, 1.5, 1.2, '#a0703a', false); }, 'With a dog on a red leash.');
+life('Kids playing', 5, 4, (H) => { const kid = (top, hair, it) => ({skin:'#f2d2b6', top, bot:'#3a4a63', shoe:'#c63a2c', hair, small:1, pack:it ? null : '#e8b730', item:it});
+  figure3(H, kid('#c63a2c', '#c9a24a', 'ball'), 0.5, 0.5, {armR:'up', legs:['runF', 'runB']}); figure3(H, kid('#2c5f93', '#3a2b20'), 2.2, 1.6, POSE.run); figure3(H, kid('#e8b730', '#7a4a2a'), 1.0, 2.4, {armR:'wave', armL:'wave'}); }, 'One with a ball, one running, one waving.', [0, 2]);
+life('School children', 4, 3, (H) => { [['#3f7a4a', '#c63a2c'], ['#e8b730', '#2c5f93'], ['#b05a6a', '#3f7a4a']].forEach(([t, pk], i) => figure3(H, {skin:pick(rng(i + 40), SKIN), top:t, bot:'#3a4a63', shoe:'#2b2522', hair:pick(rng(i + 50), HAIR), longHair:i === 1, small:1, pack:pk}, 0.3 + i*1.0, 0.3 + (2 - i)*0.7, i % 2 ? POSE.walkA : POSE.walkB)); }, 'Bright backpacks, on the way to the school.', [0, 2]);
+one('Angler', {skin:'#e8c09c', top:'#5a6a3a', bot:'#3a4a63', shoe:'#2f5f3a', boots:1, hair:'#9a9590', hat:'cap', hatc:'#5a6a3a', vest:'#6a7a4a', item:'rod'}, {armR:'forward', armL:'forward'}, 'By the stream; sees the contamination first.');
+one('Postman', {skin:'#d9a882', top:'#2b2f36', bot:'#2b2f36', shoe:'#1c1f22', hair:'#3a2b20', hat:'cap', hatc:'#e8b730', stripe:'#e8b730', item:'parcel'}, {armR:'carry', armL:'carry', legs:['fwd', 'back']}, 'Yellow cap and stripe; letters and parcels.');
+life('Woman with a pram', 3.5, 2.5, (H) => { figure3(H, {skin:'#f2d2b6', top:'#b05a6a', bot:'#3a4a63', shoe:'#5a4632', hair:'#7a4a2a', longHair:1}, 0.3, 0.5, {armR:'push', armL:'push', legs:['fwd', 'back']});
+  H.SD(1.3, 2.4, 0.7, 1.5, 0, 1.15, (x, y, z) => { const p = [x, y, z]; for (const wx of [1.55, 2.2]) for (const wy of [0.78, 1.42]) if (Math.hypot(x - wx, z - 0.14) < 0.14 && Math.abs(y - wy) < 0.03) return '#1c1f22';
+    if (inCap(p, [1.25, 1.1, 1.02], [1.5, 1.1, 0.72], 0.02, 0.02) || inCap(p, [1.25, 0.82, 1.02], [1.25, 1.38, 1.02], 0.02, 0.02)) return '#3a3f45'; if (rbx(1.45, 2.3, 0.8, 1.4, 0.3, 0.78, 0.15)(p)) return '#2c5f93'; if (inEll(p, [2.05, 1.1, 0.78], 0.3, 0.3, 0.28) && x > 1.9 && z > 0.6) return '#2a4a73'; return null; }, {step:0.02}); }, '');
+life('Pensioners on a bench', 3, 3, (H) => { bench(H, 0.4, 0.6); figure3(H, {skin:'#e8c09c', top:'#8a6a4a', bot:'#3a4a63', shoe:'#3a2b20', hair:'#e6e2da', hat:'cap', hatc:'#5a4632', item:'cane'}, -0.05, 0.35, {sit:1, armR:'lap', armL:'lap'}); figure3(H, {skin:'#f2d2b6', top:'#7a8f6e', bot:'#4a4f55', shoe:'#5a4632', hair:'#d9d4c8', bun:1, skirt:1}, -0.05, 1.05, {sit:1, armR:'lap', armL:'lap'}); }, 'They watch the trucks go by.');
+
+// village life
+const band = (top, it, pose) => ({skin:'#e8c09c', top, bot:'#1f2a44', shoe:'#1c1f22', hair:'#5a4632', hat:'cap', hatc:top, stripe:'#e8b730', item:it});
+life('Brass band (fanfare)', 6, 5, (H) => { [['trumpet', {armR:'mouth', armL:'mouth'}], ['trumpet', {armR:'mouth', armL:'mouth'}], ['tuba', {armR:'carry', armL:'carry'}], ['drum', {armR:'sticks', armL:'sticks'}], ['trumpet', {armR:'mouth', armL:'mouth'}]].forEach(([it, ps], i) => figure3(H, band('#7a2a2a', it), 0.4 + (i % 3)*1.4, 0.4 + Math.floor(i/3)*1.6 + (i % 3)*0.4, Object.assign({legs:i % 2 ? ['fwd', 'back'] : ['back', 'fwd']}, ps))); }, 'At the fête; plays at openings if the mood is good.', [0, 2]);
+life('Churchgoers', 4, 3, (H) => { VILL.slice(0, 4).forEach((o, i) => figure3(H, Object.assign({}, o, {item:null}), 0.3 + i*0.9, 0.3 + (3 - i)*0.5, i % 2 ? POSE.walkA : POSE.walkB)); }, 'Sunday morning.', [0, 2]);
+one('Priest', {skin:'#e8c09c', top:'#1c1f22', bot:'#1c1f22', shoe:'#1c1f22', hair:'#9a9590', robe:1, stripe:null, shirt:'#f4f2ec'}, {armR:'wave'}, 'Long black cassock. The church after the quake is his.');
+life('Market stall with cheese seller', 5, 4, (H) => { H.B(0.5, 0.8, 0, 2.6, 1.2, 0.9, '#8a6a4a'); for (const [x, y] of [[0.8, 1.0], [1.4, 1.1], [2.0, 1.0], [2.6, 1.1]]) H.C(x, y + 0.2, 0.9, 0.22, 0.12, '#e8c860', {top:'#f0d880'});
+  for (const x of [0.55, 3.0]) H.L([[x, 0.85, 0], [x, 0.85, 2.2]], '#5a4632', 0.8); H.B(0.4, 0.6, 2.1, 2.8, 1.6, [0.25, 0.25, 0.05, 0.05], '#c63a2c', {win:[['S', 0, 0, 2.8, 0.08, '#f4f2ec']]});
+  figure3(H, {skin:'#d9a882', top:'#f4f2ec', bot:'#3a4a63', shoe:'#3a2b20', hair:'#5a4632', belly:1, vest:'#3a5f8a'}, -0.8, 0.9, {armR:'forward'}); figure3(H, VILL[5], 3.3, 1.2, {armR:'forward'}); }, 'Tête de Moine and the rest. Stands at the market square.', [0, 2]);
+life('Café terrace', 6, 5, (H) => { for (const [x, y] of [[1.4, 1.2], [3.8, 2.6]]){ H.C(x, y, 0, 0.05, 0.72, '#3a3f45'); H.C(x, y, 0.72, 0.4, 0.04, '#e8e4da'); H.L([[x, y, 0.76], [x, y, 2.3]], '#9aa3ab', 0.6); H.Y(x - 0.8, y - 0.8, 2.25, 1.6, 1.6, 0.35, '#c63a2c'); }
+  figure3(H, VILL[1], 0.2, 0.4, {sit:1, armR:'forward'}); figure3(H, VILL[6], 0.2, 1.5, {sit:1, armR:'lap'}); figure3(H, VILL[9], 2.6, 1.8, {sit:1, armR:'forward'}); figure3(H, {skin:'#e8c09c', top:'#f4f2ec', bot:'#1c1f22', shoe:'#1c1f22', hair:'#2b2522', shirt:'#1c1f22', item:'cup'}, 4.4, 0.6, {armR:'forward'}); }, 'The waiter brings coffee; gossip about the drilling.', [0, 2]);
+life('Hay making', 7, 5, (H) => { for (const [x, y] of [[1, 3.3], [3.2, 3.6], [5.4, 3.2]]) H.SD(x, x + 1.4, y, y + 1.3, 0, 1.3, (px, py, pz) => Math.hypot(px - x - 0.7, pz - 0.62) < 0.62 && Math.abs(py - y - 0.65) < 0.6 ? (Math.abs(py - y - 0.65) > 0.56 ? '#e8d48a' : '#d9bf6a') : null, {step:0.03});
+  figure3(H, {skin:'#d9a882', top:'#2c5f93', bot:'#2c5f93', shoe:'#2f5f3a', boots:1, hair:'#5a4632', hat:'cap', hatc:'#e8b730', item:'rake'}, 1.0, 0.8, {armR:'forward', armL:'forward', legs:['fwd', 'back']}); figure3(H, VILL[3], 4.0, 1.0, {armR:'carry', armL:'carry'}); }, 'Round bales in the fields in summer.', [0, 2]);
+
+// work
+one('Road worker', {skin:'#c98e66', top:'#e8742a', bot:'#3a4a63', shoe:'#3a2b20', boots:1, hair:'#2b2522', hat:'hard', hatc:'#e8b730', band:'#e8ece4', topBand:1.15, legBand:0.32, item:'shovel'}, {armR:'down', armL:'down'}, 'Builds the roads you order.');
+one('Road worker with jackhammer', {skin:'#e8c09c', top:'#e8742a', bot:'#3a4a63', shoe:'#3a2b20', boots:1, hair:'#5a4632', hat:'hard', hatc:'#f4f4f2', band:'#e8ece4', topBand:1.15, item:'hammer'}, {armR:'lap', armL:'lap'}, '');
+life('Surveyor with tripod', 3, 2.5, (H) => { figure3(H, {skin:'#f2d2b6', top:'#e8d23a', bot:'#3a4a63', shoe:'#3a2b20', boots:1, hair:'#9a4a2a', longHair:1, hat:'hard', hatc:'#f4f4f2', band:'#e8ece4', topBand:1.15}, 0.2, 0.5, {armR:'eye', armL:'eye'});
+  H.SD(0.6, 1.8, 0.7, 1.8, 0, 1.75, (x, y, z) => { const p = [x, y, z], top = [1.1, 1.25, 1.5]; if (inEll(p, [1.1, 1.25, 1.6], 0.14, 0.07, 0.07)) return '#e8b730'; for (const [fx, fy] of [[0.75, 1.0], [1.45, 1.05], [1.1, 1.65]]) if (inCap(p, top, [fx, fy, 0], 0.02, 0.02)) return '#d9b23a'; return null; }, {step:0.02}); }, 'Pegs out pads and roads.');
+life('Electrician on a pylon', 8, 8, (H) => { placeModel(H, 'High-voltage pylon', 0, 0); figure3(H, {skin:'#e8c09c', top:'#e8742a', bot:'#3a4a63', shoe:'#3a2b20', boots:1, hair:'#2b2522', hat:'hard', hatc:'#f4f4f2', belt:'#1c1f22'}, 3.2, 3.6, {armR:'up', armL:'up', legs:['fwd', 'back']}, 9.5); }, 'Hooks a new plant to the grid.', [0, 1], 6);
+one('Delivery driver', {skin:'#a8704a', top:'#7a5a2a', bot:'#7a5a2a', shoe:'#1c1f22', hair:'#1c1f22', hat:'cap', hatc:'#e8b730', item:'parcel'}, {armR:'carry', armL:'carry', legs:['fwd', 'back']}, '');
+
+// crisis and media
+const fire = {skin:'#e8c09c', top:'#1f2a44', bot:'#1f2a44', shoe:'#1c1f22', boots:1, hair:'#2b2522', hat:'hard', hatc:'#e8d23a', band:'#e8ece4', topBand:1.15, legBand:0.32, armBand:1.25, hand:'#1c1f22'};
+life('Firefighters with a hose', 5, 3, (H) => { figure3(H, Object.assign({}, fire, {item:'hose'}), 1.6, 0.6, {armR:'carry', armL:'carry'}); figure3(H, Object.assign({}, fire, {item:'hose'}), 0.4, 1.1, {armR:'carry', armL:'carry'}); for (let i = 0; i < 5; i++) H.S(3.4 + i*0.35, 0.9, 1.1 - i*0.15, 0.12 + i*0.04, 'rgba(160,200,230,.85)'); }, 'Called out for fires, barricades and quake ruins.', [0, 2]);
+const para = {skin:'#f2d2b6', top:'#d9e23a', bot:'#1f2a44', shoe:'#1c1f22', hair:'#7a4a2a', longHair:1, band:'#c8322a', topBand:1.18};
+life('Paramedics', 4, 3, (H) => { figure3(H, para, 0.3, 0.4, {armR:'carry', armL:'carry', legs:['fwd', 'back']}); figure3(H, Object.assign({}, para, {skin:'#c98e66', hair:'#2b2522', longHair:0}), 2.2, 0.4, {armR:'carry', armL:'carry', legs:['back', 'fwd']});
+  H.B(0.9, 0.9, 0.85, 2.1, 0.6, 0.1, '#e8742a', {win:[['S', 0, 0, 2.1, 0.1, '#f4f2ec']]}); }, 'Carry a stretcher between them.', [0, 2]);
+one('TV camera operator', {skin:'#d9a882', top:'#3a3f45', bot:'#3a4a63', shoe:'#3a2b20', hair:'#2b2522', beard:'#2b2522', item:'tvcam', pack:'#2b2f33'}, {armR:'ear', armL:'down'}, 'National TV comes when it gets ugly.');
+one('Sound engineer with boom', {skin:'#f2d2b6', top:'#7a7468', bot:'#2b2f36', shoe:'#3a2b20', hair:'#c9a24a', longHair:1, item:'boom'}, {armR:'up'}, '');
+const oui = (r, i) => Object.assign(villager(r, i), {item:'sign', signText:'OUI', signBoard:'#2c5f93', signInk:'#f4f2ec'});
+life('Counter-protesters (OUI)', 5, 3, (H) => { for (let i = 0; i < 3; i++) figure3(H, oui(rng(300 + i*11), i), 0.3 + i*1.4, 0.4 + (2 - i)*0.5, i === 1 ? POSE.walkA : null); }, 'For the project: jobs, cheap heat. Fewer, but loud.', [0, 2]);
+life('Drummers in the march', 5, 3, (H) => { for (let i = 0; i < 3; i++) figure3(H, Object.assign(protester(rng(700 + i*3), i), {item:'drum'}), 0.3 + i*1.4, 0.4 + (2 - i)*0.5, {armR:'sticks', armL:'sticks', legs:i % 2 ? ['fwd', 'back'] : ['back', 'fwd']}); }, '', [0, 2]);
+one('Police negotiator', {skin:'#e8c09c', top:'#2a4fa0', bot:'#1f2a44', shoe:'#1c1f22', hair:'#9a9590', vest:'#e8d23a', item:'megaphone'}, {armR:'mouth'}, 'Talks first. Megaphone, yellow vest.');
+veh('Ambulance', 5.6, 2.1, 2.7, c => [
+  ...tyres([1.1, 4.4], 2.1, 0.42, 0.32),
+  [rbx(2.4, 3.0, 0.75, 1.35, 2.48, 2.62, 0.04), '#3b7bf0'],
+  [rbx(0.15, 5.45, 0.2, 1.9, 0.4, 2.5, 0.35), p => p[0] > 5.25 && p[2] > 1.4 && p[2] < 2.1 ? VG : p[0] > 4.0 && p[0] < 5.0 && p[2] > 1.45 && p[2] < 2.05 ? VG : p[0] > 5.3 && p[2] < 0.95 && Math.abs(p[1] - 1.05) > 0.5 ? LAMP :
+    p[2] > 0.85 && p[2] < 1.15 ? ((Math.floor(p[0]*2.5) + (p[2] > 1.0 ? 1 : 0)) % 2 ? '#c8322a' : '#e8d23a') : '#f6f6f3']], 'Swiss style: white with a red and yellow chequered band.');
+
+/* ---------------------------------------------------------------- animals: more of them, and in motion */
+const cowM = (o) => (x, y, z) => { const p = [x, y, z], bz = 0.95, hd = o.graze ? [2.45, 0.5, 0.35] : [2.36, 0.5, 1.0], ph = o.step || 0;
+  for (const [lx, sgn] of [[0.75, 1], [1.85, -1]]) for (const [ly, s2] of [[0.33, 1], [0.67, -1]]) { const sw = ph*0.18*sgn*s2; if (inCap(p, [lx, ly, 0.75], [lx + sw, ly, 0], 0.08, 0.065)) return z < 0.08 ? '#2b2522' : '#e2d8c8'; }
+  if (inEll(p, hd, 0.27, 0.16, 0.17)) return x > hd[0] + 0.14 ? '#e8b8a0' : '#f2efe6';
+  if (inCap(p, [1.95, 0.5, bz + 0.15], [hd[0] - 0.12, 0.5, hd[2] + 0.05], 0.18, 0.15)) return '#9a4a2a';
+  if (inCap(p, [0.42, 0.5, bz + 0.2], [0.36 - (o.swish || 0)*0.2, 0.5 + (o.swish || 0)*0.2, bz - 0.35], 0.03, 0.03)) return '#9a4a2a';
+  if (inEll(p, [1.3, 0.5, bz], 0.92, 0.34, 0.38) && z > 0) return cell(x + 0.2, y, z, 0.4) > 0.45 ? '#9a4a2a' : '#f2efe6'; return null; };
+const horseFn = (o) => (x, y, z) => { const p = [x, y, z], g = o.gallop, bay = '#7a4a2a', blk = '#1f1a17', hd = o.graze ? [2.55, 0.4, 0.45] : [2.55, 0.4, 1.85];
+  const legs = g ? [[0.6, -0.35], [0.6, -0.15], [1.75, 0.35], [1.75, 0.2]] : [[0.6, (o.step || 0)*0.15], [0.6, -(o.step || 0)*0.15], [1.75, -(o.step || 0)*0.15], [1.75, (o.step || 0)*0.15]];
+  legs.forEach(([lx, sw], i) => {}); for (let i = 0; i < 4; i++){ const [lx, sw] = legs[i], ly = i % 2 ? 0.52 : 0.28; if (inCap(p, [lx, ly, 1.1], [lx + sw, ly, 0.05], 0.07, 0.05)) return z < 0.3 ? blk : bay; }
+  if (inEll(p, hd, 0.32, 0.12, 0.14)) return x > hd[0] + 0.15 && Math.abs(y - 0.4) < 0.03 ? '#f4f2ec' : bay;
+  if (inCap(p, [2.0, 0.4, 1.35], [hd[0] - 0.15, 0.4, hd[2] + 0.05], 0.2, 0.13)) return Math.abs(y - 0.4) < 0.05 && z > 1.4 ? blk : bay;
+  if (inCap(p, [0.2, 0.4, 1.35], [0.05, 0.4, 0.75], 0.07, 0.05)) return blk;
+  return inEll(p, [1.2, 0.4, 1.3], 1.0, 0.32, 0.36) ? bay : null; };
+const sheepFn = (o) => (x, y, z) => { const p = [x, y, z], hd = o.graze ? [1.12, 0.3, 0.2] : [1.08, 0.3, 0.68]; if (inEll(p, hd, 0.13, 0.09, 0.12)) return '#2b2a28';
+  for (const lx of [0.42, 0.88]) for (const ly of [0.2, 0.4]) if (inCap(p, [lx, ly, 0.45], [lx + (o.step || 0)*(ly > 0.3 ? 0.1 : -0.1), ly, 0], 0.03, 0.03)) return '#2b2a28';
+  return inEll(p, [0.65, 0.3, 0.6], 0.45, 0.27, 0.27) ? (cell(x, y, z, 0.1) > 0.6 ? '#f6f3ea' : '#e2ddd0') : null; };
+const chickFn = (o, col) => (x, y, z) => { const p = [x, y, z], hd = o.peck ? [0.38, 0.15, 0.12] : [0.33, 0.15, 0.3]; if (inEll(p, [hd[0] + 0.01, 0.15, hd[2] + 0.06], 0.04, 0.02, 0.04)) return '#c8322a'; if (inEll(p, [hd[0] + 0.07, 0.15, hd[2]], 0.035, 0.02, 0.02)) return '#e8b730';
+  if (z < 0.12 && Math.abs(y - 0.15) < 0.06 && Math.abs(x - 0.22) < 0.02) return '#e8b730'; return inEll(p, [0.2, 0.15, 0.22], 0.15, 0.09, 0.1) || inEll(p, hd, 0.07, 0.06, 0.07) ? col : null; };
+const deerFn = (o) => (x, y, z) => { const p = [x, y, z], br = '#9a6a3a', hd = [1.75, 0.3, o.graze ? 0.35 : 1.35]; if (!o.graze) for (const s of [-1, 1]) if (inCap(p, [1.7, 0.3 + s*0.05, 1.45], [1.6, 0.3 + s*0.18, 1.75], 0.015, 0.015) || inCap(p, [1.62, 0.3 + s*0.15, 1.65], [1.75, 0.3 + s*0.2, 1.72], 0.012, 0.012)) return '#d9c8a8';
+  for (const [lx, sw] of [[0.45, o.leap ? -0.3 : 0], [1.3, o.leap ? 0.3 : 0]]) for (const ly of [0.2, 0.4]) if (inCap(p, [lx, ly, 0.75], [lx + sw, ly, o.leap ? 0.25 : 0], 0.035, 0.03)) return br;
+  if (inEll(p, hd, 0.17, 0.08, 0.09)) return br; if (inCap(p, [1.35, 0.3, 0.95], [hd[0] - 0.08, 0.3, hd[2]], 0.09, 0.06)) return br;
+  if (inEll(p, [0.85, 0.3, 0.9], 0.6, 0.2, 0.22)) return x < 0.35 ? '#f4f2ec' : br; return null; };
+const crowFn = (up) => (x, y, z) => { const p = [x, y, z]; if (inEll(p, [0.3, 0.3, 0.3], 0.14, 0.05, 0.05) || inEll(p, [0.45, 0.3, 0.33], 0.05, 0.045, 0.045)) return '#1c1f22';
+  if (Math.abs(x - 0.3) < 0.08 && Math.abs(y - 0.3) < 0.32 && Math.abs(z - 0.3 - Math.abs(y - 0.3)*(up ? 0.8 : -0.5)) < 0.02) return '#1c1f22'; return null; };
+const frames = (n, W, D, H, fns, labels, note, step) => { def('a', n, W*fns.length + 0.5, D + 0.5, (G) => fns.forEach((f, i) => { const dx = 0.3 + i*W, dy = 0.3; G.SD(dx, dx + W, dy, dy + D, 0, H, (x, y, z) => f(x - dx, y - dy, z), {step:step || 0.015}); }), note); M[M.length - 1].views = [0]; };
+frames('Cow in motion: walk, walk, graze, tail', 3, 1.0, 1.45, [cowM({step:1}), cowM({step:-1}), cowM({graze:1}), cowM({swish:1})], null, 'Cows graze and wander slowly in their pasture.');
+frames('Sheep in motion: walk, walk, graze', 1.4, 0.6, 0.9, [sheepFn({step:1}), sheepFn({step:-1}), sheepFn({graze:1})], null, '');
+frames('Chickens: walk, peck', 0.6, 0.3, 0.42, [chickFn({}, '#f4f2ec'), chickFn({peck:1}, '#f4f2ec'), chickFn({}, '#a0603a'), chickFn({peck:1}, '#a0603a')], null, 'They peck around the farmyard.');
+frames('Franches-Montagnes horse: stand, walk, gallop, graze', 3.1, 0.8, 2.15, [horseFn({}), horseFn({step:1}), horseFn({gallop:1}), horseFn({graze:1})], null, 'The Jura\'s own breed: bay, black mane and legs, white blaze.', 0.02);
+frames('Dog: stand, run', 1.4, 0.4, 0.65, [dogFn('#a0703a'), dogFn('#a0703a', 1), dogFn('#2b2522'), dogFn('#2b2522', 1)], null, '');
+frames('Cat: sit, walk', 0.7, 0.3, 0.45, [(x, y, z) => inEll([x, y, z], [0.3, 0.15, 0.15], 0.12, 0.09, 0.15) || inEll([x, y, z], [0.36, 0.15, 0.33], 0.08, 0.07, 0.07) || inCap([x, y, z], [0.18, 0.15, 0.05], [0.05, 0.15, 0.2], 0.02, 0.02) ? (cell(x, y, z, 0.06) > 0.5 ? '#8a8a84' : '#6a6a64') : null,
+  (x, y, z) => inEll([x, y, z], [0.3, 0.15, 0.2], 0.2, 0.07, 0.07) || inEll([x, y, z], [0.52, 0.15, 0.26], 0.07, 0.06, 0.06) || inCap([x, y, z], [0.12, 0.15, 0.22], [0.02, 0.15, 0.4], 0.02, 0.02) || [0.18, 0.42].some(lx => inCap([x, y, z], [lx, 0.12, 0.18], [lx, 0.12, 0], 0.02, 0.02) || inCap([x, y, z], [lx, 0.18, 0.18], [lx, 0.18, 0], 0.02, 0.02)) ? (cell(x, y, z, 0.06) > 0.5 ? '#8a8a84' : '#6a6a64') : null], null, '');
+frames('Deer at the forest edge: stand, graze, leap', 2.0, 0.6, 1.8, [deerFn({}), deerFn({graze:1}), deerFn({leap:1})], null, 'Leave when the rigs come.');
+frames('Crows: flying, flying, on the ground', 0.7, 0.6, 0.6, [crowFn(true), crowFn(false), (x, y, z) => inEll([x, y, z], [0.3, 0.3, 0.15], 0.14, 0.06, 0.08) || inEll([x, y, z], [0.45, 0.3, 0.22], 0.05, 0.045, 0.045) ? '#1c1f22' : null], null, 'A flock lifts off when a survey truck shakes the ground.');
+def('a', 'Stork on a chimney', 3, 3, ({B, SD}) => { B(0, 0, 0, 3, 3, 1.6, '#a8473a', {h:[0.4, 1.6, 1.6, 0.4]}); B(1.15, 1.15, 1.0, 0.7, 0.7, 1.2, '#8d6e5a'); SD(0.5, 2.5, 0.5, 2.5, 2.2, 3.4, (x, y, z) => { const p = [x, y, z]; if (Math.hypot(x - 1.5, y - 1.5) < 0.6 && z < 2.45) return (cell(x, y, z, 0.08) > 0.5 ? '#8a6a4a' : '#6a4a32');
+  for (const ly of [1.45, 1.55]) if (inCap(p, [1.5, ly, 2.45], [1.5, ly, 2.75], 0.015, 0.015)) return '#c8322a'; if (inCap(p, [1.7, 1.5, 3.2], [2.0, 1.5, 3.1], 0.015, 0.012)) return '#c8322a';
+  if (inEll(p, [1.65, 1.5, 3.2], 0.06, 0.05, 0.06) || inCap(p, [1.55, 1.5, 2.95], [1.65, 1.5, 3.18], 0.04, 0.03)) return '#f4f2ec'; if (inEll(p, [1.45, 1.5, 2.9], 0.22, 0.1, 0.12)) return z < 2.88 || x < 1.3 ? '#1c1f22' : '#f4f2ec'; return null; }, {step:0.015}); }, 'Storks nest on village chimneys in spring.');
+
+/* ---------------------------------------------------------------- trees in the wind and in snow */
+const sway = (f, H, a) => (x, y, z, s) => f(x - a*(z/H)**2, y, z, s);
+def('n', 'Trees in the wind: beech and spruce (left, still, right)', 36, 36, (G) => { [[beech, 7.5], [spruce, 10]].forEach(([f, h], r) => [-0.7, 0, 0.7].forEach((a, i) => { const k = i + r*3, dx = 3 + k*5.5, dy = 3 + (5 - k)*5.5; G.SD(dx - 3, dx + 3, dy - 3, dy + 3, 0, h, at(sway(f, h, a), dx, dy), {step:0.06}); })); }, 'Three frames each; leaves and tops move.');
+M[M.length - 1].views = [0]; M[M.length - 1].s = 5;
+const SNOW = '#f2f5f8', snowy = (f, q) => (x, y, z, s) => { const c = f(x, y, z, s); if (!c) return null; if (c !== '#6a4a32' && c !== '#5a3e2a' && !f(x, y, z + 0.3, s) && cell(x, y, z, 0.3) > (q || 0.2)) return SNOW; return c; };
+const bareBeech = (x, y, z, s) => { s = s || 1; const p = [x, y, z]; if (cyZ(0, 0, 0.22*s, 0, 3.2*s)(p)) return '#5a4a3a';
+  for (const [a, h, l] of [[0.4, 3, 2.2], [2.3, 3.4, 2.0], [4.1, 3.2, 2.1], [1.2, 4.6, 1.6], [3.3, 4.8, 1.5], [5.3, 4.4, 1.7], [0, 5.5, 1.0]]) if (inCap(p, [0, 0, h*s], [Math.cos(a)*l*s, Math.sin(a)*l*s, (h + 1.8)*s], 0.07*s, 0.035*s)) return '#5a4a3a'; return null; };
+const winterGround = (F, W, D) => F([[0, 0], [W, 0], [W, D], [0, D]], '#e8edf0');
+def('n', 'Spruce in snow', 4, 4, ({F, SD}) => { winterGround(F, 4, 4); SD(0, 4, 0, 4, 0, 10.2, at(snowy(spruce), 2, 2), {step:0.05}); }, '');
+def('n', 'Bare beech in snow', 6, 6, ({F, SD}) => { winterGround(F, 6, 6); SD(0, 6, 0, 6, 0, 7.5, at(snowy(bareBeech, 0.6), 3, 3), {step:0.04}); }, 'Broadleaf trees lose their leaves in winter.');
+def('n', 'Bare fruit tree in snow', 4, 4, ({F, SD}) => { winterGround(F, 4, 4); SD(0, 4, 0, 4, 0, 4, at(snowy((x, y, z) => bareBeech(x, y, z, 0.6), 0.6), 2, 2), {step:0.04}); }, '');
+def('n', 'Bush in snow', 2.6, 2.6, ({F, SD}) => { winterGround(F, 2.6, 2.6); SD(0, 2.6, 0, 2.6, 0, 1.5, (x, y, z) => inEll([x, y, z], [1.3, 1.3, 0.55], 1.15, 1.1, 0.8) && z > 0 ? (z > 0.75 && cell(x, y, z, 0.3) > 0.25 ? SNOW : leafy('#4a6a3a', x, y, z)) : null, {step:0.05}); }, '');
+def('n', 'Forest patch in snow', 16, 14, ({F, SD}) => { winterGround(F, 16, 14); SD(0, 16, 0, 14, 0, 11, firstOf(at(snowy(spruce), 3, 3, 0.9), at(snowy(spruce), 8, 2.5, 1.05), at(snowy(bareBeech, 0.6), 12.5, 4, 0.85), at(snowy(spruce), 4, 9, 1.1), at(snowy(spruce), 9, 8, 0.95), at(snowy(bareBeech, 0.6), 13, 10.5, 0.9), at(snowy(spruce), 6, 12.5, 0.8)), {step:0.08}); }, 'Winter on the Jura ridges.');
 
 function outline(c, col){ const g = c.getContext('2d'), W = c.width, Hh = c.height, d = g.getImageData(0, 0, W, Hh), a = d.data, o = new Uint8Array(W*Hh), rgb = hex(col || '#2a2d33');
   for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++){ const i = (y*W + x)*4; if (a[i + 3]) continue; if ((x > 0 && a[i - 1]) || (x < W - 1 && a[i + 7]) || (y > 0 && a[i - W*4 + 3]) || (y < Hh - 1 && a[i + W*4 + 3])) o[y*W + x] = 1; }

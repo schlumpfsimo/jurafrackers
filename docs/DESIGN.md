@@ -212,3 +212,17 @@ Comité de patronage reports · local vs outside contractor choice per job (one 
 5. **Financing and vote**: Bourse and announcements, grants, bank, utility, prices, canton target, the vote and endings. Then playtest rounds until two consecutive clean rounds.
 
 Old saves will not load in the new build.
+
+
+## Life in the valley (for the scenes)
+
+The catalogue (v2/catalogue.html) holds every figure, animal and object; the game should use them to make the valley feel lived in. Ambient life never blocks play and is not clickable unless stated.
+
+- **Everyday:** hikers on the yellow-signposted paths (with packs and walking poles), cyclists and road cyclists on the valley road, joggers, dog walkers, kids playing (ball, running, waving), school children walking to and from the school, an angler by the stream (the first to notice contamination), the postman with parcels, a woman with a pram, pensioners on a bench watching the trucks.
+- **Village life:** the brass band at the fête (plays at openings when the mood is good), churchgoers on Sunday, the priest (owner of the church that the quake can wreck), the market stall with the cheese seller on the market square, the café terrace with a waiter and gossip about the drilling, hay making with round bales in summer.
+- **Animals:** cows grazing, walking and swishing tails in pastures; sheep grazing; chickens pecking in farmyards; Franches-Montagnes horses (stand, walk, gallop, graze); dogs and cats; deer at the forest edge (they leave when rigs come); crows that lift off when a survey truck shakes the ground; storks nesting on village chimneys in spring.
+- **Work:** road workers (shovel, jackhammer) when roads are built, surveyors with a tripod pegging out pads and roads, an electrician on a pylon when a plant is hooked to the grid, delivery drivers.
+- **Crisis and media:** firefighters with a hose (fires, barricades, quake ruins), paramedics with a stretcher and the ambulance, a TV crew (camera operator, sound engineer with boom) when it gets ugly, counter-protesters with blue OUI signs (fewer but loud), drummers in the marches, a police negotiator with a megaphone who talks before the riot police move.
+- **Crowds:** protesters and villagers are drawn from 20 variations each; black bloc (10 variations) only in the riots before the secret ending; the lender's men (torches, jerrycans) set buildings ablaze at night, arriving in black Vito-like vans.
+- **Poses:** every figure has stand, two walking frames and an activity (march with signs, baton strike behind shields, pitchfork, photo, speech, aiming, running). Riot police form lines: holding, advancing, batons, two rows; crowds gather behind barricades.
+- **Seasons and weather:** trees sway in the wind (three frames); in winter broadleaf trees are bare, spruces and bushes carry snow, the ground is white.
