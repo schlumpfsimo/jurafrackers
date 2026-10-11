@@ -245,6 +245,135 @@ function heightfield(g, p, rot, S, ox, oy, W, D){
   const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h; tmp.getContext('2d').putImageData(img, 0, 0); g.drawImage(tmp, sx0, sy0);
 }
 
+/* ---------------------------------------------------------------- sprites: every model from 16 directions, in one pixel style.
+   Each pixel's view ray is cast against the model's parts in the model's own coordinates: blocks, roofs, prisms, pyramids,
+   cylinders, wheels, plates and lines exactly; volumes (people, vehicles, trees, animals) are marched. One sun for everything,
+   light in tone steps, a darker pixel where a nearer part covers (a contour), a shadow under window lintels, white sills. */
+const SUN = [0.345, 0.636, 1];
+const pip = (x, y, pts) => { let ins = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++){ const xi = pts[i][0], yi = pts[i][1], xj = pts[j][0], yj = pts[j][1]; if ((yi > y) !== (yj > y) && x < (xj - xi)*(y - yi)/(yj - yi) + xi) ins = !ins; } return ins; };
+const COLS = new Map(), rgbOf = c => { let v = COLS.get(c); if (!v){ const f = c[0] === '!', s = f ? c.slice(1) : c; v = s[0] === '#' ? hex(s) : (s.match(/\d+(\.\d+)?/g) || [128, 128, 128]).slice(0, 3).map(Number); v = [v[0], v[1], v[2], f]; COLS.set(c, v); } return v; };
+// convex solids as half-spaces n·p ≤ d: the ray enters through the last plane it crosses inwards
+function hsHit(pl, O, d){ let t0 = -1e9, t1 = 1e9, k = -1; for (let i = 0; i < pl.length; i++){ const q = pl[i], den = q[0]*d[0] + q[1]*d[1] + q[2]*d[2], num = q[3] - (q[0]*O[0] + q[1]*O[1] + q[2]*O[2]);
+    if (Math.abs(den) < 1e-12){ if (num < 0) return null; continue; } const t = num/den; if (den < 0){ if (t > t0){ t0 = t; k = i; } } else if (t < t1) t1 = t; if (t0 > t1) return null; }
+  return k < 0 ? null : [t0, k]; }
+function capHit(O, d, A, B, r){ const ba = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], oa = [O[0] - A[0], O[1] - A[1], O[2] - A[2]], baba = ba[0]*ba[0] + ba[1]*ba[1] + ba[2]*ba[2], bard = ba[0]*d[0] + ba[1]*d[1] + ba[2]*d[2], baoa = ba[0]*oa[0] + ba[1]*oa[1] + ba[2]*oa[2], rdoa = d[0]*oa[0] + d[1]*oa[1] + d[2]*oa[2], oaoa = oa[0]*oa[0] + oa[1]*oa[1] + oa[2]*oa[2];
+  const a = baba - bard*bard, b = baba*rdoa - baoa*bard, c = baba*oaoa - baoa*baoa - r*r*baba; let h = b*b - a*c;
+  if (h >= 0 && a > 1e-12){ const t = (-b - Math.sqrt(h))/a, y = baoa + t*bard; if (y > 0 && y < baba) return t; const oc = y <= 0 ? oa : [O[0] - B[0], O[1] - B[1], O[2] - B[2]], b2 = d[0]*oc[0] + d[1]*oc[1] + d[2]*oc[2], c2 = oc[0]*oc[0] + oc[1]*oc[1] + oc[2]*oc[2] - r*r; h = b2*b2 - c2; if (h > 0) return -b2 - Math.sqrt(h); }
+  else if (baba > 0){ const b2 = rdoa, c2 = oaoa - r*r; h = b2*b2 - c2; if (h > 0) return -b2 - Math.sqrt(h); }
+  return null; }
+const nearestOnSeg = (P, A, B) => { const ab = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], L2 = ab[0]*ab[0] + ab[1]*ab[1] + ab[2]*ab[2] || 1, t = Math.max(0, Math.min(1, ((P[0] - A[0])*ab[0] + (P[1] - A[1])*ab[1] + (P[2] - A[2])*ab[2])/L2)); return [A[0] + ab[0]*t, A[1] + ab[1]*t, A[2] + ab[2]*t]; };
+// the parts of a model as things a ray can hit; each hit: [t, nx, ny, nz (0,0,0: estimate from neighbours), colour, tag]
+function prims(model, S, rc, noPad){ const out = [], texts = [], mt = 1/S, house = model.cat === 'b' || model.cat === 'h';
+  model.parts.forEach((p, pi) => {
+    if (p.terrain) return;
+    if (p.t === 'blk'){ let x = p.x, y = p.y, w = p.w, d = p.d; if (w < mt){ x -= (mt - w)/2; w = mt; } if (d < mt){ y -= (mt - d)/2; d = mt; }
+      const z = p.z, [h00, h10, h11, h01] = p.h, Bx = h10 - h00, By = h01 - h00, zt = z + Math.max(h00, h10, h11, h01);
+      const pl = [[-1, 0, 0, -x], [1, 0, 0, x + w], [0, -1, 0, -y], [0, 1, 0, y + d], [0, 0, -1, -z], [-Bx/w, -By/d, 1, z + h00 - Bx*x/w - By*y/d]];
+      if (Math.max(h00, h10, h11, h01) < mt){ pl[5] = [0, 0, 1, z + mt]; }
+      if (p.bv){ const b = p.bv, zb = z + h00; pl.push([-1, 0, 1, zb - b - x], [1, 0, 1, zb - b + x + w], [0, -1, 1, zb - b - y], [0, 1, 1, zb - b + y + d]); }
+      const top = rc(p.top || p.c), side = rc(p.side || p.c), base = rc(p.c), roof = p.roof, plinth = house && z === 0 && Math.min(h00, h10, h11, h01) >= 2.4 && !roof && h00 === h11;
+      // houses were drawn from two sides only: a blank back wall gets the windows of its front (no doors, no signs)
+      const wl = (p.win || []).slice(); if (house && !roof && Math.min(h00, h10, h11, h01) >= 2){ for (const [f, g2, span] of [['S', 'N', p.w], ['N', 'S', p.w], ['E', 'W', p.d], ['W', 'E', p.d]]) if (!wl.some(q => q[0] === g2)) for (const q of p.win || []) if (q[0] === f && !q[6] && q[2] > 0.3) wl.push([g2, span - q[1] - q[3], ...q.slice(2)]); }
+      const wins = {W:[], E:[], N:[], S:[]}; wl.forEach((wv, wi) => { const [f, a, wz, ww, wh, wc, txt, tc] = wv; if (!wins[f]) return; wins[f].push([a, a + ww, wz, wz + wh, rc(wc || PAL.glass), txt, pi*64 + wi + 1, wz > 0.4 && !txt && house]);
+        if (txt){ const fn = {E:[1, 0], W:[-1, 0], S:[0, 1], N:[0, -1]}[f], ux = -fn[1], uy = fn[0], fx = f === 'E' ? p.x + p.w : f === 'W' ? p.x : null, fy = f === 'S' ? p.y + p.d : f === 'N' ? p.y : null;
+          const mid = f === 'E' ? [fx, p.y + a + ww/2] : f === 'W' ? [fx, p.y + p.d - a - ww/2] : f === 'S' ? [p.x + a + ww/2, fy] : [p.x + p.w - a - ww/2, fy];
+          texts.push({x:mid[0] + fn[0]*0.02, y:mid[1] + fn[1]*0.02, z:z + wz + wh/2, nx:fn[0], ny:fn[1], ux, uy, len:ww, hh:wh, txt, tc:tc || '#fff', prim:out.length}); } });
+      const eave = roof ? (Bx === 0 ? (By > 0 ? (X, Y) => Y - p.y : (X, Y) => p.y + p.d - Y) : (Bx > 0 ? (X, Y) => X - p.x : (X, Y) => p.x + p.w - X)) : null;
+      out.push({box:[x, x + w, y, y + d, z, zt], hit(O, dd){ const r = hsHit(pl, O, dd); if (!r) return null; const [t, k] = r, q = pl[k], L = Math.hypot(q[0], q[1], q[2]), X = O[0] + t*dd[0], Y = O[1] + t*dd[1], Z = O[2] + t*dd[2];
+        let c = base, tag = 0;
+        if (k === 5){ c = top; if (roof){ const s = eave(X, Y); c = s < 0.16 ? sh(base, 0.62) : (s % 0.55) < 0.11 ? sh(base, 0.82) : base; } }
+        else if (k < 4){ c = side; const f = 'WENS'[k], u = f === 'E' ? Y - p.y : f === 'W' ? p.y + p.d - Y : f === 'S' ? X - p.x : p.x + p.w - X, v = Z - z;
+          if (plinth && v < 0.45) c = sh(side, 0.8);
+          for (const [a0, a1, v0, v1, wc, txt, id, sill] of wins[f]){ if (u >= a0 && u <= a1 && v >= v0 && v <= v1){ c = wc; tag = txt ? 0 : id; break; } if (sill && v >= v0 - 0.13 && v < v0 && u >= a0 - 0.07 && u <= a1 + 0.07){ c = '#f1efe9'; break; } } }
+        return [t, q[0]/L, q[1]/L, q[2]/L, c, tag]; }});
+    } else if (p.t === 'cyl'){ const r = Math.max(p.r, 0.5*mt), zt = p.z + p.h, top = rc(p.top || p.c), c = rc(p.c);
+      out.push({box:[p.x - r, p.x + r, p.y - r, p.y + r, p.z, zt], hit(O, d){ { const t = (zt - O[2])/d[2], X = O[0] + t*d[0] - p.x, Y = O[1] + t*d[1] - p.y; if (X*X + Y*Y <= r*r) return [t, 0, 0, 1, top, 0]; }
+        const ox = O[0] - p.x, oy = O[1] - p.y, a = d[0]*d[0] + d[1]*d[1], b = ox*d[0] + oy*d[1], cc = ox*ox + oy*oy - r*r, disc = b*b - a*cc; if (disc < 0 || a < 1e-12) return null;
+        const t = (-b - Math.sqrt(disc))/a, Z = O[2] + t*d[2]; if (Z < p.z || Z > zt) return null; return [t, (ox + t*d[0])/r, (oy + t*d[1])/r, 0, c, 0]; }});
+    } else if (p.t === 'prism'){ const pts = p.pts, zt = p.z + p.h, xs = pts.map(q => q[0]), ys = pts.map(q => q[1]); let area = 0; for (let i = 0; i < pts.length; i++){ const a = pts[i], b = pts[(i + 1) % pts.length]; area += a[0]*b[1] - b[0]*a[1]; }
+      const sg = area > 0 ? 1 : -1, top = rc(p.top || p.c), side = rc(p.side || p.c), zt2 = zt + (p.h < mt ? mt : 0);
+      out.push({box:[Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys), p.z, zt2], hit(O, d){ const tT = (zt2 - O[2])/d[2], tB = (p.z - O[2])/d[2];
+        if (pip(O[0] + tT*d[0], O[1] + tT*d[1], pts)) return [tT, 0, 0, 1, top, 0]; let best = Infinity, bn = null;
+        for (let i = 0; i < pts.length; i++){ const A = pts[i], B = pts[(i + 1) % pts.length], ex = B[0] - A[0], ey = B[1] - A[1], den = d[0]*ey - d[1]*ex; if (Math.abs(den) < 1e-12) continue;
+          const wx = A[0] - O[0], wy = A[1] - O[1], t = (wx*ey - wy*ex)/den, s = (wx*d[1] - wy*d[0])/den; if (s < 0 || s > 1 || t < tT || t > tB || t >= best) continue;
+          let nx = sg*ey, ny = -sg*ex; const L = Math.hypot(nx, ny); nx /= L; ny /= L; if (nx*d[0] + ny*d[1] >= 0) continue; best = t; bn = [nx, ny]; }
+        return bn ? [best, bn[0], bn[1], 0, side, 0] : null; }});
+    } else if (p.t === 'pyr'){ const cx = p.x + p.w/2, cy = p.y + p.d/2, T = [cx, cy, p.z + p.h], cs = [[p.x, p.y], [p.x + p.w, p.y], [p.x + p.w, p.y + p.d], [p.x, p.y + p.d]], c = rc(p.c), pl = [[0, 0, -1, -p.z]];
+      for (let i = 0; i < 4; i++){ const A = [cs[i][0], cs[i][1], p.z], B = [cs[(i + 1) % 4][0], cs[(i + 1) % 4][1], p.z], u = [B[0] - A[0], B[1] - A[1], 0], v = [T[0] - A[0], T[1] - A[1], T[2] - A[2]];
+        let n = [u[1]*v[2] - u[2]*v[1], u[2]*v[0] - u[0]*v[2], u[0]*v[1] - u[1]*v[0]], dd = n[0]*A[0] + n[1]*A[1] + n[2]*A[2]; if (n[0]*cx + n[1]*cy + n[2]*(p.z + p.h*0.25) > dd){ n = n.map(q => -q); dd = -dd; } pl.push([...n, dd]); }
+      out.push({box:[p.x, p.x + p.w, p.y, p.y + p.d, p.z, p.z + p.h], hit(O, d){ const r = hsHit(pl, O, d); if (!r) return null; const q = pl[r[1]], L = Math.hypot(q[0], q[1], q[2]); return [r[0], q[0]/L, q[1]/L, q[2]/L, c, 0]; }});
+    } else if (p.t === 'q'){ const P = p.pts, c = rc(p.c); let nx = 0, ny = 0, nz = 0; for (let i = 0; i < P.length; i++){ const a = P[i], b = P[(i + 1) % P.length]; nx += (a[1] - b[1])*(a[2] + b[2]); ny += (a[2] - b[2])*(a[0] + b[0]); nz += (a[0] - b[0])*(a[1] + b[1]); }
+      const L = Math.hypot(nx, ny, nz) || 1; nx /= L; ny /= L; nz /= L; const dd = nx*P[0][0] + ny*P[0][1] + nz*P[0][2], ax = Math.abs(nx) >= Math.abs(ny) && Math.abs(nx) >= Math.abs(nz) ? 0 : Math.abs(ny) >= Math.abs(nz) ? 1 : 2;
+      const P2 = P.map(q => ax === 0 ? [q[1], q[2]] : ax === 1 ? [q[0], q[2]] : [q[0], q[1]]), xs = P.map(q => q[0]), ys = P.map(q => q[1]), zs = P.map(q => q[2]);
+      out.push({box:[Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys), Math.min(...zs), Math.max(...zs)], hit(O, d){ const den = nx*d[0] + ny*d[1] + nz*d[2]; if (Math.abs(den) < 1e-9) return null; const t = (dd - (nx*O[0] + ny*O[1] + nz*O[2]))/den; if (t < 0) return null;
+        const X = O[0] + t*d[0], Y = O[1] + t*d[1], Z = O[2] + t*d[2]; if (!pip(ax === 0 ? Y : X, ax === 2 ? Y : Z, P2)) return null; const s = den > 0 ? -1 : 1; return [t, nx*s, ny*s, nz*s, c, 0]; }});
+    } else if (p.t === 'ln'){ const r = Math.max(0.09*p.lw, 0.55*mt), P = p.pts, c = rc(p.c), xs = P.map(q => q[0]), ys = P.map(q => q[1]), zs = P.map(q => q[2]);
+      out.push({box:[Math.min(...xs) - r, Math.max(...xs) + r, Math.min(...ys) - r, Math.max(...ys) + r, Math.min(...zs) - r, Math.max(...zs) + r], hit(O, d){ let best = Infinity, bs = -1;
+        for (let i = 0; i < P.length - 1; i++){ const t = capHit(O, d, P[i], P[i + 1], r); if (t !== null && t > 0 && t < best){ best = t; bs = i; } } if (bs < 0) return null;
+        const H = [O[0] + best*d[0], O[1] + best*d[1], O[2] + best*d[2]], Q = nearestOnSeg(H, P[bs], P[bs + 1]); return [best, (H[0] - Q[0])/r, (H[1] - Q[1])/r, (H[2] - Q[2])/r, c, 0]; }});
+    } else if (p.t === 'whl'){ const r = p.r, w = Math.max(p.w || r*0.6, mt), zc = r, y0 = p.y - w/2, y1 = p.y + w/2;
+      const ring = (X, Z) => { const q = Math.hypot(X - p.x, Z - zc); return q < 0.2*r ? '#5a6066' : q < 0.5*r ? '#9aa3ab' : '#1f2226'; };
+      out.push({box:[p.x - r, p.x + r, y0, y1, 0, 2*r], hit(O, d){ let best = null;
+        for (const yc of [y0, y1]){ if (Math.abs(d[1]) < 1e-12) break; const t = (yc - O[1])/d[1], X = O[0] + t*d[0], Z = O[2] + t*d[2]; if ((X - p.x)**2 + (Z - zc)**2 <= r*r && (!best || t < best[0])) best = [t, 0, yc === y0 ? -1 : 1, 0, ring(X, Z), 0]; }
+        const ox = O[0] - p.x, oz = O[2] - zc, a = d[0]*d[0] + d[2]*d[2], b = ox*d[0] + oz*d[2], cc = ox*ox + oz*oz - r*r, disc = b*b - a*cc;
+        if (disc >= 0 && a > 1e-12){ const t = (-b - Math.sqrt(disc))/a, Y = O[1] + t*d[1]; if (Y >= y0 && Y <= y1 && (!best || t < best[0])) best = [t, (ox + t*d[0])/r, 0, (oz + t*d[2])/r, '#1f2226', 0]; }
+        return best; }});
+    } else if (p.t === 'flat'){ if (noPad) return; const zp = (p.z || 0) + 0.01, P = p.pts, c = rc(p.c), xs = P.map(q => q[0]), ys = P.map(q => q[1]);
+      out.push({box:[Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys), zp, zp], flat:true, hit(O, d){ const t = (zp - O[2])/d[2], X = O[0] + t*d[0], Y = O[1] + t*d[1]; return pip(X, Y, P) ? [t, 0, 0, 1, c, 0] : null; }});
+    } else if (p.t === 'sdf'){ const [x0, x1, y0, y1, z0, z1] = p.b, fn = p.fn, st = (p.step || Math.min(0.04, 0.5*mt))*1.7320508, me = out.length;
+      if (p.badge) texts.push({plate:1, x:p.badge.x, y:p.badge.y, z:p.badge.z, txt:p.badge.text, bg:p.badge.bg, fg:p.badge.fg, prim:me});
+      for (const [f, a0, a1, zz, hh, txt, tc, plc] of p.labels || []){ const fn2 = {E:[1, 0], W:[-1, 0], S:[0, 1], N:[0, -1]}[f], mid = f === 'S' || f === 'N' ? [(a0 + a1)/2, plc] : [plc, (a0 + a1)/2];
+        texts.push({x:mid[0] + fn2[0]*0.05, y:mid[1] + fn2[1]*0.05, z:zz + hh/2, nx:fn2[0], ny:fn2[1], ux:-fn2[1], uy:fn2[0], len:Math.abs(a1 - a0), hh, txt, tc, prim:-1}); }
+      out.push({box:p.b, sdf:true, hit(O, d){ let t0 = -1e9, t1 = 1e9; for (let ax = 0; ax < 3; ax++){ const o = O[ax], dv = d[ax], lo = p.b[ax*2], hi = p.b[ax*2 + 1]; if (Math.abs(dv) < 1e-12){ if (o < lo || o > hi) return null; continue; } let a = (lo - o)/dv, b = (hi - o)/dv; if (a > b){ const s = a; a = b; b = s; } if (a > t0) t0 = a; if (b < t1) t1 = b; if (t0 > t1) return null; }
+        let prev = t0; for (let t = t0; t <= t1 + 1e-9; t += st){ const c = fn(O[0] + t*d[0], O[1] + t*d[1], O[2] + t*d[2]); if (c){ let lo = prev, hi = t, cc = c; for (let k = 0; k < 6; k++){ const m = (lo + hi)/2, cm = fn(O[0] + m*d[0], O[1] + m*d[1], O[2] + m*d[2]); if (cm){ hi = m; cc = cm; } else lo = m; } return [hi, 0, 0, 0, rc(cc), 0]; } prev = t; }
+        return null; }});
+    }
+  });
+  return {out, texts}; }
+const SPRITES = new Map();
+function sprite(model, view, S, o){ o = o || {}; const key = model.n + '|' + view + '|' + S + '|' + (o.key || '') + (o.noPad ? '|n' : ''); const had = SPRITES.get(key); if (had) return had;
+  const th = view*Math.PI/8, ca = Math.cos(th), sa = Math.sin(th), cx = model.W/2, cy = model.D/2, rc = o.recol ? (c => o.recol[c] || c) : (c => c);
+  const {out, texts} = prims(model, S, rc, o.noPad); const toW = (x, y) => [cx + ca*(x - cx) - sa*(y - cy), cy + sa*(x - cx) + ca*(y - cy)];
+  let sx0 = 1e9, sx1 = -1e9, sy0 = 1e9, sy1 = -1e9, zTop = 0; const sb = out.map(p => { const [x0, x1, y0, y1, z0, z1] = p.box; let a0 = 1e9, a1 = -1e9, b0 = 1e9, b1 = -1e9; zTop = Math.max(zTop, z1);
+    for (const x of [x0, x1]) for (const y of [y0, y1]){ const [X, Y] = toW(x, y); for (const z of [z0, z1]){ const sx = (X - Y)*S, sy = (X + Y)*S/2 - z*S; a0 = Math.min(a0, sx); a1 = Math.max(a1, sx); b0 = Math.min(b0, sy); b1 = Math.max(b1, sy); } }
+    sx0 = Math.min(sx0, a0); sx1 = Math.max(sx1, a1); sy0 = Math.min(sy0, b0); sy1 = Math.max(sy1, b1); return [a0, a1, b0, b1]; });
+  if (!out.length){ const e = {w:1, h:1, ax:0, ay:0, data:new Uint8ClampedArray(4), texts:[]}; SPRITES.set(key, e); return e; }
+  sx0 = Math.floor(sx0) - 1; sy0 = Math.floor(sy0) - 1; const w = Math.ceil(sx1) - sx0 + 2, h = Math.ceil(sy1) - sy0 + 2; zTop += 1;
+  const G = 16, gw = Math.ceil(w/G), gh = Math.ceil(h/G), grid = Array.from({length:gw*gh}, () => []);
+  sb.forEach(([a0, a1, b0, b1], i) => { for (let gx = Math.max(0, Math.floor((a0 - sx0 - 1)/G)); gx <= Math.min(gw - 1, Math.floor((a1 - sx0 + 1)/G)); gx++) for (let gy = Math.max(0, Math.floor((b0 - sy0 - 1)/G)); gy <= Math.min(gh - 1, Math.floor((b1 - sy0 + 1)/G)); gy++) grid[gy*gw + gx].push(i); });
+  const r3 = 1/Math.sqrt(3), dl = [(-ca - sa)*r3, (sa - ca)*r3, -r3], N = w*h, cols = new Array(N), nrm = new Float32Array(N*3), hitW = new Float32Array(N*3), who = new Int32Array(N).fill(-1), tags = new Int32Array(N);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++){ const cell = grid[Math.floor(j/G)*gw + Math.floor(i/G)]; if (!cell.length) continue;
+    const a = (sx0 + i + 0.5)/S, b = (sy0 + j + 0.5)/S, OX = a/2 + b + zTop - cx, OY = b + zTop - a/2 - cy, O = [cx + ca*OX + sa*OY, cy - sa*OX + ca*OY, zTop];
+    let best = null, bi = -1; for (const k of cell){ const r = out[k].hit(O, dl); if (r && r[0] > 0 && (!best || r[0] < best[0])){ best = r; bi = k; } }
+    if (!best) continue; const n = j*w + i, t = best[0], lx = O[0] + t*dl[0], ly = O[1] + t*dl[1]; cols[n] = best[4]; who[n] = bi; tags[n] = best[5];
+    const [WX, WY] = toW(lx, ly); hitW[n*3] = WX; hitW[n*3 + 1] = WY; hitW[n*3 + 2] = O[2] + t*dl[2];
+    if (best[1] || best[2] || best[3]){ nrm[n*3] = ca*best[1] - sa*best[2]; nrm[n*3 + 1] = sa*best[1] + ca*best[2]; nrm[n*3 + 2] = best[3]; } }
+  const data = new Uint8ClampedArray(N*4), depth = n => hitW[n*3] + hitW[n*3 + 1] + hitW[n*3 + 2], ok = (i, j) => i >= 0 && j >= 0 && i < w && j < h && who[j*w + i] >= 0;
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++){ const n = j*w + i; if (who[n] < 0) continue; const [R, Gc, B, flat] = rgbOf(cols[n]); let f = 1;
+    if (!flat){ let nx = nrm[n*3], ny = nrm[n*3 + 1], nz = nrm[n*3 + 2];
+      if (!nx && !ny && !nz){ const dq = depth(n), P = q => ok(q[0], q[1]) && who[q[1]*w + q[0]] === who[n] && Math.abs(depth(q[1]*w + q[0]) - dq) < 0.35 ? q[1]*w + q[0] : -1, v = m => [hitW[m*3], hitW[m*3 + 1], hitW[m*3 + 2]], q0 = v(n);
+        const rr = P([i + 1, j]), ll = P([i - 1, j]), dn = P([i, j + 1]), up = P([i, j - 1]), dif = (A, B2) => [A[0] - B2[0], A[1] - B2[1], A[2] - B2[2]];
+        const ex = rr >= 0 && ll >= 0 ? dif(v(rr), v(ll)) : rr >= 0 ? dif(v(rr), q0) : ll >= 0 ? dif(q0, v(ll)) : null, ey = dn >= 0 && up >= 0 ? dif(v(dn), v(up)) : dn >= 0 ? dif(v(dn), q0) : up >= 0 ? dif(q0, v(up)) : null;
+        if (ex && ey){ nx = ex[1]*ey[2] - ex[2]*ey[1]; ny = ex[2]*ey[0] - ex[0]*ey[2]; nz = ex[0]*ey[1] - ex[1]*ey[0]; if (nx + ny + nz < 0){ nx = -nx; ny = -ny; nz = -nz; } const L = Math.hypot(nx, ny, nz) || 1; nx /= L; ny /= L; nz /= L; } else { nx = 0; ny = 0; nz = 1; } }
+      f = Math.max(0.6, Math.min(1.14, 0.55 + 0.55*(nx*SUN[0] + ny*SUN[1] + nz*SUN[2]))); f = Math.round(f*10)/10;
+      const dq = depth(n); for (const [a, b] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) if (ok(a, b) && depth(b*w + a) - dq > 0.35){ f *= 0.84; break; }
+      if (tags[n] && (!ok(i, j - 1) || tags[n - w] !== tags[n])) f *= 0.8; }
+    const k = v => f > 1 ? v + (255 - v)*(f - 1) : v*f, o4 = n*4; data[o4] = k(R); data[o4 + 1] = k(Gc); data[o4 + 2] = k(B); data[o4 + 3] = 255; }
+  // writing on walls and signs carried by people: kept apart, so a zoomed view can write them in screen pixels
+  const T = []; for (const tx of texts){ const [X, Y] = toW(tx.x, tx.y), px = (X - Y)*S - sx0, py = (X + Y)*S/2 - tx.z*S - sy0;
+    if (tx.plate){ const i = Math.round(px), j = Math.round(py); if (ok(i, j)) T.push({plate:1, x:px, y:py, txt:tx.txt, bg:tx.bg, fg:tx.fg}); continue; }
+    let nx = ca*tx.nx - sa*tx.ny, ny = sa*tx.nx + ca*tx.ny; if (nx + ny < 0.15) continue; let ux = ca*tx.ux - sa*tx.uy, uy = sa*tx.ux + ca*tx.uy, dx = ux - uy; if (dx < 0){ ux = -ux; uy = -uy; dx = -dx; }
+    const i = Math.round(px), j = Math.round(py); if (tx.prim >= 0 && (!ok(i, j) || who[j*w + i] !== tx.prim)) continue;
+    T.push({x:px, y:py, len:tx.len*S*Math.hypot(dx, (ux + uy)/2), skew:((ux + uy)/2)/dx, hh:tx.hh*S, txt:tx.txt, tc:tx.tc}); }
+  const e = {w, h, ax:(cx - cy)*S - sx0, ay:(cx + cy)*S/2 - sy0, data, texts:T, key}; SPRITES.set(key, e); return e; }
+// a sprite as a canvas (made once, on first use)
+function spriteCanvas(e){ if (e.canvas) return e.canvas; const c = typeof document !== 'undefined' ? document.createElement('canvas') : new OffscreenCanvas(e.w, e.h); c.width = e.w; c.height = e.h; c.getContext('2d').putImageData(new ImageData(e.data, e.w, e.h), 0, 0); e.canvas = c; return c; }
+// the writing of a sprite drawn at screen scale z (letters only when they fit)
+function spriteTexts(g, e, x, y, z, S){ for (const t of e.texts){ const sx = x + t.x*z, sy = y + t.y*z;
+    if (t.plate){ const pw = Math.max(2, Math.round(S*z)), ph = Math.max(1, Math.round(0.55*S*z)), x0 = Math.round(sx - pw/2), y0 = Math.round(sy - ph/2); g.fillStyle = t.bg; g.fillRect(x0, y0, pw, ph); plateText(g, x0, y0, pw, ph, t.txt, t.fg); continue; }
+    const fs = Math.round(t.hh*z*0.8); if (fs < 6) continue; g.save(); g.fillStyle = t.tc; g.font = fs + 'px "Silkscreen", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; const tw = g.measureText(t.txt).width, fit = Math.min(1, (t.len*z*0.9)/tw);
+    g.translate(sx, sy); g.transform(1, t.skew, 0, 1, 0, 0); g.scale(fit, 1); g.fillText(t.txt, 0, 0.5); g.restore(); } }
+
 /* ---------------------------------------------------------------- models */
 const M = [];
 const def = (cat, n, W, D, fn, note) => M.push({cat, n, W, D, parts:build(fn), note});
@@ -1214,5 +1343,5 @@ for (let i = 0; i < 4; i++){ const r = rng(900 + i*31), ax = i % 2 ? 'y' : 'x', 
 // composing scenes from the locked assets: a kit of the building blocks used above
 const KIT = {M, VARS, place:placeModel, figure:figure3, turned, PROT, VILL, BLOC, GOON, RIOT, POSE, cowM, sheepFn, chickFn, horseFn, dogAt, bikeAt, bench, barricade, beech, spruce, fruitTree, bareBeech, snowy, sway, at, firstOf, flame, grass, f35At, rng, pick, hsh, cell, leafy};
 const compose = (W, D, fn) => ({cat:'s', n:'scene', W, D, parts:build(H => fn(H, KIT))});
-window.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose, plates:PLATES, plateText, texts:TEXTS, wallText};
+globalThis.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose, plates:PLATES, plateText, texts:TEXTS, wallText, sprite, spriteCanvas, spriteTexts, sprites:SPRITES};
 })();
