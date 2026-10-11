@@ -56,7 +56,7 @@ function renderAll(){
   for (const m of ART.models){
     const num = pre[m.cat] + String(++n[m.cat]).padStart(2, '0'), views = card(document.getElementById(host[m.cat]), num, m.n, m.note);
     const zt = extent(m), span = m.W + m.D, pad = 6;
-    const s = m.cat === 'p' ? (m.parts[0].t === 'fig' ? 56 : 40) : m.cat === 'v' ? Math.min(7, 64/span)*(m.big || 1) : Math.max(1.2, Math.min(7, 118/span, 150/(span/2 + Math.max(zt, 1))));
+    const s = m.cat === 'p' ? (m.parts[0].u < 0.05 ? 56 : 40) : m.cat === 'v' ? Math.min(7, 64/span)*(m.big || 1) : Math.max(1.2, Math.min(7, 118/span, 150/(span/2 + Math.max(zt, 1))));
     const zoom = m.cat === 'v' ? 3 : 2;
     for (let r = 0; r < 4; r++){
       const big = document.createElement('canvas'), ex = span*s*0.6 + 20; big.width = Math.ceil(span*s + ex*2); big.height = Math.ceil(span*s/2 + Math.max(zt, 1)*s + ex*2);

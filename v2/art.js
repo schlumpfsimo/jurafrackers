@@ -32,6 +32,8 @@ function build(fn){
     // a row of windows on a face: face, from, to, step, z, w, h
     Q:(pts, c, o) => push(Object.assign({t:'q', pts, c}, o || {})),                                // flat 3D polygon: fins, blades; o.face shows it only from that side
     V:(x, y, z, w, d, h, c) => { for (let i = x; i < x + w; i++) for (let j = y; j < y + d; j++) for (let k = z; k < z + h; k++) vox.set(i + ',' + j + ',' + k, c); },   // voxels (people), 0.1 m cubes
+    VF:(u, x0, x1, y0, y1, z0, z1, fn) => { const cells = []; for (let i = Math.floor(x0/u); i*u < x1; i++) for (let j = Math.floor(y0/u); j*u < y1; j++) for (let k = Math.floor(z0/u); k*u < z1; k++){ const c = fn((i + 0.5)*u, (j + 0.5)*u, (k + 0.5)*u); if (c) cells.push([i, j, k, c]); }
+      return push({t:'vox', u, cells, zt:(Math.max(...cells.map(q => q[2])) + 1)*u}); },
     row:(f, a0, a1, step, z, w, h, c) => { const r = []; for (let a = a0; a <= a1 + 1e-6; a += step) r.push([f, a, z, w, h, c]); return r; },
   };
   fn(H, PAL);
@@ -146,6 +148,13 @@ function draw(g, model, rot, S, ox, oy, post){
   items.sort((a, b) => a.k - b.k || a.i - b.i).forEach(it => it.f());
   return post;
 }
+
+/* ---------------------------------------------------------------- volumes (for sampled voxel models) */
+const segD = (p, a, b) => { const ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], ap = [p[0] - a[0], p[1] - a[1], p[2] - a[2]], L2 = ab[0]*ab[0] + ab[1]*ab[1] + ab[2]*ab[2];
+  const t = Math.max(0, Math.min(1, (ap[0]*ab[0] + ap[1]*ab[1] + ap[2]*ab[2])/L2)); return [Math.hypot(ap[0] - ab[0]*t, ap[1] - ab[1]*t, ap[2] - ab[2]*t), t]; };
+const inCap = (p, a, b, r1, r2) => { const [d, t] = segD(p, a, b); return d <= r1 + (r2 - r1)*t; };                     // tapered capsule
+const inEll = (p, c, rx, ry, rz) => ((p[0] - c[0])/rx)**2 + ((p[1] - c[1])/ry)**2 + ((p[2] - c[2])/rz)**2 <= 1;
+const lerpT = (tab, x) => { if (x <= tab[0][0]) return tab[0][1]; for (let i = 1; i < tab.length; i++) if (x <= tab[i][0]){ const [x0, y0] = tab[i - 1], [x1, y1] = tab[i]; return y0 + (y1 - y0)*(x - x0)/(x1 - x0); } return tab[tab.length - 1][1]; };
 
 /* ---------------------------------------------------------------- models */
 const M = [];
@@ -448,22 +457,27 @@ def('v', 'Police helicopter', 10.5, 2.6, ({B, X, C, L, Q}, c) => { const wh = '#
   for (const [y, f] of [[m + 0.13, 'S'], [m - 0.13, 'N']]){ const ring = []; for (let i = 0; i < 12; i++){ const a = i/12*Math.PI*2; ring.push([0.48 + Math.cos(a)*0.3, y, 1.72 + Math.sin(a)*0.3]); } Q(ring, '#22252a', {face:f}); }
   for (let i = 0; i < 4; i++){ const a = i*Math.PI/2 + 0.4, ca = Math.cos(a), sa = Math.sin(a), w = 0.13; Q([[4.6 - sa*w, m + ca*w, 2.76], [4.6 + ca*5.2 - sa*w, m + sa*5.2 + ca*w, 2.76], [4.6 + ca*5.2 + sa*w, m + sa*5.2 - ca*w, 2.76], [4.6 + sa*w, m - ca*w, 2.76]], '#2b2f33', {k:8000}); }
 }, 'Cabin with a glass nose and a blue band, engine and rotor mast on the roof, tail boom, ducted tail rotor, skids. The last resort.');
-def('v', 'F-35', 15.6, 11, ({X, B, W, L, Q}, c) => { const g = '#8b8d87', gd = '#6f716c', gl = '#9b9d97', m = 5.5, sym = pts => [...pts.map(([x, y]) => [x, m - y]), ...pts.slice().reverse().map(([x, y]) => [x, m + y])];
+def('v', 'F-35', 15.6, 11, ({VF, W, L}, c) => { const m = 5.5, g = '#8b8d87', gt = '#9a9c96', gb = '#70726d', dk = '#2c2d2b';
   for (const [x, y] of [[12.6, 0], [6.4, -1.5], [6.4, 1.5]]){ L([[x, m + y, 0.3], [x, m + y*0.85, 0.95]], '#3a3c38', 0.9); W(x, m + y, x > 10 ? 0.28 : 0.36); }
-  // belly, then the chine (widest, sharp edge), then the upper body and the spine: a faceted, thick fuselage
-  X(sym([[1.0, 0.7], [2.5, 1.15], [9.0, 1.3], [11.4, 0.9], [13.6, 0.4], [15.0, 0.08]]), 0.85, 0.35, gd);
-  X(sym([[0.8, 0.85], [2.0, 1.4], [4.0, 1.8], [9.4, 1.8], [11.2, 1.25], [13.4, 0.6], [15.6, 0]]), 1.2, 0.3, g);
-  for (const s of [-1, 1]){ X([[10.2, m + s*1.7], [7.0, m + s*5.35], [5.7, m + s*5.35], [3.9, m + s*1.7]], 1.32, 0.12, g, {kx:7.5, ky:m + s*3});
-    X([[3.9, m + s*1.3], [1.6, m + s*3.65], [0.65, m + s*3.65], [-0.4, m + s*1.05]], 1.36, 0.1, g, {kx:8, ky:m + s*3.1});
-    Q([[11.0, m + s*1.0, 1.25], [11.0, m + s*1.45, 1.25], [10.6, m + s*1.4, 1.75], [10.6, m + s*0.95, 1.75]], '#2a2c2a', {face:'E', kx:12, ky:m + s*2.1}); }
-  X(sym([[1.1, 0.75], [2.2, 1.25], [4.5, 1.7], [10.0, 1.65], [11.6, 0.85], [13.4, 0.5], [15.0, 0.06]]), 1.5, 0.5, g);
-  X(sym([[1.6, 0.5], [2.6, 1.0], [6.0, 1.4], [9.4, 1.3], [10.9, 0.6], [10.9, 0]]), 2.0, 0.38, gl);
-  X(sym([[10.6, 0], [10.9, 0.38], [12.0, 0.48], [13.2, 0.4], [14.0, 0]]), 2.0, 0.5, '#5e5133', {top:'#8c7a45'});
-  for (const s of [-1, 1]) Q([[1.4, m + s*1.3, 2.3], [1.0, m + s*1.85, 4.5], [2.6, m + s*1.85, 4.5], [5.0, m + s*1.3, 2.3]], s > 0 ? '#999b95' : '#6c6e69', {kx:8, ky:m + s*3.7, line:'rgba(20,24,28,.45)'});
-  B(-0.75, m - 0.62, 0.95, 1.8, 1.24, 1.0, '#5d5f5a', {bv:0.25}); B(-0.8, m - 0.45, 1.12, 0.06, 0.9, 0.66, '#2f302d', {noline:1});
-  B(13.0, m - 0.16, 0.82, 0.45, 0.32, 0.1, '#9a7a3a');
-}, 'Warm grey, thick faceted body with a sharp chine edge, long pointed nose, long tinted canopy set well forward, side intakes, trapezoid wings, big tailplanes, tall twin tails leaning outwards, one big nozzle. Only in the secret ending.');
-M[M.length - 1].big = 1.7;
+  const wT = [[-0.2, 0.55], [1.5, 1.2], [4, 1.75], [9.6, 1.75], [11, 1.3], [13.5, 0.55], [15.6, 0.03]], huT = [[-0.2, 0.3], [2, 0.55], [5, 0.85], [9.6, 0.85], [11, 0.6], [13.4, 0.42], [15.6, 0.03]], hlT = [[-0.2, 0.3], [2, 0.45], [9, 0.5], [12, 0.35], [15.6, 0.03]];
+  VF(0.14, -0.9, 15.7, 0, 11, 0.6, 4.6, (x, y, z) => { const ay = Math.abs(y - m), zc = 1.35;
+    // canopy: a long bubble, tinted gold
+    if (inEll([x, y, z], [12.0, m, zc + 0.62], 1.55, 0.46, 0.45) && z > zc + 0.55) return '#6a5a30';
+    // fuselage: chined section, sharp edge at the widest line
+    if (x >= -0.2 && x <= 15.6){ const w = lerpT(wT, x), r = ay/w; if (r <= 1){ const top = zc + lerpT(huT, x)*(1 - r**1.6), bot = zc - lerpT(hlT, x)*(1 - r*r);
+      if (z <= top && z >= bot){ if (x > 10.15 && x < 10.55 && ay > 1.05 && z < zc + 0.35 && z > zc - 0.3) return dk; return z > zc + 0.12 ? gt : z < zc - 0.1 ? gb : g; } } }
+    // intake bumps beside the cockpit
+    if (inEll([x, y, z], [11.0, m + Math.sign(y - m)*1.25, zc + 0.05], 0.75, 0.32, 0.3)) return g;
+    // wings and tailplanes: thin trapezoids at the chine
+    if (Math.abs(z - zc) < 0.08 && ay >= 1.5 && ay <= 5.35){ const f = (ay - 1.6)/3.75, le = 10.2 - f*3.2, te = 3.9 + f*1.8; if (x <= le && x >= te) return g; }
+    if (Math.abs(z - zc - 0.05) < 0.07 && ay >= 1.0 && ay <= 3.65){ const f = (ay - 1.0)/2.65, le = 3.9 - f*2.3, te = -0.4 + f*1.05; if (x <= le && x >= te) return g; }
+    // twin tails, leaning outwards
+    if (z >= 1.9 && z <= 4.4){ const t = (z - 1.9)/2.5, yc = 1.25 + t*0.45, le = 5.0 - t*2.4, te = 1.4 - t*0.35; if (Math.abs(ay - yc) < 0.15 && x <= le && x >= te) return t > 0.92 ? gb : g; }
+    // engine nozzle
+    if (x >= -0.85 && x < 0.2 && (y - m)**2 + (z - zc)**2 <= 0.55**2) return x < -0.7 && (y - m)**2 + (z - zc)**2 <= 0.35**2 ? '#1e1f1d' : '#5a5c57';
+    return null; });
+}, 'Warm grey, thick chined body, long pointed nose, long tinted canopy set forward, side intakes with bumps, trapezoid wings, big tailplanes, twin tails leaning outwards, one big nozzle. Only in the secret ending.');
+M[M.length - 1].big = 2.4;
 def('v', 'Regional train', 20, 3, ({B, W}, c) => { for (const x0 of [0.3, 10.2]){ wheels(W, [x0 + 1.4, x0 + 8], 3, 0.45);
   B(x0, 0.25, 0.6, 9.5, 2.5, 2.8, '#dfe2e5', {bv:0.5, win:[...[0.6, 2.3, 4, 5.7, 7.4].flatMap(a => sides(a, 1.3, 1.3, 0.85, GL)), ...sides(0.3, 0.45, 8.9, 0.26, '#b8322a'), ['E', 0.3, 1.2, 1.9, 0.9, GL], ['W', 0.3, 1.2, 1.9, 0.9, GL]]}); } }, 'Along the top of the valley.');
 
@@ -519,9 +533,46 @@ function figure(g, base, S, rot, o){
     g.beginPath(); c.forEach((p, k) => k ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.fillStyle = front ? '#f4f2ec' : '#d9d6cc'; g.fill(); g.strokeStyle = '#8a8478'; g.lineWidth = 1; g.stroke();
     if (front){ const m = U(hu, 2.43), fs = Math.max(6, Math.round(S*0.3)); g.save(); g.translate(m[0], m[1]); g.transform(1, -0.12*dir*2, 0, 1, 0, 0); g.font = fs + 'px "Silkscreen", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#c63a2c'; g.fillText(o.sign || 'NON', 0, 0); g.restore(); } }
 }
-const figP = (n, o, note) => def('p', n, 1.5, 1.5, ({G}) => G(0.75, 0.75, o, o.item === 'sign' ? 2.8 : 1.9), note);
-figP('Driller (drawn)', {skin:'#d9a882', top:'#e07a2c', bot:'#e07a2c', shoe:'#4a3626', hand:'#c9a24a', hair:'#3a2b20', brow:'#3a2b20', beard:'#3a2b20', hat:'hard', hatc:'#f2c230', glasses:'#2a3a44', belt:'#2b2522', zip:'#b8642a', bulk:1.1, topBands:[[1.12, 0.035, '#e8ece4']], legBands:[[0.32, 0.035, '#e8ece4']], armBands:[[1.25, 0.03, '#e8ece4']], item:'wrench'}, 'Trial, drawn: orange coveralls with reflective bands, yellow hard hat, safety glasses, beard, gloves, boots, pipe wrench.');
-figP('Protester (drawn)', {skin:'#f2d2b6', top:'#3f7a4a', bot:'#3a4a63', shoe:'#5a4632', hair:'#9a4a2a', brow:'#7a3a22', longHair:1, hat:'beanie', hatc:'#c63a2c', scarf:'#e8b730', hood:1, zip:'#2f5f38', bulk:1.12, raise:1, item:'sign', sign:'NON'}, 'Trial, drawn: green parka with a hood, jeans, red beanie, yellow scarf, long red hair, sign held up.');
+/* People as volumes sampled into small cubes: rounded limbs, real proportions, no faces. Front at +x. */
+const volPerson = (o) => (x, y, z) => { const cx = 0.75, cy = 0.75, p = [x, y, z], bk = o.bulk || 1; let c = null;
+  const put = (test, col) => { if (test) c = col; };
+  for (const s of [-1, 1]){ const ly = cy + s*0.09;
+    put(inCap(p, [cx, ly, 0.92], [cx + 0.01, ly, 0.5], 0.08, 0.06) || inCap(p, [cx + 0.01, ly, 0.5], [cx, ly, 0.1], 0.058, 0.045), o.bot);
+    if (o.legBand && z > o.legBand[0] && z < o.legBand[0] + o.legBand[1]) put(inCap(p, [cx + 0.01, ly, 0.5], [cx, ly, 0.1], 0.06, 0.047), o.band);
+    put(z >= 0 && (inEll(p, [cx + 0.05, ly, 0.045], 0.135, 0.06, 0.07) || (o.boots && inCap(p, [cx, ly, 0.05], [cx, ly, 0.24], 0.055, 0.055))), o.shoe); }
+  put(inEll(p, [cx, cy, 0.95], 0.11, 0.17, 0.1), o.bot);
+  put(inEll(p, [cx, cy, 1.1], 0.105*bk, 0.155*bk, 0.15) || inEll(p, [cx, cy, 1.3], 0.125*bk, 0.19*bk, 0.17) || inCap(p, [cx, cy - 0.16*bk, 1.42], [cx, cy + 0.16*bk, 1.42], 0.065*bk, 0.065*bk), o.top);
+  if (o.belt) put(inEll(p, [cx, cy, 0.98], 0.115, 0.175, 0.03), o.belt);
+  if (o.topBand) put(z > o.topBand[0] && z < o.topBand[0] + o.topBand[1] && inEll(p, [cx, cy, 1.15], 0.115*bk, 0.17*bk, 0.2), o.band);
+  if (o.hood) put(inEll(p, [cx - 0.11, cy, 1.5], 0.07, 0.14, 0.08), o.top);
+  put(inCap(p, [cx, cy, 1.44], [cx, cy, 1.56], 0.05, 0.048), o.skin);
+  if (o.scarf) put(inEll(p, [cx, cy, 1.5], 0.09, 0.1, 0.045) || inCap(p, [cx + 0.08, cy + 0.04, 1.48], [cx + 0.1, cy + 0.05, 1.3], 0.03, 0.03), o.scarf);
+  // head and hair: hair covers the back and the top; a hat replaces the top
+  const hc = [cx + 0.01, cy, 1.665];
+  put(inEll(p, hc, 0.1, 0.085, 0.115), o.skin);
+  put(inEll(p, hc, 0.112, 0.097, 0.125) && (z > 1.7 || x < cx - 0.01), o.hair);
+  if (o.longHair) put(inCap(p, [cx - 0.07, cy, 1.66], [cx - 0.09, cy, 1.4], 0.085, 0.07) && x < cx - 0.02, o.hair);
+  if (o.beard) put(inEll(p, [cx + 0.06, cy, 1.585], 0.06, 0.08, 0.05) && x > cx + 0.02, o.beard);
+  if (o.hat === 'hard'){ put(inEll(p, [cx + 0.01, cy, 1.73], 0.125, 0.11, 0.12) && z > 1.73, o.hatc); put(z > 1.72 && z < 1.765 && inEll(p, [cx + 0.03, cy, 1.74], 0.16, 0.13, 0.1), o.hatc); }
+  if (o.hat === 'beanie'){ put(inEll(p, [cx + 0.005, cy, 1.72], 0.115, 0.1, 0.12) && z > 1.7, o.hatc); put(inEll(p, [cx, cy, 1.86], 0.035, 0.035, 0.035), '#f4f2ec'); }
+  // arms: hanging, or the right one raised
+  for (const s of [-1, 1]){ const ay = cy + s*0.235*bk;
+    if (s > 0 && o.raise){ put(inCap(p, [cx, ay, 1.42], [cx + 0.03, ay + 0.06, 1.7], 0.055, 0.047) || inCap(p, [cx + 0.03, ay + 0.06, 1.7], [cx + 0.04, ay + 0.08, 1.96], 0.045, 0.038), o.top); put(inEll(p, [cx + 0.04, ay + 0.08, 2.01], 0.04, 0.035, 0.055), o.hand || o.skin); }
+    else { put(inCap(p, [cx, ay, 1.42], [cx, ay + s*0.02, 1.15], 0.055, 0.047) || inCap(p, [cx, ay + s*0.02, 1.15], [cx + 0.02, ay + s*0.02, 0.9], 0.045, 0.037), o.top);
+      if (o.armBand && z > o.armBand[0] && z < o.armBand[0] + o.armBand[1]) put(inCap(p, [cx, ay, 1.42], [cx, ay + s*0.02, 1.15], 0.058, 0.05), o.band);
+      put(inEll(p, [cx + 0.02, ay + s*0.02, 0.85], 0.04, 0.032, 0.055), o.hand || o.skin); } }
+  // things carried
+  const ry = cy + 0.255*bk;
+  if (o.item === 'wrench'){ put(Math.abs(x - cx - 0.02) < 0.02 && Math.abs(y - ry) < 0.02 && z > 0.5 && z < 0.82, '#b8322a'); put(Math.abs(x - cx - 0.02) < 0.08 && Math.abs(y - ry) < 0.025 && z > 0.44 && z < 0.52, '#8f979e'); }
+  if (o.item === 'sign'){ const sy = ry + 0.08, sx = cx + 0.04; put(Math.abs(x - sx) < 0.02 && Math.abs(y - sy) < 0.02 && z > 1.7 && z < 2.2, '#8a6a4a');
+    if (Math.abs(y - sy) < 0.66 && z > 2.15 && z < 2.68 && x > sx - 0.04 && x < sx + 0.04){ let col = '#f4f2ec';
+      if (x > sx){ const gx = Math.floor((sy + 0.6 - y)*14), gz = Math.floor((2.6 - z)*14), L = {N:['10001', '11001', '10101', '10011', '10001'], O:['01110', '10001', '10001', '10001', '01110']};
+        const word = 'NON', ci = Math.floor(gx/6), cx2 = gx % 6; if (gx >= 0 && ci < 3 && cx2 < 5 && gz >= 0 && gz < 5 && L[word[ci]][gz][cx2] === '1') col = '#c63a2c'; }
+      c = col; } }
+  return c; };
+const volP = (n, o, note) => def('p', n, 1.5, 1.5, ({VF}) => VF(1/28, 0, 1.5, 0, o.item === 'sign' ? 2 : 1.5, 0, o.item === 'sign' ? 2.7 : 1.95, volPerson(o)), note);
+volP('Driller', {skin:'#d9a882', top:'#e07a2c', bot:'#e07a2c', shoe:'#4a3626', boots:1, hand:'#c9a24a', hair:'#3a2b20', beard:'#3a2b20', hat:'hard', hatc:'#f2c230', belt:'#2b2522', band:'#e8ece4', topBand:[1.12, 0.04], legBand:[0.3, 0.04], armBand:[1.24, 0.035], bulk:1.08, item:'wrench'}, 'Trial, volumetric: orange coveralls with reflective bands, hard hat, beard, gloves, boots, pipe wrench.');
+volP('Protester', {skin:'#f2d2b6', top:'#3f7a4a', bot:'#3a4a63', shoe:'#5a4632', hair:'#9a4a2a', longHair:1, hat:'beanie', hatc:'#c63a2c', scarf:'#e8b730', hood:1, bulk:1.12, raise:1, item:'sign'}, 'Trial, volumetric: green parka with a hood, jeans, red beanie, yellow scarf, long red hair, sign held up.');
 
 /* People, built from 0.1 m voxels: square heads with pixel faces, front at +x. Each type has its own silhouette. */
 const personModel = (p) => ({V}, c) => {
