@@ -228,6 +228,8 @@ Comité de patronage reports · local vs outside contractor choice per job (one 
 4. **Valley and buildings**: every building window, requests and promises, crises, CEO car, opposition and marches, association and courses.
 5. **Financing and vote**: Bourse and announcements, grants, bank, utility, prices, canton target, the vote and endings. Then playtest rounds until two consecutive clean rounds.
 
+**Phase 1 (look) is done.** The world look is settled: per-pixel ground with three detail levels, the 640 × 480 m valley from a random seed, the locked buildings, vehicles and people. Fine tuning at the very end: pixelate everything a bit more (buildings, roads, ground) so it looks less stale, and make people slightly bigger than realistic.
+
 Old saves will not load in the new build.
 
 
