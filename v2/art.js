@@ -1140,5 +1140,8 @@ const LOGOS = {
 function outline(c, col){ const g = c.getContext('2d'), W = c.width, Hh = c.height, d = g.getImageData(0, 0, W, Hh), a = d.data, o = new Uint8Array(W*Hh), rgb = hex(col || '#2a2d33');
   for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++){ const i = (y*W + x)*4; if (a[i + 3]) continue; if ((x > 0 && a[i - 1]) || (x < W - 1 && a[i + 7]) || (y > 0 && a[i - W*4 + 3]) || (y < Hh - 1 && a[i + W*4 + 3])) o[y*W + x] = 1; }
   for (let j = 0; j < o.length; j++) if (o[j]){ a[j*4] = rgb[0]; a[j*4 + 1] = rgb[1]; a[j*4 + 2] = rgb[2]; a[j*4 + 3] = 255; } g.putImageData(d, 0, 0); }
-window.ART = {models:M, draw, outline, PAL, logos:LOGOS};
+// composing scenes from the locked assets: a kit of the building blocks used above
+const KIT = {M, place:placeModel, figure:figure3, turned, PROT, VILL, BLOC, GOON, RIOT, POSE, cowM, sheepFn, chickFn, horseFn, dogAt, bikeAt, bench, barricade, beech, spruce, fruitTree, bareBeech, snowy, sway, at, firstOf, flame, grass, f35At, rng, pick, hsh, cell, leafy};
+const compose = (W, D, fn) => ({cat:'s', n:'scene', W, D, parts:build(H => fn(H, KIT))});
+window.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose};
 })();
