@@ -3,7 +3,7 @@
    land in between. Built like the test corner: the ground is worked out for every pixel, the trees are the locked ones.
    ?s= resolution (px per metre), ?z= pixel enlargement, ?d= detail (default from the screen scale s·z: <8 far, <20 middle,
    ≥20 close), ?win=x0,y0,x1,y1 draws one part, ?works=1 adds a test drill site, a site in the forest and their new roads. */
-const Q = new URLSearchParams(location.search), S = Math.min(7, +(Q.get('s') || 2.5)), Z = +(Q.get('z') || 1), SCR = S*Z, LOD = +(Q.get('d') || (SCR >= 20 ? 3 : SCR >= 8 ? 2 : 1)), WORKS = Q.get('works') === '1';
+const Q = new URLSearchParams(location.search), S = Math.min(7, +(Q.get('s') || 2.5)), Z = +(Q.get('z') || 1), SCR = S*Z, LOD = +(Q.get('d') || (SCR >= 20 ? 3 : SCR >= 8 ? 2 : 1)), PROTEST = Q.get('scene') === 'protest', WORKS = Q.get('works') === '1' || PROTEST;
 const W = 640, D = 480;
 const SCENE = ART.compose(W, D, (H, K) => {
   // every game is a new valley: everything random comes from one seed (?seed= repeats a valley)
@@ -58,7 +58,9 @@ const SCENE = ART.compose(W, D, (H, K) => {
   const ROADS = [MAIN, NORTH, PAR, WEST, SOUTH, ROAD_A, ROAD_B, ROAD_C, ...LANES];
   // works: a test drill site in a field, one in the forest, and the new roads to them (they cut through whatever is there)
   const SITES = [], NEWROADS = [];
-  if (WORKS){ for (let i = 0; i < 300 && SITES.length < 1; i++){ const x = rr(40, 560), y = rr(axis(x) - 40, axis(x) + 20); if (Math.abs(x - TX) > 110 && far([x, y], VILLAGES, 80) && Math.abs(streamV(x, y)) > 20){ SITES.push([x, y - 30, x + 40, y]); NEWROADS.push(curve([[x + 20, yOn(MAIN, x + 20)], [x + 20, y]], 2.6)); } }
+  if (WORKS){ for (let i = 0; i < 400 && SITES.length < 1; i++){ const x = rr(40, 560), yr = yOn(MAIN, x + 20), y = yr + rr(12, 20);
+      const clearBox = [0, 0.25, 0.5, 0.75, 1].every(u => [0, 0.5, 1].every(v => { const px = x - 36 + u*80, py = y - 4 + v*42; return near(RAIL, px, py, 10) > 8 && near(MAIN, px, py, 10) > 5 && Math.abs(streamV(px, py)) > 8; }));
+      if (clearBox && Math.abs(x - TX) > 120 && far([x, y], VILLAGES, 80) && Math.abs(x - SVX) > 50){ SITES.push([x, y, x + 40, y + 30]); NEWROADS.push(curve([[x + 20, yr], [x + 20, y]], 2.6)); } }
     for (let i = 0; i < 300 && SITES.length < 2; i++){ const x = rr(40, 560), y = RID(x) - rr(70, 90); if (y > 8 && Math.abs(x - SVX) > 70 && far([x, y], VILLAGES, 90)){ SITES.push([x, y, x + 34, y + 24]); const x2 = x + 17, y2 = axis(x2) - 8; NEWROADS.push(curve([[x2 + 30, yOn(MAIN, x2 + 30)], [x2 + 20, lerp(y2, y, 0.4)], [x2 + 8, lerp(y2, y, 0.75)], [x2, y + 24]], 2.6)); } } }
   const ALLROADS = [...ROADS, ...NEWROADS], LEVELLED = [...ALLROADS, RAIL];
   // ---- settlements
@@ -224,7 +226,8 @@ const SCENE = ART.compose(W, D, (H, K) => {
   const shrub = (x, y, s) => { const z = hb(x, y) - 0.1; casters.push([x - 0.8*s*2, y - 0.8*s*2, x + 0.8*s*2, y + 0.8*s*2, 3*s]); H.SD(x - 1.6*s*2.6, x + 1.6*s*2.6, y - 1.6*s*2.6, y + 1.6*s*2.6, 0, 8*s, (px, py, pz) => K.beech((px - x)/1.6, (py - y)/1.6, pz + 1.2*s*1.6, s), {step:0.12, lift:z}); };
   const CG = 3.6; for (let i = 0; i <= W/CG; i++) for (let j = 0; j <= D/CG; j++){ const x = (i + 0.5 + 0.8*(hsh(i, j, 31) - 0.5))*CG, y = (j + 0.5 + 0.8*(hsh(i, j, 32) - 0.5))*CG; if (x < 1 || y < 1 || x > W - 1 || y > D - 1 || !forestM(x, y)) continue;
     const sp = hsh(i, j, 33) < 0.35 + 0.5*clamp((90 - y)/90, 0, 1), s = 0.85 + 0.35*hsh(i, j, 34); tree(x, y, sp ? 's' : 'b', s*(sp ? 1.05 : 1.1)); }
-  const free = (x, y, m) => !PROBE(x, y, m) && !roadNear(x, y, 1.5) && Math.abs(streamV(x, y)) > hw(x) + 0.6 && near(SIDE, x, y, 3) > 1.8 && !TRACKS.some(pl => near(pl, x, y, 3) < 2.2) && !forestM(x, y) && !inSite(x, y, 2) && !cleared(x, y);
+  const PZ = PROTEST && SITES[0] ? [SITES[0][0] - 34, SITES[0][1] - 8, SITES[0][2] + 4, SITES[0][3] + 12] : null;
+  const free = (x, y, m) => !(PZ && inBox(x, y, PZ, 2)) && !PROBE(x, y, m) && !roadNear(x, y, 1.5) && Math.abs(streamV(x, y)) > hw(x) + 0.6 && near(SIDE, x, y, 3) > 1.8 && !TRACKS.some(pl => near(pl, x, y, 3) < 2.2) && !forestM(x, y) && !inSite(x, y, 2) && !cleared(x, y);
   for (const pl of HEDGES) for (let t = 0; t < pl.length; t += 1){ const [px, py] = pl[t], x = px + (hsh(t, pl.length, 35) - 0.5)*1.2, y = py + (hsh(t, 1, 36) - 0.5)*1.2; if (hedgeM(x, y) && free(x, y, 1)){ if (hsh(t, pl.length, 37) < 0.06) tree(x, y, 'b', 1.15 + 0.3*hsh(t, 2, 38)); else if (LOD >= 2 || t % 2 === 0) shrub(x, y, 0.42 + 0.14*hsh(t, 3, 39)); } }
   for (let i = 0; i < 120; i++){ const x = r()*W, v = (r() < 0.5 ? -1 : 1)*(hw(x) + 1.8 + r()*1.4), y = ys(x) + v; if (y < D - 3 && free(x, y, 3)) tree(x, y, 'b', 0.6 + r()*0.3); }
   for (let i = 0; i < 40; i++){ const t = Math.floor(r()*SIDE.length), [px, py] = SIDE[t], x = px + (r() < 0.5 ? -1 : 1)*(2.6 + r()*1.5), y = py; if (free(x, y, 3)) tree(x, y, r() < 0.5 ? 'b' : 's', 0.6 + r()*0.3); }
@@ -262,6 +265,25 @@ const SCENE = ART.compose(W, D, (H, K) => {
       if ([[0, 0], [m.W, 0], [0, m.D], [m.W, m.D], [m.W/2, m.D/2]].every(([u, v]) => !roadNear(px + u, py + v, 0.3) && okSpot(px + u, py + v, 0.5))){ K.place(H, name, px, py, hb(px + m.W/2, py + m.D/2), null, true); break search; } } }
   for (const pl of [MAIN, ROAD_C, ROAD_A]) for (let sl = 30; sl < pl.cum[pl.cum.length - 1]; sl += 90){ const [x, y, ux] = atRoad(pl, sl, -pl.w*0.5); if (inTown(x, y) || Math.abs(ux) < 0.85 || !okSpot(x, y, 1)) continue; const nm = K.VARS.car[Math.floor(r()*K.VARS.car.length)], m = K.M.find(q => q.n === nm); K.place(H, nm, x - m.W/2, y - m.D/2, hb(x, y)); }
   { const q = nearP(MAIN, TX + 45, TYR, 60), [x, y] = atRoad(MAIN, q[3], -1.4); if (okSpot(x, y, 2)) K.place(H, 'Post bus', x - 4.5, y - 1.25, hb(x, y)); const [tx, ty] = atRoad(ROAD_A, 40, 0); K.place(H, 'Tractor with manure spreader', tx - 4.3, ty - 1.3, hb(tx, ty)); }
+  // ---- a protest at a rig: the rig on its pad behind a fence, the crowd in the field beside it with signs and flags behind a barricade,
+  // a line of riot police along the fence facing them, a second row, vans on the access road, a journalist, the drillers watching
+  if (PROTEST && SITES[0]){ const [sx0, sy0, sx1, sy1] = SITES[0], zs = hb((sx0 + sx1)/2, (sy0 + sy1)/2), HL = z => Object.assign(Object.create(H), {SD:(a, b, c, d, e, f, fn, o) => H.SD(a, b, c, d, e, f, fn, Object.assign({}, o, {lift:z}))});
+    K.place(H, 'Deep rig on its pad', sx0 + 3, sy0 + 3, zs, null, true); K.place(H, 'Site container', sx0 + 30, sy0 + 3, zs, null, true); K.place(H, 'Site container', sx0 + 30, sy0 + 9, zs, null, true);
+    casters.push([sx0 + 4, sy0 + 4, sx0 + 26, sy0 + 26, 20]);
+    const gx = (sx0 + sx1)/2; for (const [a, b] of [[[sx0, sy1], [sx1, sy1]], [[sx1, sy0], [sx1, sy1]], [[sx0, sy0], [sx0, sy1]], [[sx0, sy0], [gx - 3.5, sy0]], [[gx + 3.5, sy0], [sx1, sy0]]]){ const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1])/2.5);
+      for (let i = 0; i <= n; i++){ const x = lerp(a[0], b[0], i/n), y = lerp(a[1], b[1], i/n); H.B(x - 0.04, y - 0.04, zs, 0.08, 0.08, 2, '#8a9096'); if (i < n){ const x2 = lerp(a[0], b[0], (i + 1)/n), y2 = lerp(a[1], b[1], (i + 1)/n); for (const zz of [0.3, 1.0, 1.9]) H.L([[x, y, zs + zz], [x2, y2, zs + zz]], '#a9afb5', 0.3); } } }
+    const ok = (x, y) => !roadNear(x, y, 0.2) && !PROBE(x, y, 0.4) && x > 2 && y > 2 && x < W - 3 && y < D - 3 && Math.abs(streamV(x, y)) > hw(x) + 1;
+    K.barricade(HL(hb(sx0 - 10, sy0 + 15)), sx0 - 10, sy0 + 5, sy0 + 26, false);
+    for (let i = 0; i < 90; i++){ const x = sx0 - 11.5 - Math.sqrt(r())*11, y = sy0 + 4 + r()*(sy1 - sy0 - 6), o = K.PROT[Math.floor(r()*20)]; if (!ok(x, y)) continue; const z = hb(x + 0.75, y + 0.75);
+      K.figure(H, o, x - 0.75, y - 0.75, o.item === 'sign' || o.item === 'flag' ? (r() < 0.6 ? {armR:'up'} : {armR:'up', legs:['fwd', 'back']}) : (r() < 0.5 ? {armR:'fist'} : null), z); }
+    for (let i = 0; i < 6; i++){ const x = sx0 - 30 + r()*6, y = sy0 + r()*24; if (ok(x, y)) K.figure(H, K.VILL[Math.floor(r()*20)], x - 0.75, y - 0.75, null, hb(x, y)); }   // onlookers
+    for (let y = sy0 + 1; y < sy1 - 0.5; y += 0.95){ const x = sx0 - 2.2; if (ok(x, y) && ok(x - 1.5, y)) K.turned(H, K.RIOT, x - 0.75, y - 0.75, ((y - sy0) % 5) < 1 ? {armR:'strike'} : {armR:'down'}, hb(x, y)); }
+    for (let y = sy0 + 2; y < sy1 - 1; y += 2.6){ const x = sx0 + 0.6; if (x < sx0 + 2) K.turned(H, K.RIOT, x - 0.75, y - 0.75, {armR:'strike'}, zs); }
+    const off = K.M.find(q => q.n === 'Police officer').o, jo = K.M.find(q => q.n === 'Journalist (La Feuille)').o, dr = K.M.find(q => q.n === 'Driller').o;
+    K.turned(H, off, sx0 + 2.5, sy1 - 3, {armR:'forward'}, zs); K.figure(H, jo, sx0 - 12, sy1 + 4, {armR:'eye', armL:'eye'}, hb(sx0 - 12, sy1 + 4));
+    for (const [dx, dy] of [[24, 18], [25.4, 19.2], [27, 17.6]]) K.turned(H, dr, sx0 + dx, sy0 + dy, null, zs);
+    { const q = nearP(MAIN, gx, sy0, 60); [['Police van', 12], ['Riot police bus', 22], ['Police car', 34]].forEach(([name, ds]) => { const [mx, my] = atRoad(MAIN, q[3] + ds, 1.4), m = K.M.find(o => o.n === name); K.place(H, name, mx - m.W/2, my - m.D/2, hb(mx, my)); }); }
+    window.WORLD.site = SITES[0]; }
   // ---- light: sun direction, soft shade on slopes, darker hollows and feet of things, shadows, warm sun and cool shade, haze
   const L = [0.345, 0.636, 1], Ln = Math.hypot(...L), sx = 0.345/0.723, sy = 0.636/0.723, rise = 1/0.723;
   const colourAt = (x, y) => { const h = hb(x, y); let c = surface(x, y, kindAt(x, y));
