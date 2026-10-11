@@ -1,6 +1,6 @@
 # Jurafrackers 2.0 — Art register
 
-Phase 1 (look) is approved. All art lives in `v2/art.js` (`window.ART`): every model is built in code and drawn isometrically in four orientations. The old catalogue page (`v2/catalogue.html`) became too heavy to load and is no longer the place to review art; this file is the record of what exists and what was decided.
+Phase 1 (look) is approved and **locked**, logos included: do not change any approved art without the user asking for it. All art lives in `v2/art.js` (`window.ART`): every model is built in code and drawn isometrically in four orientations. The old catalogue page (`v2/catalogue.html`) became too heavy to load and is no longer the place to review art; this file is the record of what exists and what was decided.
 
 ## Style rules (decided with the user)
 
