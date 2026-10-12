@@ -72,7 +72,7 @@ function create(world, canvas, opts){ opts = opts || {};
     items.sort((a, b) => (a.o.flat ? -1e6 : 0) + a.depth - ((b.o.flat ? -1e6 : 0) + b.depth));
     for (const it of items){ const sx = (it.px - V.x0)*z, sy = (it.py - V.y0)*z; if (sx < -400 || sy < -400 || sx > canvas.width + 400 || sy > canvas.height + 400) continue;
       if (it.o.draw){ it.o.draw(g, sx, sy, z, L.S, V); continue; }
-      const e = it.e, x0 = Math.round(sx - e.ax*z), y0 = Math.round(sy - e.ay*z); g.drawImage(ART.spriteCanvas(e), x0, y0, e.w*z, e.h*z);
+      const e = it.e, x0 = Math.round(sx - e.ax*z), y0 = Math.round(sy - e.ay*z); if (it.o.alpha !== undefined) g.globalAlpha = it.o.alpha; g.drawImage(ART.spriteCanvas(e), x0, y0, e.w*z, e.h*z); g.globalAlpha = 1;
       if (!it.o.flat) for (const s of nearStatics(L, it.px - e.ax, it.py - e.ay, e.w, e.h)){ if (s.depth <= it.depth + 0.5) continue; const se = spriteOf(s, L.S), [rx, ry] = s.r[L.li]; g.drawImage(ART.spriteCanvas(se), Math.round((rx - V.x0)*z), Math.round((ry - V.y0)*z), se.w*z, se.h*z); } }
     // writing on walls, at screen scale, when it fits
     for (const o of visibleStatics(L, V)){ if (o.kind !== 'b') continue; const e = spriteOf(o, L.S); if (!e.texts.length) continue; const [rx, ry] = o.r[L.li]; ART.spriteTexts(g, e, (rx - V.x0)*z, (ry - V.y0)*z, z, L.S); }
