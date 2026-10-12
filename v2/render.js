@@ -5,12 +5,12 @@
 (function(){
 'use strict';
 const T = 256, PAD = 24, BASE = 8;
-const STEPS = [{li:0, z:1}, {li:1, z:1}, {li:2, z:1}, {li:2, z:2}, {li:2, z:3}, {li:2, z:4}, {li:2, z:6}];   // coarse pixels, enlarged when zooming in
+const STEPS = [{li:0, z:1}, {li:1, z:1}, {li:2, z:1}, {li:2, z:2}, {li:3, z:1}, {li:3, z:2}, {li:3, z:3}, {li:3, z:4}];   // rough far out and in the middle (pixels enlarged), full detail close
 function create(world, canvas, opts){ opts = opts || {};
-  const ART = globalThis.ART, W = world.W, D = world.D, FINE = opts.fine || 3;
-  const LEVELS = [1, 2, FINE].map((S, li) => { const top = world.zmax + 26, OX = D*S + PAD, OY = top*S + PAD, w = Math.ceil((W + D)*S + 2*PAD), h = Math.ceil(((W + D)/2 + top - world.zmin + BASE)*S + 2*PAD);
+  const ART = globalThis.ART, W = world.W, D = world.D, FINE = opts.fine || 6;
+  const LEVELS = [1, 2, 3, FINE].map((S, li) => { const top = world.zmax + 26, OX = D*S + PAD, OY = top*S + PAD, w = Math.ceil((W + D)*S + 2*PAD), h = Math.ceil(((W + D)/2 + top - world.zmin + BASE)*S + 2*PAD);
     return {li, S, OX, OY, w, h, tiles:new Map(), objs:null, tw:Math.ceil(w/T), th:Math.ceil(h/T)}; });
-  const lodOf = scr => scr >= 9 ? 3 : scr >= 4 ? 2 : 1;
+  const lodOf = scr => scr >= 20 ? 3 : scr >= 6 ? 2 : 1;
   const g = canvas.getContext('2d');
   const cam = {x:W/2, y:D/2, step:1};
   const lv = () => LEVELS[STEPS[cam.step].li], zf = () => STEPS[cam.step].z, scr = () => lv().S*zf();

@@ -126,7 +126,7 @@ const DESCR = {house:'Somebody lives here. They will have an opinion.', farm:'Co
   station:'Trains to the capital every hour, to the other villages twice a day.', substation:'Transformers humming behind a fence. Power from a plant would join the grid here.', church:'The bells ring on the hour.', school:'Children, a playground, a headteacher with views.'};
 G.DESCR = DESCR;
 // ---- vehicles: drive along the roads (then across the fields to the last point); speed in metres per day
-const VSPEED = {car:15, pickup:14, lorry:10, lowloader:7, bus:12, van:14, vibro:45, offroad:40};   // metres per game day: a car at 1x is a brisk drive, not a dart
+const VSPEED = {car:18, pickup:17, lorry:12, lowloader:8, bus:14, van:17, vibro:45, offroad:40};   // metres per game day: a car at 1x is a brisk drive, not a dart
 G.vehicle = (model, from, to, o) => { o = o || {}; const W = G.world, road = W.route(from, to, !!o.tracks); let pts = road ? road.slice() : [from.slice(0, 2), to.slice(0, 2)];
   if (road){ if (Math.hypot(pts[0][0] - from[0], pts[0][1] - from[1]) > 1) pts.unshift(from.slice(0, 2)); if (Math.hypot(pts[pts.length - 1][0] - to[0], pts[pts.length - 1][1] - to[1]) > 1) pts.push(to.slice(0, 2)); }
   const v = {id:++G.S.vehN, model, pts, s:0, speed:o.speed || VSPEED[o.kind || 'car'] || 70, kind:o.kind || 'car', done:o.done || null, arg:o.arg ?? null, name:o.name || null, keep:!!o.keep, tag:o.tag || null}; v.len = pathLen(pts); G.S.vehicles.push(v); return v; };
