@@ -19,7 +19,7 @@ function init(){ L = {walk:[], cars:[], train:{s:-1, next:1}}; const hs = G.home
 G.on('world', () => { L = null; });
 G.on('tick', dd => { if (!G.world || G.S.phase === 'drive' && !G.S.started) return; if (!L) init();
   for (const o of [...L.walk, ...L.cars]){ if (!o.pts){ o.wait -= dd; if (o.wait <= 0) trip(o); continue; } o.s += o.sp*dd; if (o.s >= o.len){ o.from = o.pts[o.pts.length - 1]; o.pts = null; o.wait = o.car ? 0.3 : 1 + Math.random()*3; } }
-  const T = L.train; if (T.s < 0){ T.next -= dd; if (T.next <= 0){ T.s = 0; T.dir = Math.random() < 0.5 ? 1 : -1; } } else { T.s += 380*dd; if (T.s > plen(G.world.rail) + 60){ T.s = -1; T.next = 2 + Math.random()*3; } } });
+  const T = L.train; if (T.s < 0){ T.next -= dd; if (T.next <= 0){ T.s = 0; T.dir = Math.random() < 0.5 ? 1 : -1; } } else { T.s += 60*dd; if (T.s > plen(G.world.rail) + 60){ T.s = -1; T.next = 2 + Math.random()*3; } } });
 G.on('dyn', dyn => { const W = G.world, S = G.S; if (!L || !W) return; const t = performance.now()/1000;
   for (const o of L.walk){ if (!o.pts) continue; const [x0, y0, dx, dy] = along(o.pts, o.s), d = Math.hypot(dx, dy) || 1, x = x0 - dy/d*o.side, y = y0 + dx/d*o.side; dyn.push({m:W.model(o.m), view:W.view16(dx, dy), x, y, z:W.hb(x, y) + Math.abs(Math.sin(t*5 + o.ph))*0.05}); }
   for (const o of L.cars){ if (!o.pts) continue; const [x0, y0, dx, dy] = along(o.pts, o.s), d = Math.hypot(dx, dy) || 1, x = x0 - dy/d*o.side, y = y0 + dx/d*o.side; dyn.push({m:W.model(o.m), view:W.view16(dx, dy), x, y, z:W.hb(x, y) + 0.05}); }
