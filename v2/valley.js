@@ -122,7 +122,7 @@ G.ceoGo = (bid, task, at) => { const S = G.S, b = bid !== null ? bById(bid) : {c
   const from = car ? G.vehPos(car).slice(0, 2) : [base.cx, base.cy]; if (car) S.vehicles.splice(S.vehicles.indexOf(car), 1);
   const v = G.vehicle('Company car (old 911)', from, [b.cx, b.cy], {kind:'car', keep:true, done:'ceoAt', arg:null}); v.name = 'Company car'; v.tag = 'car'; S.car = v.id; S.ceoTask = task; G.closeAll(); G.news('The CEO drives to ' + (b.role === 'spot' ? task.where || 'the site' : where(b)) + '.', {quiet:true}); return 'ok'; };
 // a building named in a sentence: “to the mairie of X”, “to La Feuille de la Faille”, “to the committee office”
-const where = b => b.role === 'mairie' ? 'the mairie of ' + pn(b.home) : b.role === 'newspaper' ? 'La Feuille de la Faille' : b.role === 'house' || b.role === 'farm' ? G.buildingTitle(b).replace(/^A /, 'a ') : 'the ' + G.buildingTitle(b)[0].toLowerCase() + G.buildingTitle(b).slice(1);
+const where = b => { const t = G.buildingTitle(b).replace(/, /, ' in '); return b.role === 'mairie' ? 'the mairie of ' + pn(b.home) : b.role === 'newspaper' ? 'La Feuille de la Faille' : b.role === 'house' || b.role === 'farm' ? t.replace(/^A /, 'a ') : /^(Ferme|Épicerie)/.test(t) ? t : 'the ' + t[0].toLowerCase() + t.slice(1); };
 G.where = where;
 G.vehicleDone.ceoAt = () => { const S = G.S, t = S.ceoTask; S.ceoTask = null; if (t && CEO[t.kind]) CEO[t.kind](t); const car = S.vehicles.find(v => v.id === S.car), base = G.company('bureau'); if (!car || !base) return;
   S.vehicles.splice(S.vehicles.indexOf(car), 1); const v = G.vehicle('Company car (old 911)', G.vehPos(car).slice(0, 2), [base.cx + 6, base.cy + 8], {kind:'car', keep:true}); v.name = 'Company car'; v.tag = 'car'; S.car = v.id; };
