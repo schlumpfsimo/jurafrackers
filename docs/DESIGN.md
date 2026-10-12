@@ -119,8 +119,8 @@ Carried over: moods per village, voter groups (higher/lower educated, farmers), 
 
 **World building (every game):**
 - Every game is a new valley from a random seed. The same seed gives the same valley.
-- The map is 640 × 480 m: a forested ridge at the back, the main valley with its stream and a railway, a side valley with its own stream, a wooded hill in front, and a lot of open land to build on.
-- One town on the valley road and three villages: one on the slope, one in the side valley, one across the stream.
+- The map is 640 × 480 m. The valley crosses it differently every game: west to east, north to south, or bending round a corner. From the seed come the width of its floor, the height and shape of each side (a plateau, a ridge, terraces or rolling ground), how far up the forest starts and how wooded the land is, up to two side valleys with their own streams, and one to three hills (sometimes a big one). There is always a stream, the valley road and a railway along the floor, and a lot of open land to build on.
+- One town on the valley road and three villages: one on the slope, one in a side valley (or high on the far side when there is none), one across the stream. The springs rise above them.
 - No collisions: nothing stands on a road, the railway, a stream or another building; trees, animals, cars and people keep clear too.
 - Rule 1: every type of house is on the map (all ordinary houses, all farms, all public buildings, the villa, the station, the substation).
 - Rule 2: each building stands where its function puts it:
@@ -128,7 +128,7 @@ Carried over: moods per village, voter groups (higher/lower educated, farmers), 
   - every village: mairie, chapel, shop and ordinary houses; the largest village also has a school
   - freestanding: farms in the open with a track to the nearest road, the lender's villa alone on the slope near the forest with its own drive, the substation outside the town by the valley road
 - Buildings that come during play (company campus, sites, gifts, damaged states, protest camps) are not part of the start.
-- Detail follows the zoom: far, middle, close. The finest resolution is 7 px per metre; zooming further only enlarges the pixels.
+- Detail follows the zoom: far, middle, close. The finest resolution is 6 px per metre; zooming further only enlarges the pixels.
 
 **Later:**
 - 16 views (directions) for every object, so vehicles follow curved roads and things can face any way.
@@ -228,7 +228,7 @@ Comité de patronage reports · local vs outside contractor choice per job (one 
 4. **Valley and buildings**: every building window, requests and promises, crises, CEO car, opposition and marches, association and courses.
 5. **Financing and vote**: Bourse and announcements, grants, bank, utility, prices, canton target, the vote and endings. Then playtest rounds until two consecutive clean rounds.
 
-**Phase 1 (look) is done.** The world look is settled: per-pixel ground with three detail levels, the 640 × 480 m valley from a random seed, the locked buildings, vehicles and people. Fine tuning done at the end: the finest level is 6 px per metre (was 7), the middle level 4 (was 4.8), people are drawn 1.2 times life size.
+**Phase 1 (look) is done.** The world look is settled: per-pixel ground with three detail levels, the 640 × 480 m valley from a random seed, the locked buildings, vehicles and people. Fine tuning done at the end: the finest level is 6 px per metre (was 7), the middle level 4 (was 4.8), people are drawn 1.2 times life size. Afterwards the valley itself became different every game (its course across the map, the shape of its sides, side valleys, hills, woods); a world takes about 1.5 s to make.
 
 **Phases 2–5 are built** (`v2/index.html`). Code map:
 

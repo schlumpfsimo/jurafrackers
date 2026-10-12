@@ -5,7 +5,7 @@
 'use strict';
 const $ = s => document.querySelector(s), clamp = (v, a, b) => v < a ? a : v > b ? b : v, lerp = (a, b, t) => a + (b - a)*t;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'})[c]);
-const CFG = {MONTH_SEC:40, DAYS:30, START_CASH:30000, SHARES:3000, START_YEAR:2027, END:120, SAVE:'jurafrackers2'};
+const CFG = {MONTH_SEC:40, DAYS:30, START_CASH:30000, SHARES:3000, START_YEAR:2027, END:120, SAVE:'jurafrackers2', V:2};   // V: the save format and the valley generator (an older save would come back in another valley)
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const COMPANY = 'Énergie-Géo Switzerland SA', ASSOC = 'Géothermie-Helvetica', PAPER = 'La Feuille de la Faille';
 const fmt = k => { const a = Math.abs(k); if (a < 0.5) return 'CHF 0'; return (k < 0 ? '−' : '') + 'CHF ' + (a >= 1000 ? (a/1000).toFixed(a >= 100000 ? 0 : 1).replace(/\.0$/, '') + ' M' : Math.round(a) + 'k'); };
@@ -24,7 +24,7 @@ const month = () => Math.floor(G.S.day/CFG.DAYS), dateStr = d => { const m = Mat
 G.month = month; G.dateStr = dateStr; G.monthsLeft = () => Math.max(0, CFG.END - month());
 G.dur = days => days < 10 ? Math.max(1, Math.round(days)) + (Math.round(days) === 1 ? ' day' : ' days') : days < 45 ? Math.round(days/7) + ' weeks' : Math.round(days/30) + ' months';
 // ---- state
-function newState(seed){ return {v:1, seed, day:0, speed:1, paused:false, cash:CFG.START_CASH, shares:CFG.SHARES, price:10, priceHist:[10], debt:0, loans:[], grants:[], contracts:[],
+function newState(seed){ return {v:CFG.V, seed, day:0, speed:1, paused:false, cash:CFG.START_CASH, shares:CFG.SHARES, price:10, priceHist:[10], debt:0, loans:[], grants:[], contracts:[],
   ledger:{cur:{}, last:{}, hist:[]}, news:[], phase:'drive', staff:[], staffN:0, vehicles:[], vehN:0, company:[], compN:0, changes:[], tips:{}, marks:[], heat:0, power:0, fc:[38, 52], names:null, flags:{}}; }
 // ---- names of the town, the villages and their buildings (from the seed)
 function nameValley(){ const r = ART.KIT.rng(G.S.seed + 99), pick = a => a[Math.floor(r()*a.length)], used = new Set(), uniq = a => { for (let i = 0; i < 50; i++){ const n = pick(a); if (!used.has(n)){ used.add(n); return n; } } return pick(a); };
@@ -213,7 +213,7 @@ function loop(now){ requestAnimationFrame(loop); const S = G.S; if (!S || !G.R) 
 // ---- save and load: the seed makes the valley; what the Company changed is replayed
 function save(){ try { const S = G.S; if (!S || S.over) return; const keep = Object.assign({}, S, {vehicles:S.vehicles.map(v => Object.assign({}, v)), company:S.company.map(c => Object.assign({}, c, {stat:undefined, dyn:undefined}))}); localStorage.setItem(CFG.SAVE, JSON.stringify(keep)); } catch (e){ console.warn('save', e); } }
 G.save = save;
-function load(){ try { const t = localStorage.getItem(CFG.SAVE); return t ? JSON.parse(t) : null; } catch (e){ return null; } }
+function load(){ try { const t = localStorage.getItem(CFG.SAVE), s = t ? JSON.parse(t) : null; return s && s.v === CFG.V ? s : null; } catch (e){ return null; } }
 // ---- start: the logo, the concession, the car, the Bureau
 function overlay(html, pause){ const o = $('#ovl'); o.innerHTML = html; o.classList.add('on'); G.overlayPause = pause !== false; return o; }
 G.overlay = overlay;

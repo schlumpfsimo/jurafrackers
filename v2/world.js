@@ -10,6 +10,8 @@ const ih = (a, b, c) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0,
 const FRONT = {0:[0, 1], 4:[-1, 0], 8:[0, -1], 12:[1, 0]};   // a model's front looks to +y; a view turns it
 const viewFacing = (fx, fy) => { let best = 0, bd = -9; for (const v of [0, 4, 8, 12]){ const d = FRONT[v][0]*fx + FRONT[v][1]*fy; if (d > bd){ bd = d; best = v; } } return best; };
 const view16 = (dx, dy) => (Math.round(Math.atan2(dy, dx)/(Math.PI/8)) % 16 + 16) % 16;    // the view that points a model's +x along (dx, dy)
+const viewFront = (fx, fy) => (Math.round((Math.atan2(fy, fx) - Math.PI/2)/(Math.PI/8)) % 16 + 16) % 16;   // the view that turns a model's front (+y) towards (fx, fy)
+const viewFacing8 = (fx, fy) => (Math.round(viewFront(fx, fy)/2)*2) % 16;   // the same, in steps of 45°
 
 function create(seed, opts){ opts = opts || {};
   const ART = globalThis.ART, K = ART.KIT, W = 640, D = 480, SEED = seed >>> 0, SI = (SEED % 99991) | 0;
@@ -31,113 +33,208 @@ function create(seed, opts){ opts = opts || {};
   const yOn = (pl, x) => { for (let i = 0; i < pl.length - 1; i++){ const [ax, ay] = pl[i], [bx, by] = pl[i + 1]; if ((x - ax)*(x - bx) <= 0 && ax !== bx) return ay + (by - ay)*(x - ax)/(bx - ax); } return pl[0][1]; };
   const atRoad = (pl, sl, off) => { let i = 1; while (i < pl.cum.length - 1 && pl.cum[i] < sl) i++; const [ax, ay] = pl[i - 1], [bx, by] = pl[i], L = Math.hypot(bx - ax, by - ay) || 1, t = clamp((sl - pl.cum[i - 1])/L, 0, 1), ux = (bx - ax)/L, uy = (by - ay)/L;
     return [ax + (bx - ax)*t - uy*(off || 0), ay + (by - ay)*t + ux*(off || 0), ux, uy]; };
-  // ---- the shape of the valley
-  const PH = Array.from({length:8}, () => r()*6.283), AX = rr(235, 268), TILT = rr(-0.045, 0.045), axis = x => AX + TILT*(x - 320), RID = x => 120 + 12*Math.sin(x/90 + PH[4]);
-  const ys = x => axis(x) + 34 + 10*Math.sin(x/45 + PH[0]) + 4*Math.sin(x/13 + PH[1]), dys = x => TILT + 10/45*Math.cos(x/45 + PH[0]) + 4/13*Math.cos(x/13 + PH[1]);
-  const ys2 = x => -10/2025*Math.sin(x/45 + PH[0]) - 4/169*Math.sin(x/13 + PH[1]), hw = x => 2.4 + 0.6*Math.sin(x/23 + PH[2]), streamV = (x, y) => (y - ys(x))/Math.sqrt(1 + dys(x)**2);
-  const SVX = r() < 0.5 ? rr(70, 150) : rr(490, 570), sv = y => SVX + 14*Math.sin(y/37 + PH[3]);
-  const SIDE = curve([[sv(-2), -2], ...[60, 120, 180].map(y => [sv(y), y]), [sv(axis(SVX) - 30), axis(SVX) - 30], [SVX + 8, ys(SVX + 8)]], 1.3, 'stream');
-  const HX = rr(90, 550), PX = HX < 320 ? 430 : 210;
-  const base0 = (x, y) => 30*sm(clamp((RID(x) - y)/120, 0, 1)) + 16*Math.exp(-((x - HX)**2/95**2 + (y - 455)**2/70**2)) + 9*sm(clamp((y - 330)/130, 0, 1))*sm(clamp((HX < 320 ? x - PX : PX - x)/160 + 0.5, 0, 1))
-    - 16*Math.exp(-((x - sv(y))**2)/34**2)*sm(clamp((axis(SVX) - 10 - y)/120, 0, 1)) + 8*(fbm(x/60, y/60, 3) - 0.5) + 2.5*(fbm(x/16, y/16, 4) - 0.5);
+  // ---- the shape of the valley, new every game. A valley axis crosses the map, in at one edge and out at another, straight or
+  //      bending; the stream meanders along it and flows downhill with it; the road and the railway follow it on the valley floor.
+  //      Each side climbs to a height of its own; side valleys bring their streams down; hills stand on the slopes. Positions are
+  //      taken in the valley's frame too: s along the axis, v across it (to its left).
+  const PH = Array.from({length:8}, () => r()*6.283);
+  const AXIS = (() => { const edgePt = (e, t) => e === 0 ? [t*W, 0] : e === 1 ? [W, t*D] : e === 2 ? [t*W, D] : [0, t*D], OUT = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+    let best = null;
+    const kind = r(), e0 = kind < 0.38 ? (r() < 0.5 ? 1 : 3) : kind < 0.68 ? (r() < 0.5 ? 0 : 2) : Math.floor(r()*4), e1 = kind < 0.68 ? (e0 + 2) % 4 : (e0 + (r() < 0.5 ? 1 : 3)) % 4;
+    for (let tries = 0; tries < 600; tries++){ const a = edgePt(e0, rr(0.18, 0.82)), b = edgePt(e1, rr(0.18, 0.82));
+      const ux = b[0] - a[0], uy = b[1] - a[1], L = Math.hypot(ux, uy); if (L < (kind < 0.68 ? 430 : 380)) continue; const nx_ = -uy/L, ny_ = ux/L, nb = r() < 0.5 ? 1 : 2, pts = [[a[0] + OUT[e0][0]*80, a[1] + OUT[e0][1]*80], a];
+      for (let k = 1; k <= nb; k++){ const t = k/(nb + 1), off = rr(-75, 75)*(tries > 300 ? 0.4 : 1); pts.push([a[0] + ux*t + nx_*off, a[1] + uy*t + ny_*off]); }
+      pts.push(b, [b[0] + OUT[e1][0]*80, b[1] + OUT[e1][1]*80]); let c;
+      if (kind >= 0.68){ // a bend: a smooth turn around the corner between the two edges (the inward lines meet at its control point)
+        const d0 = [-OUT[e0][0], -OUT[e0][1]], d1 = [-OUT[e1][0], -OUT[e1][1]], den = d0[0]*d1[1] - d0[1]*d1[0]; if (Math.abs(den) < 1e-6) continue; const t = ((b[0] - a[0])*d1[1] - (b[1] - a[1])*d1[0])/den, C = [a[0] + d0[0]*t, a[1] + d0[1]*t];
+        const bez = [[a[0] + OUT[e0][0]*80, a[1] + OUT[e0][1]*80]]; for (let k = 0; k <= 60; k++){ const u = k/60; bez.push([(1 - u)*(1 - u)*a[0] + 2*(1 - u)*u*C[0] + u*u*b[0], (1 - u)*(1 - u)*a[1] + 2*(1 - u)*u*C[1] + u*u*b[1]]); } bez.push([b[0] + OUT[e1][0]*80, b[1] + OUT[e1][1]*80]); c = curve(bez, 1, 'axis'); }
+      else c = curve(pts, 1, 'axis');
+      let ok = true; for (let i = 10; i < c.length - 10 && ok; i += 5){ const [x0, y0] = c[i - 10], [x1, y1] = c[i], [x2, y2] = c[i + 10], a1 = Math.atan2(y1 - y0, x1 - x0), a2 = Math.atan2(y2 - y1, x2 - x1); let da = Math.abs(a2 - a1); if (da > Math.PI) da = 2*Math.PI - da; if (da > 0.13) ok = false; }
+      const inner = c.filter(([x, y]) => x > 60 && y > 60 && x < W - 60 && y < D - 60).length*2; if (!ok || inner < 300) continue;
+      best = c; break; }
+    return best || curve([[-80, D*0.55], [-2, D*0.55], [W/2, D*0.5], [W + 2, D*0.45], [W + 80, D*0.45]], 1, 'axis'); })();
+  const AN = AXIS.length, AXC = AXIS.cum;
+  const axisAt = s => { s = clamp(s, 0, AXIS.len); let lo = 0, hi = AN - 1; while (hi - lo > 1){ const mid = (lo + hi) >> 1; if (AXC[mid] <= s) lo = mid; else hi = mid; }
+    const [ax, ay] = AXIS[lo], [bx, by] = AXIS[hi], L = AXC[hi] - AXC[lo] || 1, t = (s - AXC[lo])/L; return [ax + (bx - ax)*t, ay + (by - ay)*t, (bx - ax)/L, (by - ay)/L]; };
+  const P = (s, o) => { const [x, y, tx, ty] = axisAt(s); return [x - ty*o, y + tx*o]; };     // the point o metres to the left of the axis at s
+  let S0 = 0, S1 = AXIS.len; { const inside = i => AXIS[i][0] >= 0 && AXIS[i][1] >= 0 && AXIS[i][0] <= W && AXIS[i][1] <= D; let i = 0; while (i < AN - 1 && !inside(i)) i++; S0 = AXC[i]; let j = AN - 1; while (j > 0 && !inside(j)) j--; S1 = AXC[j]; }
+  // the frame of every 2 m of the map: how far along the axis, how far to its side (nearest point, refined around a coarse guess)
+  const FG = 2, fgx = W/FG + 1, fgy = D/FG + 1, FS = new Float32Array(fgx*fgy), FV = new Float32Array(fgx*fgy);
+  for (let j = 0; j < fgy; j++) for (let i = 0; i < fgx; i++){ const x = i*FG, y = j*FG; let bi = 0, bd = 1e18; for (let k = 0; k < AN; k += 6){ const dx = x - AXIS[k][0], dy = y - AXIS[k][1], d = dx*dx + dy*dy; if (d < bd){ bd = d; bi = k; } }
+    let q = null; for (let k = Math.max(0, bi - 8); k < Math.min(AN - 1, bi + 8); k++){ const z = segNear(AXIS, k, x, y); if (!q || z[0] < q[0]) q = z; } FS[j*fgx + i] = q[3]; FV[j*fgx + i] = q[0]*q[4]; }
+  let fS = 0, fV = 0; const frame = (x, y) => { const gx = clamp(x/FG, 0, fgx - 1.0001), gy = clamp(y/FG, 0, fgy - 1.0001), i = gx | 0, j = gy | 0, u = gx - i, w = gy - j, o = j*fgx + i, a = (1 - u)*(1 - w), b = u*(1 - w), c = (1 - u)*w, d = u*w;
+    fS = FS[o]*a + FS[o + 1]*b + FS[o + fgx]*c + FS[o + fgx + 1]*d; fV = FV[o]*a + FV[o + 1]*b + FV[o + fgx]*c + FV[o + fgx + 1]*d; };
+  // the stream: a meander about the axis; its width; the inside of its bends (gravel bars)
+  const MA = rr(5, 12), ML = rr(36, 60), MB = rr(2, 5), MS = rr(11, 17);
+  const mea = s => MA*Math.sin(s/ML + PH[0]) + MB*Math.sin(s/MS + PH[1]), mea1 = s => MA/ML*Math.cos(s/ML + PH[0]) + MB/MS*Math.cos(s/MS + PH[1]), mea2 = s => -MA/(ML*ML)*Math.sin(s/ML + PH[0]) - MB/(MS*MS)*Math.sin(s/MS + PH[1]);
+  const streamV = (x, y) => { frame(x, y); return (fV - mea(fS))/Math.sqrt(1 + mea1(fS)**2); };
+  const hw = (x, y) => { if (y === undefined) return 2.7; frame(x, y); return 2.4 + 0.6*Math.sin(fS/23 + PH[2]); };
+  const bendAt = (x, y) => { frame(x, y); return mea2(fS); };
+  // the valley floor, and each side's height and steepness; the side towards the back of the view is more often the high one
+  const F0 = rr(44, 74), F1 = rr(0, 14), FL0 = rr(80, 170), Fw = s => F0 + F1*Math.sin(s/FL0 + PH[3]);
+  const [, , mtx, mty] = axisAt((S0 + S1)/2), BACK = mty - mtx > 0 ? 1 : -1, AH = {}, SWD = {};
+  AH[BACK] = rr(24, 48); AH[-BACK] = r() < 0.35 ? rr(22, 40) : rr(9, 24); SWD[1] = rr(85, 175); SWD[-1] = rr(85, 175);
+  const FLH = {1:Math.max(15, AH[1]*rr(0.45, 0.78)), '-1':Math.max(15, AH[-1]*rr(0.45, 0.78))}, PROF = {1:['plateau', 'ridge', 'terrace', 'rolling'][Math.floor(r()*4)], '-1':['plateau', 'ridge', 'terrace', 'rolling'][Math.floor(r()*4)]};
+  const CREST = {1:rr(20, 90), '-1':rr(20, 90)}, WOODY = {1:rr(0.35, 0.65), '-1':rr(0.35, 0.65)};   // where a ridge's crest lies beyond the slope; how wooded the uplands are
+  const sideH = (sd, d, F, x, y) => { const A = AH[sd], W_ = SWD[sd], up = sm(clamp((d - F)/W_, 0, 1)), pr = PROF[sd];
+    if (pr === 'ridge') return A*up*(1 - 0.5*sm(clamp((d - F - W_ - CREST[sd])/110, 0, 1))) + 10*(fbm(x/120, y/120, 5) - 0.5)*up;
+    if (pr === 'terrace') return A*(0.5*sm(clamp((d - F)/(W_*0.4), 0, 1)) + 0.5*sm(clamp((d - F - W_*0.7)/(W_*0.35), 0, 1))) + 8*(fbm(x/140, y/140, 5) - 0.5)*up;
+    if (pr === 'rolling') return A*0.7*up + 22*(fbm(x/90, y/90, 5) - 0.5)*up;
+    return A*up + 13*(fbm(x/140, y/140, 5) - 0.5)*up; };
+  // downhill with the stream: the axis runs from its source end to its mouth end
+  const UPX = AXIS[0][0] - AXIS[AN - 1][0], UPY = AXIS[0][1] - AXIS[AN - 1][1], UPL = Math.hypot(UPX, UPY), TR = rr(0.012, 0.034), trendAt = (x, y) => TR*((x - W/2)*UPX + (y - D/2)*UPY)/UPL;
+  // the road side, the road and the railway offsets from the axis (the railway on the uphill side of the road)
+  const RS = r() < 0.5 ? 1 : -1, oRoad = s => RS*(Math.max(0.42*Fw(s), RS*mea(s) + 25) + 4*Math.sin(s/70 + PH[5])), oRail = s => oRoad(s) + RS*(46 + 5*Math.sin(s/110 + PH[6]));
+  // the town: on the road, its centre a little uphill, where there is room around it
+  let ST = (S0 + S1)/2; for (let t = 0; t < 400; t++){ const s = rr(S0 + 110, S1 - 110), c = P(s, oRoad(s) + RS*12); if (c[0] > 120 && c[0] < W - 120 && c[1] > 95 && c[1] < D - 95){ ST = s; break; } }
+  const TOWNC = P(ST, oRoad(ST) + RS*12);
+  // side valleys: none, one or two, each with its stream coming down to the main one at an angle, from upstream
+  const SIDES = [], SVD = []; { const n = r() < 0.15 ? 0 : r() < 0.6 ? 1 : 2;
+    for (let k = 0, t = 0; k < n && t < 120; t++){ const sj = rr(S0 + 70, S1 - 70), sd = r() < 0.5 ? 1 : -1; if (Math.abs(sj - ST) < 150 || SVD.some(q => Math.abs(q.s - sj) < 170)) continue;
+      const J = P(sj, mea(sj)), [, , tx, ty] = axisAt(sj), phi = rr(0.15, 0.65); let a = Math.atan2(tx*sd*Math.cos(phi) - ty*Math.sin(phi), -ty*sd*Math.cos(phi) - tx*Math.sin(phi)), x = J[0], y = J[1], L = rr(170, 320), pts = [[x, y]], ok = true;
+      for (let d = 0; d < L; d += 6){ a += rr(-0.08, 0.08); x += Math.cos(a)*6; y += Math.sin(a)*6; pts.push([x, y]); frame(clamp(x, 0, W), clamp(y, 0, D)); if (d > 60 && Math.abs(fV) < Fw(fS) + 20) ok = false; if (Math.hypot(x - TOWNC[0], y - TOWNC[1]) < 120) ok = false; if (x < -16 || y < -16 || x > W + 16 || y > D + 16) break; }
+      if (!ok || pts.length < 25) continue; SIDES.push(curve(pts.reverse(), 1.3, 'stream')); SVD.push({s:sj, side:sd, depth:rr(10, 18), width:rr(24, 40)}); k++; } }
+  // the side streams' distance field (2 m), and how far along each the point lies (0 at the spring, 1 at the mouth)
+  const SDS = new Float32Array(fgx*fgy).fill(999), SDK = new Int8Array(fgx*fgy).fill(-1), SDT = new Float32Array(fgx*fgy);
+  SIDES.forEach((pl, k) => { const R = 110; for (let i = 0; i < pl.length - 1; i++){ const [ax, ay] = pl[i], [bx, by] = pl[i + 1];
+    for (let gj = Math.max(0, Math.floor((Math.min(ay, by) - R)/FG)); gj <= Math.min(fgy - 1, Math.ceil((Math.max(ay, by) + R)/FG)); gj++) for (let gi = Math.max(0, Math.floor((Math.min(ax, bx) - R)/FG)); gi <= Math.min(fgx - 1, Math.ceil((Math.max(ax, bx) + R)/FG)); gi++){
+      const q = segNear(pl, i, gi*FG, gj*FG), o = gj*fgx + gi; if (q[0] < SDS[o]){ SDS[o] = q[0]; SDK[o] = k; SDT[o] = q[3]/pl.len; } } } });
+  let sK = -1, sT = 0; const sideD = (x, y) => { const gx = clamp(x/FG, 0, fgx - 1.0001), gy = clamp(y/FG, 0, fgy - 1.0001), i = gx | 0, j = gy | 0, u = gx - i, w = gy - j, o = j*fgx + i, near_ = u < 0.5 ? (w < 0.5 ? o : o + fgx) : (w < 0.5 ? o + 1 : o + fgx + 1);
+    sK = SDK[near_]; sT = SDT[near_]; return SDS[o]*(1 - u)*(1 - w) + SDS[o + 1]*u*(1 - w) + SDS[o + fgx]*(1 - u)*w + SDS[o + fgx + 1]*u*w; };
+  // hills on the slopes and the uplands, away from the floor and the town
+  const HILLS = []; { const n = Math.floor(rr(1, 4)); for (let t = 0; t < 200 && HILLS.length < n; t++){ const x = rr(30, W - 30), y = rr(30, D - 30); frame(x, y); if (Math.abs(fV) < Fw(fS) + 45 || Math.hypot(x - TOWNC[0], y - TOWNC[1]) < 170) continue; HILLS.push(r() < 0.25 ? [x, y, rr(22, 34), rr(70, 110)] : [x, y, rr(8, 19), rr(45, 95)]); } }
+  // the height of the ground, before anything is built: computed once on a 1 m grid, then read from it
+  const base0a = (x, y) => { frame(x, y); const s = fS, v = fV, sd = v >= 0 ? 1 : -1, d = Math.abs(v), F = Fw(s);
+    let h = trendAt(x, y) + 1.4*Math.min(1, (d/F)**2), slopeH = sideH(sd, d, F, x, y); const sdd = sideD(x, y);
+    if (sdd < 110 && sK >= 0){ const q = SVD[sK], cut = Math.min(q.depth*(0.45 + 0.55*sT), 0.85*Math.max(0, slopeH) + 1.5)*Math.exp(-((sdd/q.width)**2))*sm(clamp((d - F*0.5)/50, 0, 1)); slopeH -= cut; }
+    h += slopeH; for (const [hx, hy, hh_, hr] of HILLS) h += hh_*Math.exp(-((x - hx)**2 + (y - hy)**2)/(hr*hr));
+    return h + 8*(fbm(x/60, y/60, 3) - 0.5) + 2.5*(fbm(x/16, y/16, 4) - 0.5); };
+  const B0 = new Float32Array(fgx*fgy); for (let j = 0; j < fgy; j++) for (let i = 0; i < fgx; i++) B0[j*fgx + i] = base0a(i*FG, j*FG);
+  const base0 = (x, y) => { const gx = clamp(x/FG, 0, fgx - 1.0001), gy = clamp(y/FG, 0, fgy - 1.0001), i = gx | 0, j = gy | 0, u = gx - i, w = gy - j, o = j*fgx + i; return B0[o]*(1 - u)*(1 - w) + B0[o + 1]*u*(1 - w) + B0[o + fgx]*(1 - u)*w + B0[o + fgx + 1]*u*w; };
   const slope = (x, y) => Math.hypot(base0(x + 1, y) - base0(x - 1, y), base0(x, y + 1) - base0(x, y - 1))/2;
-  // ---- the valley road, the railway along the foot of the slope
-  const MAIN = curve(Array.from({length:9}, (_, i) => { const x = i === 0 ? -2 : i === 8 ? 642 : i*80 + rr(-10, 10); return [x, axis(x) - 8 + 6*Math.sin(x/70 + PH[5]) + rr(-3, 3)]; }), 2.8, 'main');
-  const RAIL = curve(Array.from({length:7}, (_, i) => { const x = i === 0 ? -2 : i === 6 ? 642 : i*107; return [x, axis(x) - 46 + 5*Math.sin(x/110 + PH[6])]; }), 1.6, 'rail');
-  // ---- settlements: one town on the valley road, a village on the slope, one in the side valley, one across the stream
+  const above = (x, y) => base0(x, y) - trendAt(x, y);   // height above the valley floor's level
+  const uphill = (x, y, dist) => { for (let t = 0; t < dist; t += 5){ const gx = base0(x + 2, y) - base0(x - 2, y), gy = base0(x, y + 2) - base0(x, y - 2), g = Math.hypot(gx, gy) || 1; x = clamp(x + gx/g*5, 12, W - 12); y = clamp(y + gy/g*5, 12, D - 12); } return [x, y]; };
+  // lines across the map: clipped to it, keeping the longest stretch inside
+  const clipIn = pts => { const inside = ([x, y]) => x >= -2 && y >= -2 && x <= W + 2 && y <= D + 2; let best = [], cur = [];
+    for (let i = 0; i < pts.length; i++){ if (inside(pts[i])){ if (!cur.length && i > 0) cur.push(edgeCut(pts[i - 1], pts[i])); cur.push(pts[i]); } else if (cur.length){ cur.push(edgeCut(pts[i], pts[i - 1])); if (cur.length > best.length) best = cur; cur = []; } }
+    if (cur.length > best.length) best = cur; return best; };
+  const edgeCut = (o, i) => { let lo = 0, hi = 1; for (let k = 0; k < 30; k++){ const m = (lo + hi)/2, p = [lerp(i[0], o[0], m), lerp(i[1], o[1], m)]; if (p[0] >= -2 && p[1] >= -2 && p[0] <= W + 2 && p[1] <= D + 2) lo = m; else hi = m; } return [lerp(i[0], o[0], lo), lerp(i[1], o[1], lo)]; };
+  const along = (fo, step) => { const out = []; for (let s = 0; s <= AXIS.len; s += step) out.push(P(s, fo(s))); out.push(P(AXIS.len, fo(AXIS.len))); return out; };
+  // ---- the valley road, the railway along the foot of the slope (straight where the station stands), the stream as a line
+  const MAIN = finish(clipIn(curve(along(oRoad, 40), 2.8, 'main')), 2.8, 'main');
+  const STREAM = finish(clipIn(along(mea, 4)), 2.7, 'river');
+  const sx0 = ST + rr(-6, 6), TT = axisAt(sx0), Q = (ds, dn) => P(sx0 + ds, oRoad(sx0 + ds) + RS*dn);   // town coordinates: ds along the road, dn uphill of it
+  const TN = [-TT[3]*RS, TT[2]*RS];   // the uphill normal at the town
+  let RAIL = finish(clipIn(curve(along(oRail, 50), 1.6, 'rail')), 1.6, 'rail');
+  const STA = (() => { const sr = sx0 + rr(14, 24), c = P(sr, oRail(sr)), q = nearP(RAIL, c[0], c[1], 1e9), [, , ux, uy] = atRoad(RAIL, q[3]), k = Math.round(Math.atan2(uy, ux)/(Math.PI/8)), a = k*Math.PI/8, u = [Math.cos(a), Math.sin(a)];
+    const out = RAIL.map(p => p.slice(0, 2)); for (let i = 0; i < RAIL.length; i++){ const ds = RAIL.cum[i] - q[3], ad = Math.abs(ds); if (ad > 40) continue; const w = ad <= 18 ? 1 : 1 - sm((ad - 18)/22); out[i] = [lerp(RAIL[i][0], q[1] + u[0]*ds, w), lerp(RAIL[i][1], q[2] + u[1]*ds, w)]; }
+    RAIL = finish(out, 1.6, 'rail'); let n = [-u[1], u[0]]; if (n[0]*TN[0] + n[1]*TN[1] < 0) n = [-n[0], -n[1]]; return {x:q[1], y:q[2], n}; })();
+  // ---- settlements: one town on the valley road, a village on the slope, one up a side valley (or high on the far side), one across the stream
   const far = (p, list, d) => list.every(q => !q || Math.hypot(p[0] - q[0], p[1] - q[1]) > d);
-  let TX = 320; for (let i = 0; i < 200; i++){ TX = rr(200, 440); if (Math.abs(TX - SVX) > 120) break; }
-  const TYR = yOn(MAIN, TX), TOWN = [TX, TYR - 12, 72, 52];
-  let VA = null, VB = null, VC = null;
-  for (let i = 0; i < 400 && !VA; i++){ const x = rr(50, 590), y = RID(x) + rr(5, 30); if (Math.abs(x - TX) > 170 && Math.abs(x - SVX) > 80 && slope(x, y) < 0.5) VA = [x, y, 32]; }
-  for (let i = 0; i < 400 && !VB; i++){ const y = rr(80, 125), x = sv(y) + 16; if (far([x, y], [VA, TOWN], 150)) VB = [x, y, 28]; }
-  for (let i = 0; i < 400 && !VC; i++){ const x = rr(60, 580), y = rr(350, 405); if (Math.abs(x - TX) > 150 && Math.abs(x - HX) > 130 && far([x, y], [VA, VB, TOWN], 150)) VC = [x, y, 32]; }
-  VA = VA || [100, 140, 32]; VB = VB || [sv(100) + 16, 100, 28]; VC = VC || [560, 380, 32];
+  const inMap = (p, m) => p[0] > m && p[1] > m && p[0] < W - m && p[1] < D - m;
+  const TOWN = [TOWNC[0], TOWNC[1], 72, 52, Math.atan2(TT[3], TT[2])];
+  let VA = null, VB = null, VC = null, VBside = null;
+  for (let i = 0; i < 600 && !VA; i++){ const s = rr(S0 + 50, S1 - 50); if (Math.abs(s - ST) < 170 - i/8) continue; const p = P(s, oRail(s) + RS*rr(24, 75)); if (inMap(p, 48) && slope(p[0], p[1]) < 0.5 && sideD(p[0], p[1]) > 45 && far(p, [TOWNC], 150)) VA = [p[0], p[1], 32]; }
+  for (let i = 0; i < 400 && !VB && SIDES.length; i++){ const k = Math.floor(r()*SIDES.length), pl = SIDES[k], d = rr(90, 170), sl = pl.len - d; if (sl < 10) continue; const bank = r() < 0.5 ? 1 : -1, [x, y, ux, uy] = atRoad(pl, sl, bank*16), p = [x, y];
+    if (inMap(p, 45) && slope(x, y) < 0.5 && far(p, [VA, TOWNC], 150)) { VB = [x, y, 28]; VBside = {k, sl, bank}; } }
+  for (let i = 0; i < 600 && !VB; i++){ const s = rr(S0 + 50, S1 - 50), p = P(s, -RS*(Fw(s) + rr(20, 75))); if (inMap(p, 48) && slope(p[0], p[1]) < 0.5 && sideD(p[0], p[1]) > 40 && far(p, [VA, TOWNC], 150)) VB = [p[0], p[1], 28]; }
+  for (let i = 0; i < 800 && !VC; i++){ const s = rr(S0 + 50, S1 - 50), lim = Math.max(80, 150 - i/6); if (Math.abs(s - ST) < lim) continue; const p = P(s, -RS*rr(0.45*Fw(s), Fw(s) + 25)); if (inMap(p, 45) && slope(p[0], p[1]) < 0.5 && sideD(p[0], p[1]) > 35 && Math.abs(streamV(p[0], p[1])) > 22 && far(p, [VA, VB, TOWNC], lim)) VC = [p[0], p[1], 32]; }
+  const anySpot = (avoid, rad) => { for (let i = 0; i < 4000; i++){ const p = [rr(55, W - 55), rr(55, D - 55)]; if (slope(p[0], p[1]) < 0.45 && Math.abs(streamV(p[0], p[1])) > 22 && sideD(p[0], p[1]) > 30 && near(MAIN, p[0], p[1], 40) > 30 && near(RAIL, p[0], p[1], 40) > 26 && far(p, avoid, Math.max(90, 150 - i/40))) return [p[0], p[1], rad]; } return [W/2, D/2, rad]; };
+  VA = VA || anySpot([TOWNC, VB, VC], 32); VB = VB || anySpot([TOWNC, VA, VC], 28); VC = VC || anySpot([TOWNC, VA, VB], 32);
   const VILLAGES = [VA, VB, VC];
   // ---- town streets and the lanes to the villages
-  const NX = TX + rr(-6, 6), SQ = [NX, TYR - 16];
-  const NORTH = curve([[NX, TYR], [NX + rr(-3, 3), TYR - 24], [NX + rr(-6, 6), TYR - 48], [NX + rr(-12, 12), TYR - 64]], 2.3, 'street');
-  const PAR = curve([[TX - 58, TYR - 31 + rr(-3, 3)], [TX - 20, TYR - 32], [NX, TYR - 32], [TX + 30, TYR - 31], [TX + 54, TYR - 28 + rr(-3, 3)]], 2.2, 'street');
-  const WEST = curve([[TX - 70, yOn(MAIN, TX - 70)], [TX - 64, TYR - 22], [TX - 58, PAR[0][1]]], 2.2, 'street');
-  const SX = TX + rr(16, 30), SOUTH = curve([[SX, yOn(MAIN, SX)], [SX + rr(-4, 4), yOn(MAIN, SX) + 14], [SX + rr(-6, 6), ys(SX) - 9]], 2.2, 'street');
-  const zig = (x0, y0, x1, y1, amp) => { const n = Math.max(2, Math.ceil(Math.abs(y1 - y0)/28)), pts = [[x0, y0]]; for (let k = 1; k < n; k++) pts.push([lerp(x0, x1, k/n) + (k % 2 ? amp : -amp), lerp(y0, y1, k/n)]); pts.push([x1, y1]); return pts; };
-  const xa = clamp(VA[0] + rr(-30, 30), 10, 630), ROAD_A = curve([...zig(xa, yOn(MAIN, xa), VA[0], VA[1], 20), [VA[0] + rr(-25, 25), VA[1] - 24]], 2.1, 'lane');
-  const xb = sv(axis(SVX)) + 16, ROAD_B = curve([[xb, yOn(MAIN, xb)], ...[0.25, 0.5, 0.75].map(t => { const y = lerp(yOn(MAIN, xb), VB[1], t); return [sv(y) + 16, y]; }), [VB[0], VB[1]], [sv(VB[1] - 26) + 16, VB[1] - 26]], 2.1, 'lane');
-  const xc = clamp(VC[0] + rr(-40, 40), 10, 630), ROAD_C = curve([[xc, yOn(MAIN, xc)], [lerp(xc, VC[0], 0.3), ys(lerp(xc, VC[0], 0.3)) - 10], [lerp(xc, VC[0], 0.4), ys(lerp(xc, VC[0], 0.4)) + 12], [VC[0], VC[1]], [VC[0] + rr(-20, 20), VC[1] + 24]], 2.2, 'lane');
-  const LANES = VILLAGES.map(([vx, vy]) => { const dir = r() < 0.5 ? 1 : -1; return curve([[vx, vy], [vx + dir*14, vy + rr(-6, 6)], [vx + dir*30, vy + rr(-10, 10)]], 1.9, 'lane'); });
+  const SQ = Q(0, 16);
+  const NORTH = curve([Q(0, 0), Q(rr(-3, 3), 24), Q(rr(-6, 6), 48), Q(rr(-12, 12), 64)], 2.3, 'street');
+  const PAR0 = 31 + rr(-3, 3), PAR = curve([Q(-58, PAR0), Q(-20, 32), Q(0, 32), Q(30, 31), Q(54, 28 + rr(-3, 3))], 2.2, 'street');
+  const WEST = curve([Q(-70, 0), Q(-64, 22), Q(-58, PAR0)], 2.2, 'street');
+  const SOUTH = (() => { const ds = rr(16, 30), s = sx0 + ds; return curve([Q(ds, 0), Q(ds + rr(-4, 4), -14), P(s + rr(-6, 6), mea(s) + RS*9)], 2.2, 'street'); })();
+  const zig = (a, b, amp) => { const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1, nx_ = -dy/L, ny_ = dx/L, n = Math.max(2, Math.ceil(L/30)), pts = [a]; for (let k = 1; k < n; k++){ const o = (k % 2 ? amp : -amp); pts.push([lerp(a[0], b[0], k/n) + nx_*o, lerp(a[1], b[1], k/n) + ny_*o]); } pts.push(b); return pts; };
+  const vS = p => { frame(p[0], p[1]); return fS; };
+  const ROAD_A = (() => { const sa = vS(VA) + rr(-30, 30), a = P(sa, oRoad(sa)), up = uphill(VA[0], VA[1], 24); return curve([...zig(a, [VA[0], VA[1]], 16), [up[0] + rr(-8, 8), up[1] + rr(-6, 6)]], 2.1, 'lane'); })();
+  const ROAD_B = (() => { if (VBside){ const pl = SIDES[VBside.k], sj = vS(pl[pl.length - 1]), pts = [P(sj + 18, oRoad(sj + 18))]; for (let sl = pl.len - 28; sl > VBside.sl - 26; sl -= 28) pts.push(atRoad(pl, Math.max(4, sl), VBside.bank*16).slice(0, 2)); return curve(pts, 2.1, 'lane'); }
+    const sb = vS(VB), a = P(sb + 20, oRoad(sb + 20)), up = uphill(VB[0], VB[1], 26); return curve([a, P(sb + 10, mea(sb + 10) + RS*12), P(sb + 4, mea(sb + 4) - RS*12), [VB[0], VB[1]], up], 2.1, 'lane'); })();
+  const ROAD_C = (() => { const sc = vS(VC), s0 = sc + rr(-40, 40), m1 = lerp(s0, sc, 0.3), m2 = lerp(s0, sc, 0.4), up = uphill(VC[0], VC[1], 24); return curve([P(s0, oRoad(s0)), P(m1, mea(m1) + RS*10), P(m2, mea(m2) - RS*12), [VC[0], VC[1]], up], 2.2, 'lane'); })();
+  const LANES = VILLAGES.map(([vx, vy]) => { const a = r()*6.283, b = a + rr(-0.4, 0.4); return curve([[vx, vy], [vx + Math.cos(a)*14, vy + Math.sin(a)*14], [vx + Math.cos(a)*14 + Math.cos(b)*16, vy + Math.sin(a)*14 + Math.sin(b)*16]], 1.9, 'lane'); });
   const ROADS = [MAIN, NORTH, PAR, WEST, SOUTH, ROAD_A, ROAD_B, ROAD_C, ...LANES], NEWROADS = [], TRACKS = [];
   const allRoads = () => [...ROADS, ...NEWROADS];
   // ---- settlements as areas
-  const inSettle = (x, y, m) => Math.hypot((x - TOWN[0])/(TOWN[2] + m), (y - TOWN[1])/(TOWN[3] + m)) < 1 || VILLAGES.some(([cx, cy, rad]) => Math.hypot(x - cx, y - cy) < rad + m);
-  const inTown = (x, y) => Math.hypot((x - TOWN[0])/(TOWN[2] - 6), (y - TOWN[1])/(TOWN[3] - 6)) < 1;
+  const TCA = Math.cos(TOWN[4]), TSA = Math.sin(TOWN[4]), townE = (x, y, a, b) => { const dx = x - TOWN[0], dy = y - TOWN[1]; return Math.hypot((dx*TCA + dy*TSA)/a, (-dx*TSA + dy*TCA)/b); };
+  const inSettle = (x, y, m) => townE(x, y, TOWN[2] + m, TOWN[3] + m) < 1 || VILLAGES.some(([cx, cy, rad]) => Math.hypot(x - cx, y - cy) < rad + m);
+  const inTown = (x, y) => townE(x, y, TOWN[2] - 6, TOWN[3] - 6) < 1;
   const SITES = [];   // the Company's pads: {cx, cy, w, d, a (angle), z}
   const inSiteBox = (s, x, y, m) => { const dx = x - s.cx, dy = y - s.cy, ca = Math.cos(s.a), sa = Math.sin(s.a), u = dx*ca + dy*sa, v = -dx*sa + dy*ca; return Math.abs(u) <= s.w/2 + m && Math.abs(v) <= s.d/2 + m; };
   const inSite = (x, y, m) => SITES.some(s => inSiteBox(s, x, y, m));
-  const rock = (x, y) => (y < RID(x) + 55 || (Math.abs(x - SVX) < 70 && y < axis(SVX))) && !inSettle(x, y, 10) ? clamp((fbm(x/8, y/8, 9) - 0.6)*5, 0, 1)*clamp((slope(x, y) - 0.3)*4, 0, 1) : 0;
+  // rock: steep ground high up, and the walls of the side valleys
+  const rock = (x, y) => { const f = clamp((fbm(x/8, y/8, 9) - 0.6)*5, 0, 1); if (!f) return 0; const sl = slope(x, y); if (sl < 0.3 || inSettle(x, y, 10)) return 0; frame(x, y); if (above(x, y) < FLH[fV >= 0 ? 1 : -1] - 8 && sideD(x, y) > 45) return 0; return f*clamp((sl - 0.3)*4, 0, 1); };
   // ---- levelled ground: building plots and pads; roads and the railway are cut into the slope (flat across, smooth along)
   const flats = [], FB = new Map(); const addFlat = f => { flats.push(f); const [x0, y0, x1, y1, , m] = f; for (let i = Math.floor((x0 - m)/16); i <= Math.floor((x1 + m)/16); i++) for (let j = Math.floor((y0 - m)/16); j <= Math.floor((y1 + m)/16); j++){ const k = i*1000 + j; if (!FB.has(k)) FB.set(k, []); FB.get(k).push(f); } return f; };
   const level = (x0, y0, x1, y1, m, z) => addFlat([x0, y0, x1, y1, z ?? base0((x0 + x1)/2, (y0 + y1)/2), m || 4])[4];
-  const levelled = () => [...allRoads(), RAIL];
-  const roadLevel = (x, y, h) => { for (const pl of levelled()){ const q = nearP(pl, x, y, pl.w + 4); if (!q || q[0] > pl.w + 4) continue; const zc = base0(q[1], q[2]), t = q[0] < pl.w + 0.6 ? 0 : sm((q[0] - pl.w - 0.6)/3.4); h = zc + (h - zc)*t; } return h; };
-  const onLevelled = (x, y, m) => levelled().some(pl => near(pl, x, y, pl.w + m) < pl.w + m);
+  const LEVELLED = {track:0, stream:0, hedge:0};   // roads and the rail are levelled (looked up in the 8 m bins below, which reach far enough)
+  const roadLevel = (x, y, h) => { for (const e of binAt(x, y)){ const pl = e.pl; if (pl.kind in LEVELLED) continue; const q = nearIn(e, x, y); if (q[0] > pl.w + 4) continue; const zc = base0(q[1], q[2]), t = q[0] < pl.w + 0.6 ? 0 : sm((q[0] - pl.w - 0.6)/3.4); h = zc + (h - zc)*t; } return h; };
+  const onLevelled = (x, y, m) => binAt(x, y).some(e => !(e.pl.kind in LEVELLED) && nearIn(e, x, y)[0] < e.pl.w + m);
   const ground = (x, y) => { let h = roadLevel(x, y, base0(x, y)); for (const [x0, y0, x1, y1, z, m] of FB.get(Math.floor(x/16)*1000 + Math.floor(y/16)) || []){ const d = Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(y0 - y, 0, y - y1)); if (d < m){ const t = sm(d/m); h = z + (h - z)*t; } }
     for (const s of SITES){ if (Math.abs(x - s.cx) > s.w + s.d + 8 || Math.abs(y - s.cy) > s.w + s.d + 8) continue; const dx = x - s.cx, dy = y - s.cy, ca = Math.cos(s.a), sa = Math.sin(s.a), u = Math.abs(dx*ca + dy*sa) - s.w/2, v = Math.abs(-dx*sa + dy*ca) - s.d/2, d = Math.hypot(Math.max(u, 0), Math.max(v, 0)); if (d < 5){ const t = sm(d/5); h = s.z + (h - s.z)*t; } }
-    const v = Math.abs(streamV(x, y)), w = hw(x); if (v < w + 3) h -= 1.3*(v < w ? 1 : 1 - sm((v - w)/3)); const ds = near(SIDE, x, y, 4); if (ds < 3.5 && !onLevelled(x, y, 1.2)) h -= 0.9*(ds < 1.3 ? 1 : 1 - sm((ds - 1.3)/2.2));
+    const v = Math.abs(streamV(x, y)), w = hw(x, y); if (v < w + 3) h -= 1.3*(v < w ? 1 : 1 - sm((v - w)/3)); const ds = sideD(x, y); if (ds < 3.5 && !onLevelled(x, y, 1.2)) h -= 0.9*(ds < 1.3 ? 1 : 1 - sm((ds - 1.3)/2.2));
     const rk = rock(x, y); if (rk) h += rk*1.1*fbm(x/1.8, y/1.8, 12); return h; };
   // ---- buildings. Rule 1: every type of house is on the map. Rule 2: each stands where its function puts it (public buildings in the
   // town, a mairie, chapel and shop in every village, ordinary houses in the town and the villages; farms, the villa and the substation
   // freestanding). Public buildings face the nearest road; ordinary houses and farms are turned more freely.
   const MD = new Map(), model = n => { let m = MD.get(n); if (!m){ m = ART.models.find(q => q.n === n); MD.set(n, m); } return m; };
   const FOOT = {'Railway station':[0, 0.4, 22, 4.6]};   // the part that stands (the platform is the railway's)
-  const footOf = (m, view) => { const f = FOOT[m.n] || [0, 0, m.W, m.D], cx = m.W/2, cy = m.D/2, th = view*Math.PI/8, ca = Math.round(Math.cos(th)), sa = Math.round(Math.sin(th)), pts = [[f[0], f[1]], [f[2], f[3]]].map(([x, y]) => [ca*(x - cx) - sa*(y - cy), sa*(x - cx) + ca*(y - cy)]);
-    return [Math.min(pts[0][0], pts[1][0]), Math.min(pts[0][1], pts[1][1]), Math.max(pts[0][0], pts[1][0]), Math.max(pts[0][1], pts[1][1])]; };   // relative to the model's centre
+  const footOf = (m, view) => { const f = FOOT[m.n] || [0, 0, m.W, m.D], cx = m.W/2, cy = m.D/2, th = view*Math.PI/8, ca = Math.cos(th), sa = Math.sin(th), pts = [[f[0], f[1]], [f[2], f[1]], [f[2], f[3]], [f[0], f[3]]].map(([x, y]) => [ca*(x - cx) - sa*(y - cy), sa*(x - cx) + ca*(y - cy)]);
+    return [Math.min(...pts.map(q => q[0])), Math.min(...pts.map(q => q[1])), Math.max(...pts.map(q => q[0])), Math.max(...pts.map(q => q[1]))]; };   // relative to the model's centre (the box around it when turned)
   const placed = [], PB = new Map(); let BID = 0;
   const PROBE = (x, y, m) => { for (const p of PB.get(Math.floor(x/16)*1000 + Math.floor(y/16)) || []) if (x > p.x0 - m && x < p.x1 + m && y > p.y0 - m && y < p.y1 + m) return p; return null; };
   const indexB = p => { for (let i = Math.floor((p.x0 - 8)/16); i <= Math.floor((p.x1 + 8)/16); i++) for (let j = Math.floor((p.y0 - 8)/16); j <= Math.floor((p.y1 + 8)/16); j++){ const k = i*1000 + j; if (!PB.has(k)) PB.set(k, []); PB.get(k).push(p); } };
   const unindexB = p => { for (const v of PB.values()){ const k = v.indexOf(p); if (k >= 0) v.splice(k, 1); } };
   const roadNear = (x, y, m) => allRoads().some(pl => near(pl, x, y, pl.w + m) < pl.w + m) || near(RAIL, x, y, RAIL.w + m) < RAIL.w + m;
-  const forestRaw = (x, y) => (y < RID(x) - 54 + 30*fbm(x/50, y/50, 21) && !(Math.abs(x - sv(y)) < 34 + 10*fbm(y/30, 1, 27) && y > 18))
-    || Math.hypot((x - HX)/(90 + 25*fbm(x/30, y/30, 28)), (y - 470)/60) < 1 || (fbm(x/48, y/48, 26) > 0.72 && y > RID(x) - 30);
+  // forest: above each side's forest line (not down in the side valleys), on the higher hills, and in woods off the valley floor
+  const forestRaw = (x, y) => { frame(x, y); const sd = fV >= 0 ? 1 : -1, d = Math.abs(fV), F = Fw(fS); if (d < F*0.9) return false; const a = above(x, y) + 9*(fbm(x/50, y/50, 21) - 0.5), fl = FLH[sd];
+    if (a > fl && !(sideD(x, y) < 22 + 10*fbm(x/30, y/30, 27) && a < fl + 10) && (slope(x, y) > 0.16 || a > fl + 14 || fbm(x/60, y/60, 30) < WOODY[sd])) return true; if (fbm(x/48, y/48, 26) > 0.72 && d > F + 20) return true;
+    for (const [hx, hy, hh_, hr] of HILLS) if (hh_ > 11 && Math.hypot(x - hx, y - hy) < hr*0.55*(0.8 + 0.4*fbm(x/30, y/30, 28))) return true; return false; };
   const fits = (x, y, w, d, name, gap) => { gap = gap ?? 2; if (x < 4 || y < 4 || x + w > W - 4 || y + d > D - 4) return false; for (const p of placed) if (!(x + w + gap < p.x0 || x - gap > p.x1 || y + d + gap < p.y0 || y - gap > p.y1)) return false;
     for (let u = 0; u <= 1; u += 0.25) for (let v = 0; v <= 1; v += 0.25){ const px = x + w*u, py = y + d*v; if (allRoads().some(pl => near(pl, px, py, pl.w + 1) < pl.w + 0.8) || near(RAIL, px, py, 4) < RAIL.w + (name === 'Railway station' ? 0.3 : 2.5)
-      || Math.abs(streamV(px, py)) < hw(px) + 4 || near(SIDE, px, py, 4) < 4 || inSite(px, py, 3) || TRACKS.some(pl => near(pl, px, py, 2) < pl.w + 0.5)) return false; } return slope(x + w/2, y + d/2) < 0.45; };
+      || Math.abs(streamV(px, py)) < hw(px, py) + 4 || sideD(px, py) < 4 || inSite(px, py, 3) || TRACKS.some(pl => near(pl, px, py, 2) < pl.w + 0.5)) return false; } return slope(x + w/2, y + d/2) < 0.45; };
   const building = (name, cx, cy, view, recol, role) => { const m = model(name); if (!m) return null; const f = footOf(m, view), x0 = cx + f[0], y0 = cy + f[1], x1 = cx + f[2], y1 = cy + f[3]; if (!fits(x0, y0, x1 - x0, y1 - y0, name)) return null;
     const z = level(x0 - 1, y0 - 1, x1 + 1, y1 + 1), zt = Math.max(3, ...m.parts.filter(q => q.t === 'blk').map(q => q.z + Math.max(...q.h)));
     const p = {id:++BID, name, cx, cy, x0, y0, x1, y1, view, recol:recol || null, z, zt, role:role || null, farm:name.startsWith('Farm'), func:FUNC.includes(name)}; placed.push(p); indexB(p); return p; };
   const unplace = p => { placed.splice(placed.indexOf(p), 1); unindexB(p); const i = flats.findIndex(f => Math.abs(f[0] - p.x0 + 1) < 1e-9 && Math.abs(f[1] - p.y0 + 1) < 1e-9); if (i >= 0){ const f = flats[i]; flats.splice(i, 1); for (const v of FB.values()){ const k = v.indexOf(f); if (k >= 0) v.splice(k, 1); } } };
   const nearestRoadDir = (x, y) => { let best = null; for (const pl of allRoads()){ const q = nearP(pl, x, y, 80); if (q && (!best || q[0] < best[0])) best = q; } return best ? [best[1] - x, best[2] - y] : [0, 1]; };
-  const nearBy = (name, x, y, recol, reach, role, view) => { for (let rad = 0; rad < (reach || 24); rad += 1.5) for (let a = 0; a < 16; a++){ const cx = x + Math.cos(a*0.3927)*rad, cy = y + Math.sin(a*0.3927)*rad, v = view ?? viewFacing(...nearestRoadDir(cx, cy)), p = building(name, cx, cy, v, recol, role); if (p) return p; } return null; };
+  const nearBy = (name, x, y, recol, reach, role, view) => { for (let rad = 0; rad < (reach || 24); rad += 1.5) for (let a = 0; a < 16; a++){ const cx = x + Math.cos(a*0.3927)*rad, cy = y + Math.sin(a*0.3927)*rad, v = view ?? viewFacing8(...nearestRoadDir(cx, cy)), p = building(name, cx, cy, v, recol, role); if (p) return p; } return null; };
   const HOUSES = ['House, two storeys', 'House, small', ...ART.VARS.house], house = () => HOUSES[Math.floor(r()*HOUSES.length)], FARMS = ['Farm', ...ART.VARS.farm];
   const ROOFS = [null, {'#a8473a':'#b8553e'}, {'#a8473a':'#8e3f32'}, {'#a8473a':'#9a5a3a'}, {'#a8473a':'#c0624a'}], roof = () => ROOFS[Math.floor(r()*ROOFS.length)];
   const FUNC = ['Church', 'Mairie', 'Fountain', 'Village shop', 'Bank', 'Bourse du Jura', 'La Feuille de la Faille', 'Gendarmerie', 'Canton house', 'School', 'Chapel', 'Committee office', 'Utility office', 'Railway station', 'Substation (utility)'];
   // the town: the square with the fountain, the mairie and church on it, the institutions around, the station on the railway, the substation outside
-  nearBy('Fountain', SQ[0] + 9, SQ[1], null, 24, 'fountain', 0);
-  { const sx = NX + rr(14, 24); nearBy('Railway station', sx, yOn(RAIL, sx) - RAIL.w - 3.0, null, 30, 'station', 0); }
+  const TQ = (dx, dy) => [SQ[0] + TT[2]*dx - TN[0]*dy, SQ[1] + TT[3]*dx - TN[1]*dy];   // around the square: dx along the road, dy downhill
+  nearBy('Fountain', ...TQ(9, 0), null, 24, 'fountain', viewFacing8(TT[2], TT[3]));
+  nearBy('Railway station', STA.x + STA.n[0]*(RAIL.w + 3.0), STA.y + STA.n[1]*(RAIL.w + 3.0), null, 30, 'station', viewFront(-STA.n[0], -STA.n[1]));
   for (const [name, dx, dy, role] of [['Mairie', 14, -10, 'mairie'], ['Church', -22, -8, 'church'], ['Village shop', 16, 8, 'shop'], ['Bank', -24, 10, 'bank'], ['La Feuille de la Faille', 40, -6, 'newspaper'], ['Gendarmerie', 38, 22, 'police'], ['Canton house', -48, -8, 'canton'],
-    ['Bourse du Jura', -50, 18, 'bourse'], ['School', -12, 30, 'school'], ['Committee office', 60, 10, 'committee'], ['Utility office', 58, -22, 'utility']]) nearBy(name, SQ[0] + dx, SQ[1] + dy, null, 30, role);
-  for (const dx of [96, -96, 110, -110]){ const x = TX + dx; if (nearBy('Substation (utility)', x, yOn(MAIN, x) + 16, null, 14, 'substation') || nearBy('Substation (utility)', x, yOn(MAIN, x) - 18, null, 14, 'substation')) break; }
+    ['Bourse du Jura', -50, 18, 'bourse'], ['School', -12, 30, 'school'], ['Committee office', 60, 10, 'committee'], ['Utility office', 58, -22, 'utility']]){ const p = nearBy(name, ...TQ(dx, dy), null, 30, role) || nearBy(name, ...TQ(dx, dy), null, 60, role) || nearBy(name, SQ[0], SQ[1], null, 100, role); if (p) p.home = 'town'; }
+  for (const dx of [96, -96, 110, -110, 130, -130]){ if (nearBy('Substation (utility)', ...Q(dx, -16), null, 14, 'substation') || nearBy('Substation (utility)', ...Q(dx, 18), null, 14, 'substation')) break; }
   // houses line the streets, a second row behind, thinning out at the edge; most face the street, some are turned
-  const frontage = (cx, cy, rx, ry, prob, rows, nmax, pick, home) => { let k = 0; for (const pl of ROADS) for (let i = 0; i < pl.length - 1; i++){ const [ax, ay] = pl[i], [bx, by] = pl[i + 1], L = Math.hypot(bx - ax, by - ay), ux = (bx - ax)/L, uy = (by - ay)/L;
+  const frontage = (dist, prob, rows, nmax, pick, home) => { let k = 0; for (const pl of ROADS) for (let i = 0; i < pl.length - 1; i++){ const [ax, ay] = pl[i], [bx, by] = pl[i + 1], L = Math.hypot(bx - ax, by - ay), ux = (bx - ax)/L, uy = (by - ay)/L;
       for (let s = 0; s < L; s += 1.2) for (const side of [-1, 1]) for (let row = 0; row < rows; row++){ if (k >= nmax) return k; const name = pick ? pick() : house(), m = model(name), off = pl.w + 3.2 + (row ? 13 : 0) + Math.max(m.W, m.D)/2;
-        const px = ax + ux*s - uy*side*off, py = ay + uy*s + ux*side*off, d = Math.hypot((px - cx)/rx, (py - cy)/ry); if (d > 1 || r() > prob*(1.25 - d)) continue;
-        const v = r() < 0.65 ? viewFacing(uy*side, -ux*side) : [0, 4, 8, 12][Math.floor(r()*4)], p = building(name, px, py, v, roof(), 'house'); if (p){ p.home = home; k++; } } } return k; };
-  frontage(TOWN[0], TOWN[1], TOWN[2], TOWN[3], 1.4, 2, 90, null, 'town');
+        const px = ax + ux*s - uy*side*off, py = ay + uy*s + ux*side*off, d = dist(px, py); if (d > 1 || r() > prob*(1.25 - d)) continue;
+        const v = r() < 0.65 ? viewFacing8(uy*side, -ux*side) : [0, 4, 8, 12][Math.floor(r()*4)], p = building(name, px, py, v, roof(), 'house'); if (p){ p.home = home; k++; } } } return k; };
+  frontage((x, y) => townE(x, y, TOWN[2], TOWN[3]), 1.4, 2, 90, null, 'town');
   // each village: mairie, chapel and shop near the middle, houses along the lanes; the largest village also has a school
   VILLAGES.forEach(([cx, cy, rad], i) => { for (const [name, dx, dy, role] of [['Mairie', 8, -10, 'mairie'], ['Chapel', -10, -12, 'church'], ['Village shop', 12, 10, 'shop'], ...(i === 0 ? [['School', -14, 12, 'school']] : [])]){ const p = nearBy(name, cx + dx, cy + dy, null, 34, role) || nearBy(name, cx, cy, null, 60, role); if (p) p.home = i; }
-    frontage(cx, cy, rad, rad, 0.8, 2, [12, 10, 11][i], null, i); });
-  for (const name of FUNC) if (!placed.some(p => p.name === name)) nearBy(name, SQ[0], SQ[1], null, 80);
+    frontage((x, y) => Math.hypot(x - cx, y - cy)/rad, 0.8, 2, [12, 10, 11][i], null, i); });
+  const FROLE = {'Railway station':'station', 'Substation (utility)':'substation', 'Chapel':'church'};   // the last resort keeps what the building is for
+  for (const name of FUNC) if (!placed.some(p => p.name === name)) nearBy(name, SQ[0], SQ[1], null, 80, FROLE[name] || null);
   // rule 1: any type of house still missing goes into a village or the town
-  for (const name of HOUSES) if (!placed.some(p => p.name === name)) for (const [cx, cy, rad, home] of [...VILLAGES.map((v, i) => [...v, i]), [TOWN[0], TOWN[1], 60, 'town']]){ if (frontage(cx, cy, rad + 8, rad + 8, 3, 2, 1, () => name, home)) break; }
-  for (const p of placed) if (p.home === undefined) p.home = inTown(p.cx, p.cy) || Math.hypot(p.cx - TX, p.cy - TOWN[1]) < 90 ? 'town' : VILLAGES.reduce((b, v, i) => Math.hypot(p.cx - v[0], p.cy - v[1]) < Math.hypot(p.cx - VILLAGES[b][0], p.cy - VILLAGES[b][1]) ? i : b, 0);
+  for (const name of HOUSES) if (!placed.some(p => p.name === name)) for (const [cx, cy, rad, home] of [...VILLAGES.map((v, i) => [v[0], v[1], v[2], i]), [TOWN[0], TOWN[1], 60, 'town']]){ if (frontage((x, y) => Math.hypot(x - cx, y - cy)/(rad + 8), 3, 2, 1, () => name, home)) break; }
+  for (const p of placed) if (p.home === undefined) p.home = inTown(p.cx, p.cy) || Math.hypot(p.cx - TOWN[0], p.cy - TOWN[1]) < 90 ? 'town' : VILLAGES.reduce((b, v, i) => Math.hypot(p.cx - v[0], p.cy - v[1]) < Math.hypot(p.cx - VILLAGES[b][0], p.cy - VILLAGES[b][1]) ? i : b, 0);
   // farms stand in the open, each with a track to the nearest road; every type of farm at least once
   const trackTo = (x, y) => { let best = null; for (const pl of ROADS){ const q = nearP(pl, x, y, 400); if (q && (!best || q[0] < best[0])) best = q; } if (!best) return null; const mx = lerp(x, best[1], 0.5) + rr(-8, 8), my = lerp(y, best[2], 0.5) + rr(-8, 8);
     const pl = curve([[x, y], [mx, my], [best[1], best[2]]], 1.45, 'track'); for (let t = 0; t < pl.length; t += 2) if (PROBE(pl[t][0], pl[t][1], 1.5) && Math.hypot(pl[t][0] - x, pl[t][1] - y) > 3) return null; return pl; };
   const farmOrder = [...FARMS, ...Array.from({length:6}, () => FARMS[Math.floor(r()*FARMS.length)])], farmsAt = [], yards = [];
-  for (const name of farmOrder){ const m = model(name); for (let t = 0; t < 600; t++){ const v = [0, 4, 8, 12][Math.floor(r()*4)], f = footOf(m, v), x = rr(24, W - 24), y = rr(RID(x) - 10, D - 28), c = [x, y];
+  for (const name of farmOrder){ const m = model(name); for (let t = 0; t < 600; t++){ const v = [0, 4, 8, 12][Math.floor(r()*4)], f = footOf(m, v), x = rr(24, W - 24), y = rr(24, D - 28), c = [x, y];
       if (inSettle(x, y, 40) || !far(c, farmsAt, 80) || slope(x, y) > 0.3 || forestRaw(x, y) || Math.abs(streamV(x, y)) < 16) continue;
       const p = building(name, x, y, v, roof(), 'farm'); if (!p) continue; const yd = [p.x0 - 3, p.y1 - 1, p.x1 + 2, p.y1 + 7], tr = trackTo(p.cx, p.y1 + 7); if (tr){ TRACKS.push(tr); farmsAt.push(c); yards.push(yd); p.yard = yd; break; } unplace(p); } }
   // the lender's villa: alone on the slope above the valley, near the forest, with its own drive
-  for (let t = 0; t < 800; t++){ const x = rr(30, 600), y = RID(x) - rr(-5, 25); if (Math.abs(x - TX) > 220 || !far([x, y], VILLAGES, 80) || slope(x, y) > 0.45 || inSettle(x, y, 30)) continue;
+  for (let t = 0; t < 2400; t++){ const x = rr(30, W - 30), y = rr(30, D - 30); if (Math.hypot(x - TOWN[0], y - TOWN[1]) > 240 || !far([x, y], VILLAGES, 80) || slope(x, y) > 0.45 || inSettle(x, y, 30)) continue; frame(x, y); if (Math.abs(fV) < Fw(fS) + 12 || forestRaw(x, y)) continue;
+    if (t < 1600){ let edge = false; for (let a = 0; a < 8 && !edge; a++) edge = forestRaw(x + Math.cos(a*0.785)*26, y + Math.sin(a*0.785)*26); if (!edge) continue; }
     const p = building('Villa', x, y, 0, null, 'villa'); if (p){ const tr = trackTo(p.cx, p.y1 + 1); if (tr){ TRACKS.push(tr); break; } unplace(p); } }
   for (const p of placed) if (p.role === 'farm' || p.role === 'villa') p.home = null;
   const SQUARE = (() => { const f = placed.find(p => p.name === 'Fountain'); return f ? [f.cx, f.cy] : SQ; })();
@@ -147,7 +244,7 @@ function create(seed, opts){ opts = opts || {};
   placed.forEach(p => { for (let u = 0.1; u < 1; u += 0.2) for (let v = 0.1; v < 1; v += 0.2){ const x = lerp(p.x0, p.x1, u), y = lerp(p.y0, p.y1, v); if (allRoads().some(pl => near(pl, x, y, pl.w) < pl.w) || near(RAIL, x, y, 2) < RAIL.w){ OVERLAPS++; return; } } });
   // ---- forest, woods, hedges, pastures, fields
   const cleared = (x, y) => inSite(x, y, 4) || NEWROADS.some(pl => near(pl, x, y, 6) < pl.w + 4.5);
-  const HEDGES = []; for (let i = 0; i < 400 && HEDGES.length < 8; i++){ let x = rr(20, 620), y = rr(RID(x) - 10, 450), a = r()*6.283; const pts = [[x, y]]; for (let k = 0; k < 3; k++){ a += rr(-0.5, 0.5); x += Math.cos(a)*rr(35, 50); y += Math.sin(a)*rr(35, 50); pts.push([x, y]); }
+  const HEDGES = []; for (let i = 0; i < 400 && HEDGES.length < 8; i++){ let x = rr(20, W - 20), y = rr(20, D - 20), a = r()*6.283; const pts = [[x, y]]; for (let k = 0; k < 3; k++){ a += rr(-0.5, 0.5); x += Math.cos(a)*rr(35, 50); y += Math.sin(a)*rr(35, 50); pts.push([x, y]); }
     if (pts.every(([px, py]) => px > 0 && py > 0 && px < W && py < D && !inSettle(px, py, 20) && !forestRaw(px, py))) HEDGES.push(curve(pts, 1, 'hedge')); }
   const seeds = []; for (let i = 0; i < 3000 && seeds.length < 80; i++){ const x = r()*W, y = r()*D; if (seeds.every(s => Math.hypot(s.x - x, s.y - y) > 36)){ const gx = base0(x + 3, y) - base0(x - 3, y), gy = base0(x, y + 3) - base0(x, y - 3), g = Math.hypot(gx, gy);
       const a = g > 0.8 ? Math.atan2(gx, -gy) : (r() - 0.5)*1.4; seeds.push({x, y, a:a + (r() - 0.5)*0.25, w:10 + r()*10, id:seeds.length, past:r() < 0.18, ca:0, sa:0}); } }
@@ -159,17 +256,19 @@ function create(seed, opts){ opts = opts || {};
   const plot = (x, y) => { let a = null, da = 1e9, db = 1e9; for (const s of seedNear[clamp(Math.floor(y/SG), 0, sgy - 1)*sgx + clamp(Math.floor(x/SG), 0, sgx - 1)]){ const d = Math.hypot(x - s.x, (y - s.y)*1.15); if (d < da){ db = da; da = d; a = s; } else if (d < db) db = d; }
     const u = (x - a.x)*a.ca + (y - a.y)*a.sa, v = -(x - a.x)*a.sa + (y - a.y)*a.ca, k = Math.floor(v/a.w), f = v/a.w - k;
     return {s:a, edge:(db - da)/2, u, v, k, f, crop:a.past ? 'pasture' : CROPS[Math.floor(hsh(a.id, k, 51)*CROPS.length)]}; };
-  const pastureM = (x, y) => { const fe = RID(x) - 54 + 30*fbm(x/50, y/50, 21); return (y > fe && y < fe + 46 && fbm(x/70, 3, 29) > 0.42) || (Math.abs(x - sv(y)) < 44 && y < 230 && y > 20); };
+  // pastures: a band below the forest line, and the floors of the side valleys
+  const pastureM = (x, y) => { frame(x, y); const sd = fV >= 0 ? 1 : -1; if (Math.abs(fV) < Fw(fS)) return false; const a = above(x, y), fl = FLH[sd] + 9*(fbm(x/50, y/50, 21) - 0.5);
+    return (a > fl - 16 && a < fl && fbm(x/70, 3, 29) > 0.42) || (sideD(x, y) < 40 && a < fl); };
   // ---- the lines near every 8 m cell (roads, tracks, rail, side stream, hedges), so a point only measures what is close
   const BIN = 8, bx = Math.ceil(W/BIN) + 1, byN = Math.ceil(D/BIN) + 1; let bins = null;
   const rebin = () => { bins = Array.from({length:bx*byN}, () => []); const add = (pl, reach) => { for (let i = 0; i < pl.length - 1; i++){ const [ax, ay] = pl[i], [qx, qy] = pl[i + 1];
       for (let gi = Math.max(0, Math.floor((Math.min(ax, qx) - reach)/BIN)); gi <= Math.min(bx - 1, Math.floor((Math.max(ax, qx) + reach)/BIN)); gi++) for (let gj = Math.max(0, Math.floor((Math.min(ay, qy) - reach)/BIN)); gj <= Math.min(byN - 1, Math.floor((Math.max(ay, qy) + reach)/BIN)); gj++){ const b = bins[gj*bx + gi]; let e = b.find(q => q.pl === pl); if (!e){ e = {pl, segs:[]}; b.push(e); } e.segs.push(i); } } };
-    for (const pl of allRoads()) add(pl, pl.w + 6.5); add(RAIL, 6); for (const pl of TRACKS) add(pl, pl.w + 4); add(SIDE, 4); for (const pl of HEDGES) add(pl, 3); };
+    for (const pl of allRoads()) add(pl, pl.w + 6.5); add(RAIL, 6); for (const pl of TRACKS) add(pl, pl.w + 4); for (const pl of SIDES) add(pl, 4); for (const pl of HEDGES) add(pl, 3); };
   rebin();
   const nearIn = (e, x, y) => { let best = null; for (const i of e.segs){ const q = segNear(e.pl, i, x, y); if (!best || q[0] < best[0]) best = q; } return best; };
   const binAt = (x, y) => bins[clamp(Math.floor(y/BIN), 0, byN - 1)*bx + clamp(Math.floor(x/BIN), 0, bx - 1)];
   // forest: on the ridge, the hill and in woods; never on roads, tracks, water, building plots or what the Company cleared
-  const forestAt = (x, y, b) => { if (!forestRaw(x, y) || inSettle(x, y, 14) || fbm(x/14, y/14, 23) >= 0.74 || Math.abs(streamV(x, y)) <= hw(x) + 2.5 || PROBE(x, y, 6)) return false;
+  const forestAt = (x, y, b) => { if (!forestRaw(x, y) || inSettle(x, y, 8 + 14*fbm(x/16, y/16, 78)) || fbm(x/14, y/14, 23) >= 0.74 || Math.abs(streamV(x, y)) <= hw(x, y) + 2.5 || PROBE(x, y, 6)) return false;
     for (const e of b || binAt(x, y)){ const k = e.pl.kind; if (k === 'hedge' || k === 'stream') continue; const q = nearIn(e, x, y); if (k === 'track' ? q[0] < 3.6 : k === 'new' ? q[0] < e.pl.w + 4.5 : q[0] < e.pl.w + 2.5) return false; }
     return !inSite(x, y, 4); };
   // ---- what lies at a point
@@ -188,7 +287,7 @@ function create(seed, opts){ opts = opts || {};
     if (onRail) return ['rail', qr[0], qr[3]]; if (qr && qr[0] < RAIL.w + 0.8) return ['verge', 0];
     const pb = PROBE(x, y, 0);
     if (Math.hypot(x - SQUARE[0], y - SQUARE[1]) < 16 && !pb) return ['square', 0];
-    const v = streamV(x, y), w = hw(x); if (Math.abs(v) < w) return ['water', Math.abs(v)/w]; if (Math.abs(v) < w + 1.4 && v*ys2(x) > 0 && Math.abs(v) < w + 1.4*(0.4 + 0.6*vn(x/5, 0, 52))) return ['gravel', 0]; if (Math.abs(v) < w + 2.6) return ['bank', Math.abs(v) - w];
+    const v = streamV(x, y), w = hw(x, y); if (Math.abs(v) < w) return ['water', Math.abs(v)/w]; if (Math.abs(v) < w + 1.4 && v*bendAt(x, y) > 0 && Math.abs(v) < w + 1.4*(0.4 + 0.6*vn(x/5, 0, 52))) return ['gravel', 0]; if (Math.abs(v) < w + 2.6) return ['bank', Math.abs(v) - w];
     if (qSide){ const ds = qSide[0]; if (ds < 1.3) return ['water', ds/1.3]; if (ds < 2.6) return ['bank', ds - 1.3]; }
     if (qTrack && qTrack[0] < qTrack.w) return ['track', qTrack[0]];
     if (qRoad && qRoad[0] < eRoad.pl.w + 1.4) return ['verge', qRoad[0] - eRoad.pl.w];
@@ -216,13 +315,13 @@ function create(seed, opts){ opts = opts || {};
   relight(0, 0, W, D);
   // ---- trees: the forest close together, hedges of shrubs with oaks, trees by the water, lone spruces in the pastures, fruit trees in gardens
   const trees = [], TB = new Map(); const treeAdd = (x, y, kind, s) => { const t = {x, y, z:hb(x, y) - (kind === 'h' ? 0.1 : 0.15), kind, s:Math.round(s*20)/20}; trees.push(t); const k = Math.floor(x/16)*1000 + Math.floor(y/16); if (!TB.has(k)) TB.set(k, []); TB.get(k).push(t); return t; };
-  const free = (x, y, m) => { if (PROBE(x, y, m) || inSite(x, y, 2) || cleared(x, y) || Math.abs(streamV(x, y)) <= hw(x) + 0.6) return false; for (const e of binAt(x, y)){ const k = e.pl.kind; if (k === 'hedge') continue; const q = nearIn(e, x, y); if (k === 'stream' ? q[0] < 1.8 : k === 'track' ? q[0] < 2.2 : q[0] < e.pl.w + 1.5) return false; } return !forestAt(x, y); };
+  const free = (x, y, m) => { if (PROBE(x, y, m) || inSite(x, y, 2) || cleared(x, y) || Math.abs(streamV(x, y)) <= hw(x, y) + 0.6) return false; for (const e of binAt(x, y)){ const k = e.pl.kind; if (k === 'hedge') continue; const q = nearIn(e, x, y); if (k === 'stream' ? q[0] < 1.8 : k === 'track' ? q[0] < 2.2 : q[0] < e.pl.w + 1.5) return false; } return !forestAt(x, y); };
   const CG = 3.6; for (let i = 0; i <= W/CG; i++) for (let j = 0; j <= D/CG; j++){ const x = (i + 0.5 + 0.8*(hsh(i, j, 31) - 0.5))*CG, y = (j + 0.5 + 0.8*(hsh(i, j, 32) - 0.5))*CG; if (x < 1 || y < 1 || x > W - 1 || y > D - 1 || !forestAt(x, y)) continue;
-    const sp = hsh(i, j, 33) < 0.35 + 0.5*clamp((90 - y)/90, 0, 1), s = 0.85 + 0.35*hsh(i, j, 34); treeAdd(x, y, sp ? 's' : 'b', s*(sp ? 1.05 : 1.1)); }
+    const sp = hsh(i, j, 33) < 0.3 + 0.55*clamp((above(x, y) - 18)/26, 0, 1), s = 0.85 + 0.35*hsh(i, j, 34); treeAdd(x, y, sp ? 's' : 'b', s*(sp ? 1.05 : 1.1)); }
   const hedgeM = (x, y) => HEDGES.some(pl => near(pl, x, y, 2.4) < 1.0 + 0.6*fbm(x/3, y/3, 24)) && fbm(x/9, y/9, 25) < 0.74 && !roadNear(x, y, 1) && !cleared(x, y) && !PROBE(x, y, 2);
   for (const pl of HEDGES) for (let t = 0; t < pl.length; t += 1){ const [px, py] = pl[t], x = px + (hsh(t, pl.length, 35) - 0.5)*1.2, y = py + (hsh(t, 1, 36) - 0.5)*1.2; if (hedgeM(x, y) && free(x, y, 1)){ if (hsh(t, pl.length, 37) < 0.06) treeAdd(x, y, 'b', 1.15 + 0.3*hsh(t, 2, 38)); else treeAdd(x, y, 'h', 0.42 + 0.14*hsh(t, 3, 39)).hedge = 1; } }
-  for (let i = 0; i < 120; i++){ const x = r()*W, v = (r() < 0.5 ? -1 : 1)*(hw(x) + 1.8 + r()*1.4), y = ys(x) + v; if (y < D - 3 && free(x, y, 3)) treeAdd(x, y, 'b', 0.6 + r()*0.3); }
-  for (let i = 0; i < 40; i++){ const t = Math.floor(r()*SIDE.length), [px, py] = SIDE[t], x = px + (r() < 0.5 ? -1 : 1)*(2.6 + r()*1.5), y = py; if (free(x, y, 3)) treeAdd(x, y, r() < 0.5 ? 'b' : 's', 0.6 + r()*0.3); }
+  for (let i = 0; i < 120; i++){ const [x0, y0, ux, uy] = atRoad(STREAM, r()*STREAM.len), o = (r() < 0.5 ? -1 : 1)*(hw(x0, y0) + 1.8 + r()*1.4), x = x0 - uy*o, y = y0 + ux*o; if (x > 2 && y > 2 && x < W - 2 && y < D - 3 && free(x, y, 3)) treeAdd(x, y, 'b', 0.6 + r()*0.3); }
+  for (const SD_ of SIDES) for (let i = 0; i < 25; i++){ const [x0, y0, ux, uy] = atRoad(SD_, r()*SD_.len), o = (r() < 0.5 ? -1 : 1)*(2.6 + r()*1.5), x = x0 - uy*o, y = y0 + ux*o; if (x > 2 && y > 2 && x < W - 2 && y < D - 2 && free(x, y, 3)) treeAdd(x, y, r() < 0.5 ? 'b' : 's', 0.6 + r()*0.3); }
   for (let i = 0; i < 2500; i++){ const x = r()*W, y = r()*D; if (pastureM(x, y) && !inSettle(x, y, 8) && free(x, y, 3) && r() < 0.03) treeAdd(x, y, r() < 0.8 ? 's' : 'b', 0.8 + r()*0.45); }
   for (const p of placed) if (p.role === 'house') for (let i = 0; i < 2; i++){ const x = p.x0 - 3 + r()*(p.x1 - p.x0 + 6), y = p.y0 - 3 + r()*(p.y1 - p.y0 + 6); if (free(x, y, 1)) treeAdd(x, y, 'f', 0.85); }
   for (const p of placed) if (p.farm) for (let i = 0; i < 5; i++){ const x = p.x0 - 8 + r()*(p.x1 - p.x0 + 16), y = p.y0 - 8 + r()*(p.y1 - p.y0 + 16); if (free(x, y, 2.5)) treeAdd(x, y, 'f', 0.9); }
@@ -235,8 +334,8 @@ function create(seed, opts){ opts = opts || {};
     side([a, e], [c, e], 0); side([c, b], [c, e], 4); side([a, b], [a, e], 4);
     if (r() < 0.6){ const x = c - 2.2, y = e - 2.2; if (!PROBE(x, y, 0.3)) prop(ART.washingModel(), x, y, 0); }
     { const x = p.x0 + 2.2, y = p.y1 + 0.6; if (!PROBE(x, y, 0.1) && !roadNear(x, y, 0.5)) prop(ART.woodpileModel(), x, y, 0); } }
-  const bridges = []; for (const pl of [...ROADS, ...TRACKS]) for (let t = 0; t < pl.length - 1; t++){ const [x, y] = pl[t], [x2, y2] = pl[t + 1]; if (Math.sign(streamV(x, y)) !== Math.sign(streamV(x2, y2))){ const w = hw(x) + 2.4, yc = ys(x), z = Math.max(base0(x, yc - w - 1), base0(x, yc + w + 1)) - 0.2, ux = x2 - x, uy = y2 - y;
-      const v = view16(ux, uy), m = ART.bridgeModel(2*w + 1, 2*(pl.w + 0.2), pl.kind !== 'track'); const bp = prop(m, x, yc, v, {bridge:1}); bp.z = z - 0.25; bridges.push(bp); } }
+  const bridges = []; for (const pl of [...ROADS, ...TRACKS]) for (let t = 0; t < pl.length - 1; t++){ const [x, y] = pl[t], [x2, y2] = pl[t + 1], v0 = streamV(x, y), v1 = streamV(x2, y2); if (Math.sign(v0) !== Math.sign(v1)){ const f = v0/(v0 - v1), cx = lerp(x, x2, f), cy = lerp(y, y2, f), L = Math.hypot(x2 - x, y2 - y) || 1, ux = (x2 - x)/L, uy = (y2 - y)/L, w = hw(cx, cy) + 2.4;
+      const z = Math.max(base0(cx - ux*(w + 1), cy - uy*(w + 1)), base0(cx + ux*(w + 1), cy + uy*(w + 1))) - 0.2, m = ART.bridgeModel(2*w + 1, 2*(pl.w + 0.2), pl.kind !== 'track'); const bp = prop(m, cx, cy, view16(ux, uy), {bridge:1}); bp.z = z - 0.25; bridges.push(bp); } }
   for (const pl of ROADS) for (let sl = 4; sl < pl.len; sl += 7){ const side = r() < 0.5 ? 1 : -1, [x, y, ux, uy] = atRoad(pl, sl, (pl.w - 1.05)*side); if (r() > (inTown(x, y) ? 0.3 : 0.015)) continue;
     if (ROADS.some(o => o !== pl && near(o, x, y, o.w + 6) < o.w + 6) || PROBE(x, y, 1) || x < 3 || y < 3 || x > W - 3 || y > D - 3) continue; const nm = ART.VARS.car[Math.floor(r()*ART.VARS.car.length)]; prop(model(nm), x, y, view16(ux*side, uy*side), {car:1, road:pl.id}); }
   const life = []; for (const [name, dx, dy] of [['Café terrace', -2, -14], ['Market stall with cheese seller', -14, 4], ['Market stall with cheese seller', -9, 8], ['Pensioners on a bench', 8, 6], ['Kids playing', 2, 7]]){ const m = model(name); if (!m) continue;
@@ -248,10 +347,11 @@ function create(seed, opts){ opts = opts || {};
   const reshade = (x0, y0, x1, y1) => { const i0 = Math.max(0, Math.floor(x0*OG)), i1 = Math.min(onx, Math.ceil(x1*OG)), j0 = Math.max(0, Math.floor(y0*OG)), j1 = Math.min(ony, Math.ceil(y1*OG));
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++){ objShade[j*(onx + 1) + i] = 255; objDark[j*(onx + 1) + i] = 0; }
     for (const [a, b, c, e, h] of casters()){ if (c + 2 < x0 || a - h - 2 > x1 || e + 2 < y0 || b - h*1.9 - 2 > y1) continue;
-      for (let j = Math.max(j0, Math.floor((b - 2)*OG)); j <= Math.min(j1, Math.ceil((e + 2)*OG)); j++) for (let i = Math.max(i0, Math.floor((a - 2)*OG)); i <= Math.min(i1, Math.ceil((c + 2)*OG)); i++){ const x = i/OG, y = j/OG, d = Math.hypot(Math.max(a - x, 0, x - c), Math.max(b - y, 0, y - e)), q = Math.min(254, Math.round(d*100)), o = j*(onx + 1) + i; if (q < objShade[o]) objShade[o] = q; }
-      for (let j = Math.max(j0, Math.floor((b - h*0.636)*OG)); j <= Math.min(j1, Math.ceil(e*OG)); j++) for (let i = Math.max(i0, Math.floor((a - h*0.345)*OG)); i <= Math.min(i1, Math.ceil(c*OG)); i++){ const x = i/OG, y = j/OG;
-        // in shadow if the way toward the sun meets the caster within its height
-        let t0 = 0.3, t1 = h; for (const [p, d, lo, hi] of [[x, 0.345, a, c], [y, 0.636, b, e]]){ const ta = (lo - p)/d, tb = (hi - p)/d; t0 = Math.max(t0, Math.min(ta, tb)); t1 = Math.min(t1, Math.max(ta, tb)); } if (t0 <= t1) objDark[j*(onx + 1) + i] = 1; } } };
+      for (let j = Math.max(j0, Math.floor((b - 2)*OG)); j <= Math.min(j1, Math.ceil((e + 2)*OG)); j++){ const y = j/OG, dy = Math.max(b - y, 0, y - e), dy2 = dy*dy, row = j*(onx + 1);
+        for (let i = Math.max(i0, Math.floor((a - 2)*OG)); i <= Math.min(i1, Math.ceil((c + 2)*OG)); i++){ const x = i/OG, dx = Math.max(a - x, 0, x - c), q = Math.min(254, Math.round(Math.sqrt(dx*dx + dy2)*100)), o = row + i; if (q < objShade[o]) objShade[o] = q; } }
+      // in shadow if the way toward the sun (0.345 east, 0.636 south per metre up) meets the caster within its height
+      for (let j = Math.max(j0, Math.floor((b - h*0.636)*OG)); j <= Math.min(j1, Math.ceil(e*OG)); j++){ const y = j/OG, ty0 = Math.max(0.3, (b - y)/0.636), ty1 = Math.min(h, (e - y)/0.636), row = j*(onx + 1); if (ty0 > ty1) continue;
+        for (let i = Math.max(i0, Math.floor((a - h*0.345)*OG)); i <= Math.min(i1, Math.ceil(c*OG)); i++){ const x = i/OG; if (Math.max(ty0, (a - x)/0.345) <= Math.min(ty1, (c - x)/0.345)) objDark[row + i] = 1; } } } };
   reshade(0, 0, W, D);
   // ---- the colour of the ground at a point: the kind of ground, its texture (more of it the closer the view), light, shadow, haze
   const C = new Map(), col = c => { let v = C.get(c); if (!v){ v = [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)]; C.set(c, v); } return v; };
@@ -343,13 +443,14 @@ function create(seed, opts){ opts = opts || {};
   // can something of this size stand here (a pad, a building)? why not, in a few words
   const canBuild = (cx, cy, w, d, a, opt) => { opt = opt || {}; if (cx - w/2 < 6 || cy - d/2 < 6 || cx + w/2 > W - 6 || cy + d/2 > D - 6) return 'Too close to the edge of the valley.';
     const ca = Math.cos(a || 0), sa = Math.sin(a || 0), pts = []; for (let u = -0.5; u <= 0.5; u += 0.125) for (let v = -0.5; v <= 0.5; v += 0.125) pts.push([cx + u*w*ca - v*d*sa, cy + u*w*sa + v*d*ca]);
-    for (const [x, y] of pts){ if (PROBE(x, y, 1)) return 'A building stands there.'; if (Math.abs(streamV(x, y)) < hw(x) + 2 || near(SIDE, x, y, 3) < 2.5) return 'Not in the stream.'; if (near(RAIL, x, y, 4) < RAIL.w + 1.5) return 'Not on the railway.';
+    for (const [x, y] of pts){ if (PROBE(x, y, 1)) return 'A building stands there.'; if (Math.abs(streamV(x, y)) < hw(x, y) + 2 || sideD(x, y) < 2.5) return 'Not in the stream.'; if (near(RAIL, x, y, 4) < RAIL.w + 1.5) return 'Not on the railway.';
       if (!opt.roadOk && allRoads().some(pl => near(pl, x, y, pl.w + 1) < pl.w + 0.5)) return 'Not on the road.'; if (inSite(x, y, 2) && !opt.siteOk) return 'Something of the Company stands there.'; }
     const z0 = base0(cx, cy); let worst = 0; for (const [x, y] of pts) worst = Math.max(worst, Math.abs(base0(x, y) - z0)); if (worst > 6) return 'Too steep: the ground drops ' + Math.round(worst) + ' m across.';
     return {cut:worst, area:w*d}; };
   return {seed:SEED, W, D, get zmin(){ return zmin; }, get zmax(){ return zmax; }, hb, base0, slope, kindAt, colourAt, forestAt, inTown, inSettle, nearP, near, atRoad, curve, finish, yOn, view16, viewFacing,
-    roads:ROADS, newRoads:NEWROADS, tracks:TRACKS, rail:RAIL, side:SIDE, hedges:HEDGES, stream:{ys, hw, streamV}, town:TOWN, villages:VILLAGES, square:SQUARE, sites:SITES, inSite, inSiteBox,
+    roads:ROADS, newRoads:NEWROADS, tracks:TRACKS, rail:RAIL, sides:SIDES, hedges:HEDGES, stream:{hw, streamV, line:STREAM}, town:TOWN, villages:VILLAGES, square:SQUARE, sites:SITES, inSite, inSiteBox,
     buildings:placed, probe:PROBE, trees, treesNear:(x, y) => TB.get(Math.floor(x/16)*1000 + Math.floor(y/16)) || [], props, bridges, life, graph, route, nearestRoad, roadNear,
-    addSite, removeSite, addRoad, canBuild, refresh, onChange:f => listeners.push(f), touch:changed, model, missing:MISSING, overlaps:OVERLAPS, tx:TX, svx:SVX, hx:HX, rid:RID, axis}; }
-globalThis.World = {create, view16, viewFacing};
+    addSite, removeSite, addRoad, canBuild, refresh, onChange:f => listeners.push(f), touch:changed, model, missing:MISSING, overlaps:OVERLAPS, uphill, frame:(x, y) => { frame(x, y); return [fS, fV]; },
+    layout:{edges:[AXIS[0].map(Math.round), AXIS[AN - 1].map(Math.round)], floor:Math.round(F0), heights:[Math.round(AH[1]), Math.round(AH[-1])], shapes:[PROF[1], PROF[-1]], sides:SIDES.length, hills:HILLS.length, roadSide:RS}}; }
+globalThis.World = {create, view16, viewFacing, viewFront};
 })();

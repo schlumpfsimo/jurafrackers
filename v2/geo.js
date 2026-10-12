@@ -28,9 +28,9 @@ function create(seed, world){
     FAULTS.push({id:i, nx:-Math.sin(a), ny:Math.cos(a), X0, Y0, cot:1/Math.tan(dip), thr:(rnd(i, 6) - 0.5)*320, w:30 + 30*rnd(i, 7), name:'F' + (i + 1)}); } }
   const faultS = (f, X, Y, d) => (X - f.X0)*f.nx + (Y - f.Y0)*f.ny - d*f.cot + 60*(vn(d/400 + f.id*7, (X*f.ny - Y*f.nx)/800, 11) - 0.5);
   // ---- springs: one above every settlement, where the karst comes out. Protection zones around them.
-  const springs = []; { const W = world, homes = [['town', W.town[0], W.town[1] - 40], ...W.villages.map((v, i) => [i, v[0], v[1] - 30])];
-    for (const [home, x0, y0] of homes){ let best = null; for (let k = 0; k < 200 && !best; k++){ const a = rnd(k, 50 + String(home).length)*Math.PI*2, r = 20 + k*0.6, x = clamp(x0 + Math.cos(a)*r, 12, W.W - 12), y = clamp(y0 + Math.sin(a)*r*0.6 - 10, 12, W.D - 12);
-        if (!W.probe(x, y, 6) && !W.roadNear(x, y, 4) && Math.abs(W.stream.streamV(x, y)) > W.stream.hw(x) + 6) best = [x, y]; } best = best || [x0, y0 - 30]; springs.push({home, x:best[0], y:best[1], lvl:0}); } }
+  const springs = []; { const W = world, homes = [['town', ...W.uphill(W.town[0], W.town[1], 40)], ...W.villages.map((v, i) => [i, ...W.uphill(v[0], v[1], 30)])];   // uphill of each settlement
+    for (const [home, x0, y0] of homes){ let best = null; for (let k = 0; k < 200 && !best; k++){ const a = rnd(k, 50 + String(home).length)*Math.PI*2, r = 20 + k*0.6, x = clamp(x0 + Math.cos(a)*r, 12, W.W - 12), y = clamp(y0 + Math.sin(a)*r, 12, W.D - 12);
+        if (!W.probe(x, y, 6) && !W.roadNear(x, y, 4) && Math.abs(W.stream.streamV(x, y)) > W.stream.hw(x) + 6) best = [x, y]; } best = best || [x0, y0]; springs.push({home, x:best[0], y:best[1], lvl:0}); } }
   const zoneAt = (x, y) => { let z = 0; for (const s of springs){ const d = Math.hypot(s.x - x, s.y - y); if (d < 10) z = Math.max(z, 2); else if (d < 30) z = Math.max(z, 2); else if (d < 75) z = Math.max(z, 1); } return z; };   // 2: inner zones (no drilling), 1: outer zone (sealed pad)
   // ---- the rock at a point (underground metres, depth below ground)
   const rockAt = (X, Y, d) => { if (d < 0) return -1; let shift = 0, inFault = false; for (const f of FAULTS){ const s = faultS(f, X, Y, d); if (s > 0) shift += f.thr; if (Math.abs(s) < f.w/2) inFault = true; }
