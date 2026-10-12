@@ -81,6 +81,8 @@ table.lines tr.tot td{font-weight:700;border-top:1px solid var(--line2)}
 #busy{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;font:12px var(--pix);color:var(--muted);background:#e6e9e4}
 #busy.on{display:flex}
 @media (max-width:700px){#hdr .f.opt{display:none}#hdr .f{padding:0 7px}.win{width:calc(100vw - 16px)!important}}
+#hdr .f{overflow:hidden}#hdr .f b,#hdr .f span{overflow:hidden;text-overflow:ellipsis}
+@media (max-width:520px){#hdr .more{display:none}#hdr .f.live{display:none}#hdr .logo+.f{flex-shrink:0}#hdr .logo{padding:0 6px}#hdr .f{padding:0 6px;flex-shrink:1}#hdr .f b{font-size:11px}#hdr .f span{font-size:8px}}
 </style>
 </head>
 <body>
