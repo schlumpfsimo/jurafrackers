@@ -228,7 +228,32 @@ Comité de patronage reports · local vs outside contractor choice per job (one 
 4. **Valley and buildings**: every building window, requests and promises, crises, CEO car, opposition and marches, association and courses.
 5. **Financing and vote**: Bourse and announcements, grants, bank, utility, prices, canton target, the vote and endings. Then playtest rounds until two consecutive clean rounds.
 
-**Phase 1 (look) is done.** The world look is settled: per-pixel ground with three detail levels, the 640 × 480 m valley from a random seed, the locked buildings, vehicles and people. Fine tuning at the very end: pixelate everything a bit more (buildings, roads, ground) so it looks less stale, and make people slightly bigger than realistic.
+**Phase 1 (look) is done.** The world look is settled: per-pixel ground with three detail levels, the 640 × 480 m valley from a random seed, the locked buildings, vehicles and people. Fine tuning done at the end: the finest level is 6 px per metre (was 7), the middle level 4 (was 4.8), people are drawn 1.2 times life size.
+
+**Phases 2–5 are built** (`v2/index.html`). Code map:
+
+| File | What it holds |
+|---|---|
+| `art.js` | every model, the sprite ray caster (16 views), logos, plates and wall texts |
+| `world.js` | the valley from a seed: ground, roads, villages, buildings, trees, sites, levelling, routes |
+| `render.js` | tiles per level, things in depth order, picking; flying things drawn on top |
+| `geo.js` | the 3D underground (layers, faults, springs, temperature), the 1970s lines, section drawings |
+| `game.js` | time and money, header, windows, vehicles, the start, the campus, save and load |
+| `drill.js` | flags, surveys (8 directions), sections, sites, rigs, crews, supplies, permits, wells and phases, drilling events, flow tests, springs |
+| `reservoir.js` | doublets, stimulation with the traffic light, circulation tests, stations, earthquakes |
+| `valley.js` | moods by voter group, the forecast, building windows, requests, promises, gifts, crises, the CEO's trips |
+| `oppo.js` | the committee, rumours, banners, blockades, barricades, camps, marches, police, debates |
+| `assoc.js` | the Maison: tiers, Cycle Strates courses and classes, suits, polls, the stand, the congress |
+| `life.js` | walkers, traffic, the train, Sunday churchgoers, the band, workers, firefighters, TV crew; sound |
+| `finance.js` | Bourse, announcements and the regulator, bank, utility and prices, pipes and lines, sales, federal and canton money, the lender |
+| `endings.js` | the campaign, the vote, lapsed, wound up, bankrupt, the raid, the secret annexation |
+
+Decisions taken while building (open to change):
+- Survey lines turn in eight directions (arrow keys or ⟲ ⟳); pipes and power lines stay gridded. A pad may stand up to 25 m beside its line.
+- One map metre is three metres underground; sections are 2 km wide and 5 km deep.
+- Goodwill has a ceiling (58) until heat reaches a village (72 there; +4 for all once power flows); repeated favours count for less.
+- The market values proven resources (a productive aquifer, hot granite), so exploration success holds the share price up.
+- Staff can be let go at the Bureau (they leave at the end of the month).
 
 Old saves will not load in the new build.
 
