@@ -170,11 +170,13 @@ function create(seed, opts){ opts = opts || {};
   const rock = (x, y) => { const f = clamp((fbm(x/8, y/8, 9) - 0.6)*5, 0, 1); if (!f) return 0; const sl = slope(x, y); if (sl < 0.3 || inSettle(x, y, 10)) return 0; frame(x, y); if (above(x, y) < FLH[fV >= 0 ? 1 : -1] - 8 && sideD(x, y) > 45) return 0; return f*clamp((sl - 0.3)*4, 0, 1); };
   // ---- levelled ground: building plots and pads; roads and the railway are cut into the slope (flat across, smooth along)
   const flats = [], FB = new Map(); const addFlat = f => { flats.push(f); const [x0, y0, x1, y1, , m] = f; for (let i = Math.floor((x0 - m)/16); i <= Math.floor((x1 + m)/16); i++) for (let j = Math.floor((y0 - m)/16); j <= Math.floor((y1 + m)/16); j++){ const k = i*1000 + j; if (!FB.has(k)) FB.set(k, []); FB.get(k).push(f); } return f; };
+  // a building's own footprint, turned with it: o = [centre x, centre y, cos, sin, half width, half depth]; distance from its edge
+  const footD = (o, x, y) => { const dx = x - o[0], dy = y - o[1], u = Math.abs(dx*o[2] + dy*o[3]) - o[4], v = Math.abs(-dx*o[3] + dy*o[2]) - o[5]; return Math.hypot(Math.max(u, 0), Math.max(v, 0)); };
   const level = (x0, y0, x1, y1, m, z) => addFlat([x0, y0, x1, y1, z ?? base0((x0 + x1)/2, (y0 + y1)/2), m || 4])[4];
   const LEVELLED = {track:0, stream:0, hedge:0};   // roads and the rail are levelled (looked up in the 8 m bins below, which reach far enough)
   const roadLevel = (x, y, h) => { for (const e of binAt(x, y)){ const pl = e.pl; if (pl.kind in LEVELLED) continue; const q = nearIn(e, x, y); if (q[0] > pl.w + 4) continue; const zc = base0(q[1], q[2]), t = q[0] < pl.w + 0.6 ? 0 : sm((q[0] - pl.w - 0.6)/3.4); h = zc + (h - zc)*t; } return h; };
   const onLevelled = (x, y, m) => binAt(x, y).some(e => !(e.pl.kind in LEVELLED) && nearIn(e, x, y)[0] < e.pl.w + m);
-  const ground = (x, y) => { let h = roadLevel(x, y, base0(x, y)); for (const [x0, y0, x1, y1, z, m] of FB.get(Math.floor(x/16)*1000 + Math.floor(y/16)) || []){ const d = Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(y0 - y, 0, y - y1)); if (d < m){ const t = sm(d/m); h = z + (h - z)*t; } }
+  const ground = (x, y) => { let h = roadLevel(x, y, base0(x, y)); for (const [x0, y0, x1, y1, z, m, o] of FB.get(Math.floor(x/16)*1000 + Math.floor(y/16)) || []){ const d = o ? footD(o, x, y) : Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(y0 - y, 0, y - y1)); if (d < m){ const t = sm(d/m); h = z + (h - z)*t; } }
     for (const s of SITES){ if (Math.abs(x - s.cx) > s.w + s.d + 8 || Math.abs(y - s.cy) > s.w + s.d + 8) continue; const dx = x - s.cx, dy = y - s.cy, ca = Math.cos(s.a), sa = Math.sin(s.a), u = Math.abs(dx*ca + dy*sa) - s.w/2, v = Math.abs(-dx*sa + dy*ca) - s.d/2, d = Math.hypot(Math.max(u, 0), Math.max(v, 0)); if (d < 5){ const t = sm(d/5); h = s.z + (h - s.z)*t; } }
     const v = Math.abs(streamV(x, y)), w = hw(x, y); if (v < w + 3) h -= 1.3*(v < w ? 1 : 1 - sm((v - w)/3)); const ds = sideD(x, y); if (ds < 3.5 && !onLevelled(x, y, 1.2)) h -= 0.9*(ds < 1.3 ? 1 : 1 - sm((ds - 1.3)/2.2));
     const rk = rock(x, y); if (rk) h += rk*1.1*fbm(x/1.8, y/1.8, 12); return h; };
@@ -186,6 +188,7 @@ function create(seed, opts){ opts = opts || {};
   const footOf = (m, view) => { const f = FOOT[m.n] || [0, 0, m.W, m.D], cx = m.W/2, cy = m.D/2, th = view*Math.PI/8, ca = Math.cos(th), sa = Math.sin(th), pts = [[f[0], f[1]], [f[2], f[1]], [f[2], f[3]], [f[0], f[3]]].map(([x, y]) => [ca*(x - cx) - sa*(y - cy), sa*(x - cx) + ca*(y - cy)]);
     return [Math.min(...pts.map(q => q[0])), Math.min(...pts.map(q => q[1])), Math.max(...pts.map(q => q[0])), Math.max(...pts.map(q => q[1]))]; };   // relative to the model's centre (the box around it when turned)
   const placed = [], PB = new Map(); let BID = 0;
+  const onFoot = (x, y, m) => { for (const p of PB.get(Math.floor(x/16)*1000 + Math.floor(y/16)) || []) if (x > p.x0 - m && x < p.x1 + m && y > p.y0 - m && y < p.y1 + m && footD(p.o, x, y) <= m) return p; return null; };   // on a building's turned footprint (plus m)
   const PROBE = (x, y, m) => { for (const p of PB.get(Math.floor(x/16)*1000 + Math.floor(y/16)) || []) if (x > p.x0 - m && x < p.x1 + m && y > p.y0 - m && y < p.y1 + m) return p; return null; };
   const indexB = p => { for (let i = Math.floor((p.x0 - 8)/16); i <= Math.floor((p.x1 + 8)/16); i++) for (let j = Math.floor((p.y0 - 8)/16); j <= Math.floor((p.y1 + 8)/16); j++){ const k = i*1000 + j; if (!PB.has(k)) PB.set(k, []); PB.get(k).push(p); } };
   const unindexB = p => { for (const v of PB.values()){ const k = v.indexOf(p); if (k >= 0) v.splice(k, 1); } };
@@ -198,8 +201,10 @@ function create(seed, opts){ opts = opts || {};
     for (let u = 0; u <= 1; u += 0.25) for (let v = 0; v <= 1; v += 0.25){ const px = x + w*u, py = y + d*v; if (allRoads().some(pl => near(pl, px, py, pl.w + 1) < pl.w + 0.8) || near(RAIL, px, py, 4) < RAIL.w + (name === 'Railway station' ? 0.3 : 2.5)
       || Math.abs(streamV(px, py)) < hw(px, py) + 4 || sideD(px, py) < 4 || inSite(px, py, 3) || TRACKS.some(pl => near(pl, px, py, 2) < pl.w + 0.5)) return false; } return slope(x + w/2, y + d/2) < 0.45; };
   const building = (name, cx, cy, view, recol, role) => { const m = model(name); if (!m) return null; const f = footOf(m, view), x0 = cx + f[0], y0 = cy + f[1], x1 = cx + f[2], y1 = cy + f[3]; if (!fits(x0, y0, x1 - x0, y1 - y0, name)) return null;
-    const z = level(x0 - 1, y0 - 1, x1 + 1, y1 + 1), zt = Math.max(3, ...m.parts.filter(q => q.t === 'blk').map(q => q.z + Math.max(...q.h)));
-    const p = {id:++BID, name, cx, cy, x0, y0, x1, y1, view, recol:recol || null, z, zt, role:role || null, farm:name.startsWith('Farm'), func:FUNC.includes(name)}; placed.push(p); indexB(p); return p; };
+    const th = view*Math.PI/8, ca = Math.cos(th), sa = Math.sin(th), F = FOOT[m.n] || [0, 0, m.W, m.D], lx = (F[0] + F[2])/2 - m.W/2, ly = (F[1] + F[3])/2 - m.D/2, o = [cx + ca*lx - sa*ly, cy + sa*lx + ca*ly, ca, sa, (F[2] - F[0])/2 + 0.6, (F[3] - F[1])/2 + 0.6];
+    // the foundation: the house turned as it stands and 0.6 m more, the ground meeting it within 2.2 m
+    const z = addFlat([x0 - 1, y0 - 1, x1 + 1, y1 + 1, base0(o[0], o[1]), 2.2, o])[4], zt = Math.max(3, ...m.parts.filter(q => q.t === 'blk').map(q => q.z + Math.max(...q.h)));
+    const p = {id:++BID, name, cx, cy, x0, y0, x1, y1, view, recol:recol || null, z, zt, role:role || null, farm:name.startsWith('Farm'), func:FUNC.includes(name), o}; placed.push(p); indexB(p); return p; };
   const unplace = p => { placed.splice(placed.indexOf(p), 1); unindexB(p); const i = flats.findIndex(f => Math.abs(f[0] - p.x0 + 1) < 1e-9 && Math.abs(f[1] - p.y0 + 1) < 1e-9); if (i >= 0){ const f = flats[i]; flats.splice(i, 1); for (const v of FB.values()){ const k = v.indexOf(f); if (k >= 0) v.splice(k, 1); } } };
   const nearestRoadDir = (x, y) => { let best = null; for (const pl of allRoads()){ const q = nearP(pl, x, y, 80); if (q && (!best || q[0] < best[0])) best = q; } return best ? [best[1] - x, best[2] - y] : [0, 1]; };
   const nearBy = (name, x, y, recol, reach, role, view) => { for (let rad = 0; rad < (reach || 24); rad += 1.5) for (let a = 0; a < 16; a++){ const cx = x + Math.cos(a*0.3927)*rad, cy = y + Math.sin(a*0.3927)*rad, v = view ?? viewFacing8(...nearestRoadDir(cx, cy)), p = building(name, cx, cy, v, recol, role); if (p) return p; } return null; };
@@ -289,14 +294,14 @@ function create(seed, opts){ opts = opts || {};
     if (qRoad){ const pl = eRoad.pl, town = inTown(x, y); if (railLine && qRoad[0] < pl.w + 1.7) return ['rail', qr[0], qr[3]]; if (qRoad[0] < pl.w) return ['road', qRoad[0], pl.w, qRoad[3], qRoad[4], pl, town, Math.hypot(qRoad[1] - SQUARE[0], qRoad[2] - SQUARE[1])];
       if (town && qRoad[0] < pl.w + 1.7) return ['pavement', qRoad[0] - pl.w, 0, qRoad[3]]; }
     if (onRail) return ['rail', qr[0], qr[3]]; if (qr && qr[0] < RAIL.w + 0.8) return ['verge', 0];
-    const pb = PROBE(x, y, 0);
+    const pb = onFoot(x, y, 0);
     if (Math.hypot(x - SQUARE[0], y - SQUARE[1]) < 16 && !pb) return ['square', 0];
     const v = streamV(x, y), w = hw(x, y); if (Math.abs(v) < w) return ['water', Math.abs(v)/w]; if (Math.abs(v) < w + 1.4 && v*bendAt(x, y) > 0 && Math.abs(v) < w + 1.4*(0.4 + 0.6*vn(x/5, 0, 52))) return ['gravel', 0]; if (Math.abs(v) < w + 2.6) return ['bank', Math.abs(v) - w];
     if (qSide){ const ds = qSide[0]; if (ds < 1.3) return ['water', ds/1.3]; if (ds < 2.6) return ['bank', ds - 1.3]; }
     if (qTrack && qTrack[0] < qTrack.w) return ['track', qTrack[0]];
     if (qRoad && qRoad[0] < eRoad.pl.w + 1.4) return ['verge', qRoad[0] - eRoad.pl.w];
     if (pb) return pb.func ? ['square', 0] : pb.farm ? ['yard', 0] : ['garden', 0, pb]; for (const yd of yards) if (x > yd[0] && x < yd[2] && y > yd[1] && y < yd[3]) return ['yard', 0];
-    const pg = PROBE(x, y, 4.5); if (pg && !pg.func && !pg.farm) return ['garden', 0, pg];
+    const pg = onFoot(x, y, 4); if (pg && !pg.func && !pg.farm) return ['garden', 0, pg];
     if (forestAt(x, y, b)) return ['floor', 0]; if (rock(x, y) > 0.35) return ['rock', 0]; if (inSettle(x, y, 6)) return ['verge', 0]; if (pastureM(x, y)) return ['pasture', 0];
     const p = plot(x, y); if (p.edge < 1.0) return ['margin', p.edge]; if (p.crop !== 'pasture' && Math.min(p.f, 1 - p.f)*p.s.w < 0.35) return ['margin', 0.5]; return [p.crop, 0, p]; };
   // ---- heights on a 1 m grid; a blurred copy for the shading of hollows; light on the slopes and the shadows of the slopes
