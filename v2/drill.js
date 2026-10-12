@@ -260,7 +260,7 @@ function event(s, wl, ph, t, u, d){ const R = GEO.ROCK, key = t + ':' + Math.flo
   if ((t === R.WATER || (t === R.FAULT && d < 1000)) && rnd() < (t === R.WATER ? (ph.opts.heavy ? 0.75 : 0.5) : (ph.opts.heavy ? 0.45 : 0.15))*(mudE ? 0.5 : 1)){
     if (ph.opts.lcm){ wl.halt = G.S.day + 2; G.news('Mud losses at ' + s.name + ', ' + M(d) + ': the lost-circulation material seals them. Two days lost.'); return true; }
     const sev = (ph.opts.clean && wl.ph === 0 ? 1 : 2) + (s.zone ? 1 : 0); warn(s, 'Mud losses', 'Returns dropped at ' + M(d) + ': mud flows into ' + (t === R.WATER ? 'cavities in the limestone' : 'open fractures') + '. With no sealing material on site the crew drills on, and the mud goes into the ground.'); G.contaminate && G.contaminate(s, sev, 'mud losses at ' + s.name); return false; }
-  if ((t === R.COAL || (t === R.FAULT && d >= 1300)) && rnd() < (ph.opts.heavy ? 0.07 : 0.4)*(mudE ? 0.6 : 1)){ kick(s, wl, d); return false; }
+  if ((t === R.COAL || (t === R.FAULT && d >= 1300)) && rnd() < (ph.opts.heavy ? 0.07 : 0.4)*(mudE ? 0.6 : 1)*(G.certAt && G.certAt(s, 'wc') ? 0.6 : 1)){ kick(s, wl, d); return false; }
   if (t === R.FAULT && rnd() < (ph.opts.heavy ? 0.1 : 0.3)){ const days = 3 + Math.round(rnd()*5), c = 100 + Math.round(rnd()*200); wl.halt = G.S.day + days; G.book('Bits, mud and fishing', -c, s.name); wl.cost += c; G.news('Broken rock at ' + s.name + ', ' + M(d) + ': the pipe sticks and is worked free. ' + days + ' days and ' + fmt(c) + '.'); return true; }
   if (t === R.FAULT && d > 1500 && rnd() < 0.06){ G.quake && G.quake(s.x, s.y, 2.0 + rnd()*0.7, true, 'Drilling through the fault zone at ' + s.name + ' sets off a small earthquake.'); }
   return false; }
@@ -325,6 +325,7 @@ G.openSpring = openSpring;
 G.contaminate = (s, sev, why) => { const sp = GEO.springs.map(q => ({q, d:Math.hypot(q.x - s.x, q.y - s.y)})).filter(o => o.d < 130 || (o.d < 320 && GEO.h(Math.round(s.x/12), Math.round(s.y/12), 40 + o.q.x) < 1.2 - o.d/320)).sort((a, b) => a.d - b.d);
   sp.forEach((o, i) => spoil(o.q, Math.max(1, sev - (i ? 1 : 0)), why)); };
 function spoil(sp, sev, why){ const before = sp.lvl || 0; if (before === 3) return; let lvl = Math.max(before, sev); if (before >= 2 && sev >= 2) lvl = 3; sp.lvl = Math.min(3, lvl); if (sp.lvl === before) return;
+  if (sp.lvl === 2 && before < 2 && G.S.staff.some(p => p.tr === 'water' && (p.certs || []).includes('karst'))){ sp.lvl = Math.max(before, 1); G.news('The water officer catches the traces in the spring of ' + G.placeName(sp.home) + ' early. A flush, a few cloudy days, no notice.'); return; }
   if (sp.lvl === 1 && G.S.staff.some(p => p.tr === 'water')){ sp.lvl = before; G.news('The water officer finds traces in the spring of ' + G.placeName(sp.home) + ' after ' + why + ' and has it flushed. Nobody notices.'); return; }
   const hit = [0, -3, -12, -20][sp.lvl] - [0, -3, -12, -20][before]; G.mood && G.mood(sp.home, hit, ['', 'Cloudy spring', 'Boil-water notice', 'Polluted spring'][sp.lvl]);
   G.news(['', 'The spring of ' + G.placeName(sp.home) + ' runs cloudy after ' + why + '.', 'Boil-water notice in ' + G.placeName(sp.home) + ' after ' + why + '. The Company pays for bottled water.', 'The spring of ' + G.placeName(sp.home) + ' is polluted for good after ' + why + '. The canton fines the Company ' + fmt(500) + '.'][sp.lvl]);

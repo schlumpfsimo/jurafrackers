@@ -37,7 +37,7 @@ G.on('mark', m => { if (m.id && m.id.startsWith('mq')){ const r = O().rum.find(q
 function openRumour(r){ const b = G.world.buildings.find(q => q.id === r.bid); G.openWin('rum' + r.id, {title:'A rumour in ' + pn(r.home), sub:'heard at the shop, repeated at the café', at:() => [b.cx, b.cy, b.z + (b.zt || 7) + 2], body:A =>
   '<p>“' + esc(r.t) + '”</p>' + (r.going ? '<p class="muted">The liaison is on the way with a box of croissants.</p>' : btn(A, 'liai', 'The liaison has coffee with the neighbours', () => { if (!idle('liaison')) return 'No idle community liaison at the Bureau.'; r.going = true; return G.visit('liaison', b, 2, 'rumour:' + r.id); }, 'main', !idle('liaison')) +
   btn(A, 'paper', 'Facts in La Feuille · ' + fmt(10), () => { if (!G.pay(10, 'Notices in La Feuille', 'La Feuille')) return 'That costs ' + fmt(10) + '.'; dropRum(r); G.mood(r.home, 1, 'Facts in La Feuille', {he:1, le:0.2, fa:0.2}); G.closeWin('rum' + r.id); return 'ok'; }))}); }
-G.on('visitDone', (vi, b, h) => { if (!String(vi.k).startsWith('rumour:')) return; const r = O().rum.find(q => q.id === vi.k.slice(7)); if (r){ dropRum(r); G.mood(h, 1.2, 'Coffee with the Company’s liaison', {he:0.8, le:1.2, fa:1}); } });
+G.on('visitDone', (vi, b, h) => { if (!String(vi.k).startsWith('rumour:')) return; const r = O().rum.find(q => q.id === vi.k.slice(7)); if (r){ const p = G.S.staff.find(q => q.id === vi.p); dropRum(r); G.mood(h, 1.2*(p && (p.certs || []).includes('talk') ? 1.5 : 1), 'Coffee with the Company’s liaison', {he:0.8, le:1.2, fa:1}); } });
 // ---- what the committee does next, now and then
 function spawn(){ const o = O(), S = G.S, sites = S.geo.sites.filter(s => s.rig && !s.burnt); if (!sites.length) return;
   const town = G.homeCentre('town'), near = sites.slice().sort((a, b) => Math.hypot(a.x - town[0], a.y - town[1]) - Math.hypot(b.x - town[0], b.y - town[1]))[0];
@@ -64,7 +64,7 @@ G.on('visitDone', (vi, b, h) => { if (!String(vi.k).startsWith('block:')) return
   if (G.moodOf(k.home) >= 35){ dropBlock(k); G.mood(k.home, 1, 'The liaison talked to the farmer', 'fa'); G.news('After two coffees and a schnapps the farmer moves the tractor.', {quiet:true}); } else G.news('The farmer listens to the liaison, nods, and stays where he is.', {quiet:true}); });
 // ---- police from the gendarmerie: a car, a van or the riot police bus; they drive back afterwards
 const PMOD = {car:'Police car', van:'Police van', riot:'Riot police bus'};
-function sendPolice(kind, target, cost, task){ const gd = bRole('police'); if (!gd) return 'No gendarmerie.'; if (!G.pay(cost, 'Police operations', 'Gendarmerie')) return 'That costs ' + fmt(cost) + '.';
+function sendPolice(kind, target, cost, task){ const gd = bRole('police'); if (!gd) return 'No gendarmerie.'; if (G.suitAt && G.suitAt('police')) cost = Math.round(cost*0.7); if (!G.pay(cost, 'Police operations', 'Gendarmerie')) return 'That costs ' + fmt(cost) + '.';
   target.police = kind; G.vehicle(PMOD[kind], [gd.cx, gd.cy], [target.x, target.y], {kind:'van', tag:'police', done:'policeIn', arg:{k:task || 'clear', id:target.id, kind}}); G.closeAll(); G.news('The gendarmerie sends ' + (kind === 'riot' ? 'the riot police' : 'a patrol') + '.', {quiet:true}); return 'ok'; }
 const POL = {};
 G.vehicleDone.policeIn = (a, v) => { const o = O(), gd = bRole('police'); if (POL[a.k]) POL[a.k](a); if (gd) G.vehicle(PMOD[a.kind], G.vehPos(v).slice(0, 2), [gd.cx, gd.cy], {kind:'van', tag:'police'}); };

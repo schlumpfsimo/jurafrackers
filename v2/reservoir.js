@@ -76,7 +76,7 @@ function stimDay(s, wl){ const run = wl.run, st = run.stages[run.cur], P = st.P,
 // the end: shut in (or bled off). Water left under pressure can still let the rock slip, days later
 function stimEnd(s, wl, bled){ const run = wl.run; run.cur = -2; if (bled) G.book('Stimulation', -COST.bleed, s.name);
   wl.stim = {r:Math.round(run.r0), flow:Math.round(run.flow*10)/10, maxM:Math.round(run.maxM*10)/10, stages:run.stages.filter(q => q.days).length};
-  const pTrail = clamp((run.maxM - 1.2)*0.25, 0, 0.5)*(bled ? 0.35 : 1); if (Math.random() < pTrail) run.trail = {at:G.S.day + 1 + Math.round(Math.random()*9), M:run.maxM - 0.1 + Math.random()*0.6};
+  const pTrail = clamp((run.maxM - 1.2)*0.25, 0, 0.5)*(bled ? 0.35 : 1)*(G.certAt && G.certAt(s, 'tl') ? 0.5 : 1); if (Math.random() < pTrail) run.trail = {at:G.S.day + 1 + Math.round(Math.random()*9), M:run.maxM - 0.1 + Math.random()*0.6};
   G.news('The stimulation at ' + s.name + ' is over: the micro-quakes outline about ' + M(wl.stim.r) + ' of cracked granite around the hole; at the end the well took ' + wl.stim.flow + ' litres a second.'); }
 G.on('day', () => { const g = G.S.geo; if (!g) return; for (const wl of g.wells){ const run = wl.run; if (!run) continue; const s = byId(wl.site); if (run.cur >= 0) stimDay(s, wl);
   if (run.trail && G.S.day >= run.trail.at){ const t = run.trail; run.trail = null; const g2 = G.lineGeom(G.lineOf(s)), [u, d] = G.pathPt(wl.plan, wl.drilled); G.quake((g2.ax + g2.ex*u)/G.geo.K, (g2.ay + g2.ey*u)/G.geo.K, t.M, true, 'Days after the pumps stopped at ' + s.name + ', the rock slips.', {plan:!!run.plan}); } } });

@@ -297,7 +297,7 @@ G.windows['company:bureau'] = c => ({wide:true, tabs:['Staff', 'Company'], body:
   return h + G.emitHtml('bureau:company'); }});
 const CBH = {maison:'The association on campus: membership tiers, courses, suits, polls, the congress.', centre:'Deep rigs and deep drilling, stimulation, the second survey pass, the traffic-light plan.', atelier:'Directional drilling, owned rigs and their maintenance.'};
 G.CBH = CBH;
-const staffWhere = p => p.st === 'idle' ? 'at the Bureau' : p.st === 'site' ? 'on site' : p.st === 'travel' ? 'on the road' : p.st === 'course' ? 'on a course' : p.st;
+const staffWhere = p => p.st === 'idle' ? 'at the Bureau' : p.st === 'site' ? 'on site' : p.st === 'travel' ? 'on the road' : p.st === 'course' ? 'on a course' : p.st === 'visit' ? 'on a visit' : p.st;
 G.staffWhere = staffWhere;
 function placeCampus(k){ const b = G.company('bureau'); if (!b) return 'The Bureau comes first.'; const def = CB[k]; G.closeAll();
   G.tool({model:def.model, view:b.view, turn:4, hint:'Place the ' + def.title + ' next to the Bureau. Arrow keys turn it; Esc cancels.',

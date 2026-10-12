@@ -114,7 +114,7 @@ G.vehicleDone.visitIn = a => { const p = G.S.staff.find(q => q.id === a.p); if (
 G.on('day', () => { const v = V(); if (!v) return; for (const vi of v.visits.slice()) if (G.S.day >= vi.until){ v.visits.splice(v.visits.indexOf(vi), 1); const p = G.S.staff.find(q => q.id === vi.p), b = bById(vi.b), h = homeOf(b), base = G.company('bureau');
   if (p){ p.st = 'travel'; if (base){ const bus = p.tr === 'liaison'; G.vehicle(bus ? 'Post bus' : 'Geologist\'s pickup', [b.cx, b.cy], [base.cx, base.cy], {kind:bus ? 'bus' : 'pickup', done:'backHome', arg:p.id}); } }
   const eff = {evening:[3, {he:1.2, le:1, fa:0.8}, 'An evening of questions'], lesson:[2.5, {he:1.5, le:1, fa:0.7}, 'Geology lessons at the school'], water:[2, {he:0.5, le:0.7, fa:2}, 'The well water was tested']}[vi.k];
-  if (eff) G.mood(h, eff[0], eff[2], eff[1]); for (const r of v.req.filter(q => q.k === vi.k && q.home === h)) closeReq(r, 'done'); keep(q => q.k === vi.k && q.home === h); G.emit('visitDone', vi, b, h); } });
+  if (eff) G.mood(h, eff[0]*(p && (p.certs || []).includes('talk') ? 1.5 : 1), eff[2], eff[1]); for (const r of v.req.filter(q => q.k === vi.k && q.home === h)) closeReq(r, 'done'); keep(q => q.k === vi.k && q.home === h); G.emit('visitDone', vi, b, h); } });
 G.visit = visit;
 // ---- the CEO in the company car: interviews, crises, debates; one trip at a time
 const CEO = G.CEO = {};
