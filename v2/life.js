@@ -15,7 +15,7 @@ function trip(o){ const c = G.homeCentre(o.home), a = Math.random()*Math.PI*2, r
   o.pts = pts.map(p => [p[0], p[1]]); o.s = 0; o.len = plen(o.pts); o.wait = 0; }
 function init(){ L = {walk:[], cars:[], train:{s:-1, next:1}}; const hs = G.homes(); let k = 0;
   for (const h of hs) for (let i = 0; i < (h === 'town' ? 6 : 3); i++){ const m = WALKERS[k++ % WALKERS.length], o = {m, home:h, side:Math.random() < 0.5 ? 1.5 : -1.5, sp:SPEED[m] || 3, ph:Math.random()*6}; trip(o); o.s = Math.random()*(o.len || 0); L.walk.push(o); }
-  for (let i = 0; i < 7; i++){ const o = {m:'Car ' + (1 + i % 8), home:hs[i % hs.length], car:true, side:1.2, sp:90}; trip(o); o.s = Math.random()*(o.len || 0); L.cars.push(o); } }
+  for (let i = 0; i < 7; i++){ const o = {m:'Car ' + (1 + i % 8), home:hs[i % hs.length], car:true, side:1.2, sp:20}; trip(o); o.s = Math.random()*(o.len || 0); L.cars.push(o); } }
 G.on('world', () => { L = null; });
 G.on('tick', dd => { if (!G.world || G.S.phase === 'drive' && !G.S.started) return; if (!L) init();
   for (const o of [...L.walk, ...L.cars]){ if (!o.pts){ o.wait -= dd; if (o.wait <= 0) trip(o); continue; } o.s += o.sp*dd; if (o.s >= o.len){ o.from = o.pts[o.pts.length - 1]; o.pts = null; o.wait = o.car ? 0.3 : 1 + Math.random()*3; } }
