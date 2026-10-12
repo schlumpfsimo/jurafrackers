@@ -248,12 +248,18 @@ Comité de patronage reports · local vs outside contractor choice per job (one 
 | `finance.js` | Bourse, announcements and the regulator, bank, utility and prices, pipes and lines, sales, federal and canton money, the lender |
 | `endings.js` | the campaign, the vote, lapsed, wound up, bankrupt, the raid, the secret annexation |
 
-Decisions taken while building (open to change):
+Decisions taken while building (confirmed after the build; open to change later):
 - Survey lines turn in eight directions (arrow keys or ⟲ ⟳); pipes and power lines stay gridded. A pad may stand up to 25 m beside its line.
 - One map metre is three metres underground; sections are 2 km wide and 5 km deep.
 - Goodwill has a ceiling (58) until heat reaches a village (72 there; +4 for all once power flows); repeated favours count for less.
 - The market values proven resources (a productive aquifer, hot granite), so exploration success holds the share price up.
 - Staff can be let go at the Bureau (they leave at the end of the month).
+- The valley varies as it does now (course, sides, side valleys, hills, woods); always one town, three villages, the stream, road and railway.
+- Difficulty as it is: a careful but simple player wins about half its games.
+- Vehicles drive 1.5 times the speed first built.
+- The secret spiral: riots after two month-ends with the average mood under 18 (or a very big quake while it is under 30); the army if it does not recover above 25 within 60 days; then the jets.
+- Finest zoom 6 px per metre; people 1.2 times life size. Sound starts with the first click.
+- The early experiment pages (landscape, landscape2, valley3, corner) are removed; the model catalogue stays.
 
 Old saves will not load in the new build.
 
