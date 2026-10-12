@@ -175,7 +175,7 @@ function create(seed, opts){ opts = opts || {};
   // ---- what lies at a point
   const SITE_K = ['site', 'earth'];
   const kindAt = (x, y) => {
-    for (const s of SITES){ if (inSiteBox(s, x, y, 0)) return ['site', 0]; if (inSiteBox(s, x, y, 1.4)) return ['earth', 0]; }
+    for (const s of SITES){ if (inSiteBox(s, x, y, 0)) return s.look ? [s.look, 0] : ['site', 0]; if (!s.look && inSiteBox(s, x, y, 1.4)) return ['earth', 0]; }
     const b = binAt(x, y); let qr = null, qRoad = null, eRoad = null, qTrack = null, qSide = null, qNew = null, eNew = null;
     for (const e of b){ const k = e.pl.kind; if (k === 'hedge') continue; const q = nearIn(e, x, y);
       if (k === 'rail'){ qr = q; continue; } if (k === 'track'){ if (!qTrack || q[0] - e.pl.w < qTrack[0] - qTrack.w){ qTrack = q; qTrack.w = e.pl.w; } continue; } if (k === 'stream'){ qSide = q; continue; }

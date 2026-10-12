@@ -55,7 +55,7 @@ const openStretch = (s, wl) => { const shoe = Math.max(0, ...wl.phases.filter(p 
 function stimPlan(wl){ const s = byId(wl.site), [a, b] = openStretch(s, wl), n = 5, st = []; for (let i = 0; i < n; i++) st.push({at:lerp(a, b, (i + 0.5)/n), P:200}); return {stages:st, y:1.4, r:2.0, auto:true, cur:-1, day:0, ev:[], maxM:-9, inj:0, r0:0}; }
 const reStage = (wl, n) => { const s = byId(wl.site), [a, b] = openStretch(s, wl), old = wl.run.stages; wl.run.stages = []; for (let i = 0; i < n; i++) wl.run.stages.push({at:lerp(a, b, (i + 0.5)/n), P:(old[i] || old[old.length - 1]).P}); };
 const seismo = s => G.crewAt(s, 'seismo').length > 0;
-function stimCheck(s, wl){ if (!G.company('centre')) return 'Stimulation needs the Centre de compétences.'; if (kindOf(wl) !== 'granite') return 'Only granite is stimulated: the open hole has to be in it.'; if (wl.stim) return 'This well is already stimulated.'; if (s.wells.some(id => { const w = byId(id); return w && w.going; })) return 'A rig is drilling on this pad.'; return true; }
+function stimCheck(s, wl){ if (G.S.val && G.S.val.noPump > G.S.day) return 'The CEO promised: no pumping for another ' + G.dur(G.S.val.noPump - G.S.day) + '.'; if (!G.company('centre')) return 'Stimulation needs the Centre de compétences.'; if (kindOf(wl) !== 'granite') return 'Only granite is stimulated: the open hole has to be in it.'; if (wl.stim) return 'This well is already stimulated.'; if (s.wells.some(id => { const w = byId(id); return w && w.going; })) return 'A rig is drilling on this pad.'; return true; }
 function stimStart(s, wl){ const ok = stimCheck(s, wl); if (ok !== true) return ok; const run = wl.run; if (run.cur >= 0) return 'Already pumping.';
   if (!G.pay(COST.stage, 'Stimulation', s.name)) return 'Each stage costs ' + fmt(COST.stage) + '.'; run.cur = 0; run.day = 0; run.plan = seismo(s) && run.auto; run.light = seismo(s) ? 'g' : null;
   G.news('The pumps start at ' + s.name + ': stage 1 of ' + run.stages.length + ' at ' + run.stages[0].P + ' bar.' + (seismo(s) ? ' The seismologist watches the traffic light.' : ' Nobody watches the seismometers.')); return 'ok'; }
@@ -67,7 +67,7 @@ function stimDay(s, wl){ const run = wl.run, st = run.stages[run.cur], P = st.P,
   if (run.ev.length > 900) run.ev.splice(0, run.ev.length - 900);
   run.maxM = Math.max(run.maxM, top); run.r0 = 80 + 45*run.stages.reduce((t, q) => t + (q.days || 0)/DAYS*Math.pow(q.P/200, 1.5), 0);
   run.flow = 1 + 30*(1 - Math.exp(-run.r0/400))*Pn;
-  if (top >= 2) G.quake(X/G.geo.K, Y/G.geo.K, top, true, 'The pumps at ' + s.name + ' set off an earthquake.');
+  if (top >= 2) G.quake(X/G.geo.K, Y/G.geo.K, top, true, 'The pumps at ' + s.name + ' set off an earthquake.', {plan:!!run.plan && seismo(s)});
   if (seismo(s)){ if (run.light === null){ run.light = 'g'; run.plan = run.auto; G.news('The seismologist at ' + s.name + ' switches the traffic light on.', {quiet:true}); } const was = run.light; run.light = top >= run.r ? 'r' : top >= run.y ? 'y' : run.light === 'y' ? 'y' : 'g';
     if (run.light === 'r'){ if (run.plan){ G.news('Red at ' + s.name + ': magnitude ' + top.toFixed(1) + '. As planned, the pumps stop and the well is bled off.'); return stimEnd(s, wl, true); } else if (was !== 'r') G.news('Red at ' + s.name + ': magnitude ' + top.toFixed(1) + '. No automatic stop was planned; the pumps keep going.'); }
     else if (run.light === 'y' && was === 'g') G.news('Yellow at ' + s.name + ': magnitude ' + top.toFixed(1) + '. Lower the pressure or stop.'); }
@@ -79,7 +79,8 @@ function stimEnd(s, wl, bled){ const run = wl.run; run.cur = -2; if (bled) G.boo
   const pTrail = clamp((run.maxM - 1.2)*0.25, 0, 0.5)*(bled ? 0.35 : 1); if (Math.random() < pTrail) run.trail = {at:G.S.day + 1 + Math.round(Math.random()*9), M:run.maxM - 0.1 + Math.random()*0.6};
   G.news('The stimulation at ' + s.name + ' is over: the micro-quakes outline about ' + M(wl.stim.r) + ' of cracked granite around the hole; at the end the well took ' + wl.stim.flow + ' litres a second.'); }
 G.on('day', () => { const g = G.S.geo; if (!g) return; for (const wl of g.wells){ const run = wl.run; if (!run) continue; const s = byId(wl.site); if (run.cur >= 0) stimDay(s, wl);
-  if (run.trail && G.S.day >= run.trail.at){ const t = run.trail; run.trail = null; const g2 = G.lineGeom(G.lineOf(s)), [u, d] = G.pathPt(wl.plan, wl.drilled); G.quake((g2.ax + g2.ex*u)/G.geo.K, (g2.ay + g2.ey*u)/G.geo.K, t.M, true, 'Days after the pumps stopped at ' + s.name + ', the rock slips.'); } } });
+  if (run.trail && G.S.day >= run.trail.at){ const t = run.trail; run.trail = null; const g2 = G.lineGeom(G.lineOf(s)), [u, d] = G.pathPt(wl.plan, wl.drilled); G.quake((g2.ax + g2.ex*u)/G.geo.K, (g2.ay + g2.ey*u)/G.geo.K, t.M, true, 'Days after the pumps stopped at ' + s.name + ', the rock slips.', {plan:!!run.plan}); } } });
+G.stopAllPumps = () => { for (const wl of G.S.geo.wells) if (wl.run && wl.run.cur >= 0) stimEnd(G.geoById(wl.site), wl, true); };
 const lower = (wl, s) => { const run = wl.run; for (let i = Math.max(0, run.cur); i < run.stages.length; i++) run.stages[i].P = Math.max(PMIN, run.stages[i].P - PSTEP); G.news('The pressure at ' + s.name + ' goes down to ' + run.stages[Math.max(0, run.cur)].P + ' bar.', {quiet:true}); return 'ok'; };
 // ---- the stimulation window: a cutaway of the granite, the stages, the cloud, the traffic light and the flow meter
 const CW = 460, CH = 300;
@@ -131,7 +132,7 @@ G.on('html:well', (A, s, wl) => { if (!wl.done || wl.plugged) return ''; const k
   return h; });
 // ---- earthquakes: claims, the mood, the newspaper; the church at magnitude 4; houses beyond
 const FELT = [[2.5, 'a bang, a rattle of cups'], [3, 'pictures fall off walls, plaster cracks'], [3.5, 'chimneys crack, people run into the street'], [4, 'tiles fall, walls crack across the valley'], [9, 'the ground rolls; the church tower comes down']];
-G.quake = (x, y, Mw, induced, text) => { const S = G.S, q = {day:Math.round(S.day), x:Math.round(x), y:Math.round(y), M:Math.round(Mw*10)/10, induced:!!induced}; S.geo.quakes.push(q); if (S.geo.quakes.length > 300) S.geo.quakes.shift();
+G.quake = (x, y, Mw, induced, text, o) => { o = o || {}; const S = G.S, q = {day:Math.round(S.day), x:Math.round(x), y:Math.round(y), M:Math.round(Mw*10)/10, induced:!!induced}; S.geo.quakes.push(q); if (S.geo.quakes.length > 300) S.geo.quakes.shift();
   const home = G.nearestHome(x, y), place = G.placeName(home) || 'the valley';
   if (q.M < 2){ G.emit('quake', q); return q; }
   shake(q.M); rings.push({x, y, M:q.M, t:performance.now()});
@@ -140,7 +141,7 @@ G.quake = (x, y, Mw, induced, text) => { const S = G.S, q = {day:Math.round(S.da
   G.mood && G.mood(home, -Math.round(2 + (q.M - 2)*6), 'Earthquake'); if (q.M >= 3) G.moodAll && G.moodAll(-Math.round((q.M - 2.5)*4), 'Earthquake');
   G.news((text ? text + ' ' : '') + 'Magnitude ' + q.M.toFixed(1) + ' under ' + place + ': ' + FELT.find(f => q.M < f[0])[1] + '. Claims so far: ' + fmt(claims) + '.' + (induced ? '' : ' The seismological service says it was natural. Not everyone believes it.'), {paper:true});
   if (q.M >= 4) collapseChurch(x, y); if (q.M >= 4.4) collapseHouses(x, y, q.M);
-  G.crisis && G.crisis({kind:'quake', M:q.M, home, induced:q.induced}); G.emit('quake', q); return q; };
+  G.crisis && G.crisis({kind:'quake', M:q.M, home, induced:q.induced, plan:o.plan}); G.emit('quake', q); return q; };
 // natural quakes: rare and mostly small; the Jura moves a little every few years
 G.on('month', () => { if (Math.random() < 0.015){ const f = G.geo.faults[Math.floor(Math.random()*G.geo.faults.length)], K = G.geo.K, x = clamp(f.X0/K + (Math.random() - 0.5)*200, 10, G.world.W - 10), y = clamp(f.Y0/K + (Math.random() - 0.5)*200, 10, G.world.D - 10);
   G.quake(x, y, 1.2 + 2.0*Math.random()*Math.random(), false, 'The ground shakes without anyone pumping.'); } });

@@ -60,6 +60,7 @@ const TRADES = G.TRADES = {
   seismo:{n:'Seismologist', pl:'Seismologists', wage:18, req:'university', h:'Reads the seismometers during stimulation: the traffic light works only with one on the site.'},
   operator:{n:'Plant operator', pl:'Plant operators', wage:14, h:'A power plant runs only with two.'}};
 const personName = fem => { for (let i = 0; i < 80; i++){ const k = Math.floor(Math.random()*FIRST.length); if ((k % 2 === 1) !== !!fem) continue; const n = FIRST[k] + ' ' + LAST[Math.floor(Math.random()*LAST.length)]; if (!G.S.staff.some(p => p.name === n)) return n; } return 'Staff ' + (G.S.staffN + 1); };
+G.personName = fem => personName(fem);
 G.hire = (tr, quiet) => { const T = TRADES[tr]; const fem = Math.random() < 0.6, p = {id:++G.S.staffN, f:fem, name:tr === 'suit' ? 'Suit no. ' + (G.S.suitN = (G.S.suitN || 0) + 1) : personName(fem), tr, st:'idle', certs:[], since:G.S.day}; G.S.staff.push(p); if (!quiet) G.news(T.n + ' hired: ' + p.name + '.'); return p; };
 G.pron = p => p.tr === 'suit' ? 'they' : p.f ? 'she' : 'he';
 // ---- news (La Feuille de la Faille and the wire)
@@ -132,7 +133,7 @@ const pathLen = pts => { let L = 0; for (let i = 1; i < pts.length; i++) L += Ma
 const along = (pts, s) => { for (let i = 1; i < pts.length; i++){ const L = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (s <= L || i === pts.length - 1){ const t = L ? clamp(s/L, 0, 1) : 1; return [lerp(pts[i - 1][0], pts[i][0], t), lerp(pts[i - 1][1], pts[i][1], t), pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]]; } s -= L; } const p = pts[pts.length - 1]; return [p[0], p[1], 1, 0]; };
 G.vehPos = v => along(v.pts, v.s);
 const DONE = G.vehicleDone = {};
-function moveVehicles(dd){ for (const v of G.S.vehicles.slice()){ if (v.s >= v.len){ continue; } v.s = Math.min(v.len, v.s + v.speed*dd); if (v.s >= v.len){ const fn = DONE[v.done]; if (!v.keep) G.S.vehicles.splice(G.S.vehicles.indexOf(v), 1); if (fn) fn(v.arg, v); } } }
+function moveVehicles(dd){ for (const v of G.S.vehicles.slice()){ if (v.s >= v.len){ continue; } if (v.s >= 0 && G.hold && G.hold(v, dd)) continue; v.s = Math.min(v.len, v.s + v.speed*dd); if (v.s >= v.len){ const fn = DONE[v.done]; if (!v.keep) G.S.vehicles.splice(G.S.vehicles.indexOf(v), 1); if (fn) fn(v.arg, v); } } }
 // ---- company buildings: placed by the player, built by the builders, then they stand on the map
 const CB = G.CB = {
   bureau:{model:'Bureau', title:'Bureau', cost:300, upkeep:20, days:20, acc:'Rent and phones'},
