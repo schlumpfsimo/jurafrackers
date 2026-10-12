@@ -237,7 +237,11 @@ function concession(seed){ const o = overlay('<div class="paper"><h1>Concession 
 function busy(on){ $('#busy').classList.toggle('on', on); }
 function begin(seed){ closeOverlay(); busy(true); setTimeout(() => { G.S = newState(seed); makeWorld(); nameValley(); G.S.started = false; G.S.phase = 'drive';
   // the company car waits at one end of the valley road
-  const W = G.world, end = Math.random() < 0.5 ? W.roads[0][0] : W.roads[0][W.roads[0].length - 1], inner = W.roads[0][end === W.roads[0][0] ? 6 : W.roads[0].length - 7];
+  const W = G.world, pts = Math.random() < 0.5 ? W.roads[0] : W.roads[0].slice().reverse(), end = pts[0]; let inner = pts[Math.min(6, pts.length - 1)];
+  { // it stops where the Bureau and the depot find open ground close by (the first stretch of road can be crowded)
+    const [w, d] = G.footprint('Bureau', 0), [w2, d2] = G.footprint('Depot', 0), tw = (FOOTVIEW(0) ? Math.max(w, w2) : w + w2 + 4) + 4, td = (FOOTVIEW(0) ? d + d2 + 4 : Math.max(d, d2)) + 4;
+    const room = ([x, y]) => { for (let r = 15; r < 80; r += 10) for (let a = 0; a < 12; a++){ const px = x + Math.cos(a*0.5236)*r, py = y + Math.sin(a*0.5236)*r; if (typeof W.canBuild(px, py, tw, td, 0) !== 'string'){ const q = W.nearestRoad(px, py); if (q && q.d <= 70) return true; } } return false; };
+    for (let i = 1, s = 0, next = 30; i < pts.length && s < 320; i++){ s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (s < next) continue; next = s + 20; if (room(pts[i])){ inner = pts[i]; break; } } }
   const car = G.vehicle('Company car (old 911)', end, inner, {kind:'car', keep:true, done:'carStop'}); car.name = 'Company car'; car.tag = 'car'; G.S.car = car.id;
   G.R.cam.step = 3; G.R.centreOn(inner[0], inner[1]); setSpeed(1); busy(false); hint('The Company car drives into the valley. Click a road where the Bureau should stand: the car drives there.'); G.emit('begin'); save(); }, 30); }
 function makeWorld(){ const S = G.S; G.world = World.create(S.seed); const c = $('#map'); G.R = Render.create(G.world, c); G.R.canvas = c.getContext('2d'); resize();
