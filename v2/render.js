@@ -69,11 +69,11 @@ function create(world, canvas, opts){ opts = opts || {};
       if (c) g.drawImage(c, Math.round(dx), Math.round(dy), T*z, T*z); else { const lower = fallback(L, i, j); if (lower) g.drawImage(lower.c, lower.sx, lower.sy, lower.sw, lower.sh, Math.round(dx), Math.round(dy), T*z, T*z); } }
     // moving things, back to front; what stands in front of each is drawn again over it
     const items = dyn.filter(o => !o.hidden).map(o => { const e = o.draw ? null : ART.sprite(o.m, o.view || 0, L.S, {noPad:true, recol:o.recol, key:o.key || ''}), [px, py] = proj(L, o.x, o.y, o.z ?? world.hb(clamp(o.x, 0, W), clamp(o.y, 0, D))); return {o, e, px, py, depth:o.depth ?? (o.x + o.y)}; });
-    items.sort((a, b) => (a.o.flat ? -1e6 : 0) + a.depth - ((b.o.flat ? -1e6 : 0) + b.depth));
+    const lift = o => o.flat ? -1e6 : o.sky ? 1e6 : 0; items.sort((a, b) => lift(a.o) + a.depth - (lift(b.o) + b.depth));   // flat things first, things in the sky last
     for (const it of items){ const sx = (it.px - V.x0)*z, sy = (it.py - V.y0)*z; if (sx < -400 || sy < -400 || sx > canvas.width + 400 || sy > canvas.height + 400) continue;
       if (it.o.draw){ it.o.draw(g, sx, sy, z, L.S, V); continue; }
       const e = it.e, x0 = Math.round(sx - e.ax*z), y0 = Math.round(sy - e.ay*z); if (it.o.alpha !== undefined) g.globalAlpha = it.o.alpha; g.drawImage(ART.spriteCanvas(e), x0, y0, e.w*z, e.h*z); g.globalAlpha = 1;
-      if (!it.o.flat) for (const s of nearStatics(L, it.px - e.ax, it.py - e.ay, e.w, e.h)){ if (s.depth <= it.depth + 0.5) continue; const se = spriteOf(s, L.S), [rx, ry] = s.r[L.li]; g.drawImage(ART.spriteCanvas(se), Math.round((rx - V.x0)*z), Math.round((ry - V.y0)*z), se.w*z, se.h*z); } }
+      if (!it.o.flat && !it.o.sky) for (const s of nearStatics(L, it.px - e.ax, it.py - e.ay, e.w, e.h)){ if (s.depth <= it.depth + 0.5) continue; const se = spriteOf(s, L.S), [rx, ry] = s.r[L.li]; g.drawImage(ART.spriteCanvas(se), Math.round((rx - V.x0)*z), Math.round((ry - V.y0)*z), se.w*z, se.h*z); } }
     // writing on walls, at screen scale, when it fits
     for (const o of visibleStatics(L, V)){ if (o.kind !== 'b') continue; const e = spriteOf(o, L.S); if (!e.texts.length) continue; const [rx, ry] = o.r[L.li]; ART.spriteTexts(g, e, (rx - V.x0)*z, (ry - V.y0)*z, z, L.S); }
     for (const f of overlays) f(g, V); };

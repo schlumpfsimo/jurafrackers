@@ -349,6 +349,8 @@ function fenceModel(len){ len = Math.round(len*10)/10; return makeModel('fence:'
 function siteFenceModel(len){ len = Math.round(len*10)/10; return makeModel('sitefence:' + len, len, 0.2, ({B, L}) => { for (const x of [0.04, len - 0.04]) B(x - 0.04, 0.06, 0, 0.08, 0.08, 2, '#8a9096'); for (const z of [0.3, 1.0, 1.9]) L([[0.04, 0.1, z], [len - 0.04, 0.1, z]], '#a9afb5', 0.3); }); }
 const flagModel = () => makeModel('prospect flag', 1.2, 1.2, ({B, Q}) => { B(0.55, 0.55, 0, 0.08, 0.08, 2.6, '#d9d4c8'); Q([[0.6, 0.6, 2.55], [0.6, 0.6, 1.95], [1.5, 0.6, 2.25]], '#e07a2c'); Q([[0.6, 0.6, 2.25], [0.6, 0.6, 1.95], [1.2, 0.6, 2.1]], '#2c5f93'); });
 const springModel = () => makeModel('spring basin', 2.2, 1.4, ({B}) => { B(0, 0, 0, 2.2, 1.4, 0.55, '#b8b1a2', {top:'#7fa6c4'}); B(0.9, -0.05, 0.55, 0.4, 0.25, 0.5, '#a9a294'); B(1.05, 0.05, 0.85, 0.1, 0.4, 0.06, '#7a7f86'); });
+// a wooden power-line pole with its crossbar and insulators (the wires are drawn between the tops)
+const poleModel = () => makeModel('power pole', 0.6, 0.6, ({B}) => { B(0.2, 0.2, 0, 0.22, 0.22, 8, '#6e543c'); B(-0.9, 0.24, 7.3, 2.4, 0.14, 0.16, '#5e4632'); for (const x of [-0.75, 0.31, 1.25]) B(x, 0.22, 7.46, 0.1, 0.18, 0.26, '#e8e6e0'); });
 // a protest banner on two posts, readable from both sides (only when zoomed in, like every sign)
 const bannerModel = t => makeModel('banner:' + t, 2.4, 0.4, ({B, L}) => { const red = '#c0392b'; L([[0.15, 0.2, 0], [0.15, 0.2, 1.75]], '#7a5a3c', 0.7); L([[2.25, 0.2, 0], [2.25, 0.2, 1.75]], '#7a5a3c', 0.7); B(0.15, 0.15, 0.75, 2.1, 0.1, 0.9, '#f4f2ec', {noline:1, win:[['S', 0.1, 0.12, 1.9, 0.66, '#f4f2ec', t, red], ['N', 0.1, 0.12, 1.9, 0.66, '#f4f2ec', t, red]]}); });
 const markerModel = (c) => makeModel('stake:' + c, 0.4, 0.4, ({B}) => { B(0.15, 0.15, 0, 0.1, 0.1, 1.2, '#e8e4da'); B(0.12, 0.12, 1.0, 0.16, 0.16, 0.2, c); });
@@ -1369,5 +1371,5 @@ for (let i = 0; i < 4; i++){ const r = rng(900 + i*31), ax = i % 2 ? 'y' : 'x', 
 // composing scenes from the locked assets: a kit of the building blocks used above
 const KIT = {M, VARS, place:placeModel, figure:figure3, turned, PROT, VILL, BLOC, GOON, RIOT, POSE, cowM, sheepFn, chickFn, horseFn, dogAt, bikeAt, bench, barricade, beech, spruce, fruitTree, bareBeech, snowy, sway, at, firstOf, flame, grass, f35At, rng, pick, hsh, cell, leafy};
 const compose = (W, D, fn) => ({cat:'s', n:'scene', W, D, parts:build(H => fn(H, KIT))});
-globalThis.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose, plates:PLATES, plateText, texts:TEXTS, wallText, sprite, spriteCanvas, spriteTexts, sprites:SPRITES, makeModel, treeModel, bridgeModel, fenceModel, siteFenceModel, lampModel, washingModel, woodpileModel, flagModel, springModel, markerModel, bannerModel, TREE_H, VARS, KIT};
+globalThis.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose, plates:PLATES, plateText, texts:TEXTS, wallText, sprite, spriteCanvas, spriteTexts, sprites:SPRITES, makeModel, treeModel, bridgeModel, fenceModel, siteFenceModel, lampModel, washingModel, woodpileModel, flagModel, springModel, markerModel, bannerModel, poleModel, TREE_H, VARS, KIT};
 })();
