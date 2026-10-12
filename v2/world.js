@@ -350,6 +350,6 @@ function create(seed, opts){ opts = opts || {};
   return {seed:SEED, W, D, get zmin(){ return zmin; }, get zmax(){ return zmax; }, hb, base0, slope, kindAt, colourAt, forestAt, inTown, inSettle, nearP, near, atRoad, curve, finish, yOn, view16, viewFacing,
     roads:ROADS, newRoads:NEWROADS, tracks:TRACKS, rail:RAIL, side:SIDE, hedges:HEDGES, stream:{ys, hw, streamV}, town:TOWN, villages:VILLAGES, square:SQUARE, sites:SITES, inSite, inSiteBox,
     buildings:placed, probe:PROBE, trees, treesNear:(x, y) => TB.get(Math.floor(x/16)*1000 + Math.floor(y/16)) || [], props, bridges, life, graph, route, nearestRoad, roadNear,
-    addSite, removeSite, addRoad, canBuild, refresh, onChange:f => listeners.push(f), model, missing:MISSING, overlaps:OVERLAPS, tx:TX, svx:SVX, hx:HX, rid:RID, axis}; }
+    addSite, removeSite, addRoad, canBuild, refresh, onChange:f => listeners.push(f), touch:changed, model, missing:MISSING, overlaps:OVERLAPS, tx:TX, svx:SVX, hx:HX, rid:RID, axis}; }
 globalThis.World = {create, view16, viewFacing};
 })();

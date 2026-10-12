@@ -290,6 +290,9 @@ function prims(model, S, rc, noPad, skip){ const out = [], texts = [], mt = 1/S,
       out.push({box:[p.x - r, p.x + r, p.y - r, p.y + r, p.z, zt], hit(O, d){ { const t = (zt - O[2])/d[2], X = O[0] + t*d[0] - p.x, Y = O[1] + t*d[1] - p.y; if (X*X + Y*Y <= r*r) return [t, 0, 0, 1, top, 0]; }
         const ox = O[0] - p.x, oy = O[1] - p.y, a = d[0]*d[0] + d[1]*d[1], b = ox*d[0] + oy*d[1], cc = ox*ox + oy*oy - r*r, disc = b*b - a*cc; if (disc < 0 || a < 1e-12) return null;
         const t = (-b - Math.sqrt(disc))/a, Z = O[2] + t*d[2]; if (Z < p.z || Z > zt) return null; return [t, (ox + t*d[0])/r, (oy + t*d[1])/r, 0, c, 0]; }});
+    } else if (p.t === 'puff'){ const r = Math.max(p.r, mt), m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(p.c), c = rc(m ? '#' + [m[1], m[2], m[3]].map(v => (+v).toString(16).padStart(2, '0')).join('') : p.c);   // smoke: an opaque ball of grey
+      out.push({box:[p.x - r, p.x + r, p.y - r, p.y + r, p.z - r, p.z + r], hit(O, d){ const ox = O[0] - p.x, oy = O[1] - p.y, oz = O[2] - p.z, a = d[0]*d[0] + d[1]*d[1] + d[2]*d[2], b = ox*d[0] + oy*d[1] + oz*d[2], cc = ox*ox + oy*oy + oz*oz - r*r, disc = b*b - a*cc; if (disc < 0) return null;
+        const t = (-b - Math.sqrt(disc))/a; return [t, (ox + t*d[0])/r, (oy + t*d[1])/r, (oz + t*d[2])/r, c, 0]; }});
     } else if (p.t === 'prism'){ const pts = p.pts, zt = p.z + p.h, xs = pts.map(q => q[0]), ys = pts.map(q => q[1]); let area = 0; for (let i = 0; i < pts.length; i++){ const a = pts[i], b = pts[(i + 1) % pts.length]; area += a[0]*b[1] - b[0]*a[1]; }
       const sg = area > 0 ? 1 : -1, top = rc(p.top || p.c), side = rc(p.side || p.c), zt2 = zt + (p.h < mt ? mt : 0);
       out.push({box:[Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys), p.z, zt2], hit(O, d){ const tT = (zt2 - O[2])/d[2], tB = (p.z - O[2])/d[2];
@@ -344,6 +347,9 @@ function bridgeModel(len, w, road){ const n = 'bridge:' + len.toFixed(1) + ':' +
   const deck = road ? '#9a958a' : '#8a6a4a', rail = road ? '#b0aba0' : '#6a4a32'; B(0, 0.3, 0, len, w, 0.4, deck, {top:road ? '#6d7176' : '#9a7a52'}); for (const y of [0.18, w + 0.3]) B(0, y, 0.4, len, 0.12, road ? 0.7 : 0.75, rail); }); }
 function fenceModel(len){ len = Math.round(len*10)/10; return makeModel('fence:' + len, len, 0.2, ({B, L}) => { for (const x of [0.05, len - 0.05]) B(x - 0.05, 0.05, 0, 0.1, 0.1, 0.95, '#7a5a3a'); for (const z of [0.4, 0.8]) L([[0.05, 0.1, z], [len - 0.05, 0.1, z]], '#8a6a4a', 0.45); }); }
 function siteFenceModel(len){ len = Math.round(len*10)/10; return makeModel('sitefence:' + len, len, 0.2, ({B, L}) => { for (const x of [0.04, len - 0.04]) B(x - 0.04, 0.06, 0, 0.08, 0.08, 2, '#8a9096'); for (const z of [0.3, 1.0, 1.9]) L([[0.04, 0.1, z], [len - 0.04, 0.1, z]], '#a9afb5', 0.3); }); }
+const flagModel = () => makeModel('prospect flag', 1.2, 1.2, ({B, Q}) => { B(0.55, 0.55, 0, 0.08, 0.08, 2.6, '#d9d4c8'); Q([[0.6, 0.6, 2.55], [0.6, 0.6, 1.95], [1.5, 0.6, 2.25]], '#e07a2c'); Q([[0.6, 0.6, 2.25], [0.6, 0.6, 1.95], [1.2, 0.6, 2.1]], '#2c5f93'); });
+const springModel = () => makeModel('spring basin', 2.2, 1.4, ({B}) => { B(0, 0, 0, 2.2, 1.4, 0.55, '#b8b1a2', {top:'#7fa6c4'}); B(0.9, -0.05, 0.55, 0.4, 0.25, 0.5, '#a9a294'); B(1.05, 0.05, 0.85, 0.1, 0.4, 0.06, '#7a7f86'); });
+const markerModel = (c) => makeModel('stake:' + c, 0.4, 0.4, ({B}) => { B(0.15, 0.15, 0, 0.1, 0.1, 1.2, '#e8e4da'); B(0.12, 0.12, 1.0, 0.16, 0.16, 0.2, c); });
 const lampModel = () => makeModel('street lamp', 0.6, 0.6, ({B}) => { B(0.24, 0.24, 0, 0.12, 0.12, 4.2, '#3a3f45'); B(0.05, 0.18, 4.1, 0.5, 0.24, 0.14, '#4a4f55', {top:'#5a5f65'}); B(0.1, 0.22, 4.02, 0.4, 0.16, 0.08, '!#fff4c8'); });
 const washingModel = () => makeModel('washing line', 3.6, 0.3, ({B, L}) => { for (const x of [0.1, 3.5]) B(x - 0.04, 0.11, 0, 0.08, 0.08, 1.8, '#7a5a3a'); L([[0.1, 0.15, 1.75], [3.5, 0.15, 1.75]], '#d9d4c8', 0.3);
   [['#f4f2ec', 0.4], ['#c63a2c', 1.1], ['#2c5f93', 1.7], ['#e8b730', 2.4], ['#f4f2ec', 2.9]].forEach(([c, x]) => B(x, 0.13, 1.2, 0.45, 0.04, 0.55, c)); });
@@ -1361,5 +1367,5 @@ for (let i = 0; i < 4; i++){ const r = rng(900 + i*31), ax = i % 2 ? 'y' : 'x', 
 // composing scenes from the locked assets: a kit of the building blocks used above
 const KIT = {M, VARS, place:placeModel, figure:figure3, turned, PROT, VILL, BLOC, GOON, RIOT, POSE, cowM, sheepFn, chickFn, horseFn, dogAt, bikeAt, bench, barricade, beech, spruce, fruitTree, bareBeech, snowy, sway, at, firstOf, flame, grass, f35At, rng, pick, hsh, cell, leafy};
 const compose = (W, D, fn) => ({cat:'s', n:'scene', W, D, parts:build(H => fn(H, KIT))});
-globalThis.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose, plates:PLATES, plateText, texts:TEXTS, wallText, sprite, spriteCanvas, spriteTexts, sprites:SPRITES, makeModel, treeModel, bridgeModel, fenceModel, siteFenceModel, lampModel, washingModel, woodpileModel, TREE_H, VARS, KIT};
+globalThis.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose, plates:PLATES, plateText, texts:TEXTS, wallText, sprite, spriteCanvas, spriteTexts, sprites:SPRITES, makeModel, treeModel, bridgeModel, fenceModel, siteFenceModel, lampModel, washingModel, woodpileModel, flagModel, springModel, markerModel, TREE_H, VARS, KIT};
 })();

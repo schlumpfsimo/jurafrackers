@@ -87,7 +87,7 @@ function headerX(){ const S = G.S, x = $('#hdrx'); if (!x.classList.contains('op
   html += '</div><div><h3>Loans, grants and contracts</h3>' + (S.loans.length || S.grants.length || S.contracts.length ? G.emitHtml('finance') : '<p class="muted">None yet.</p>') + '<h3 style="margin-top:12px">Shares</h3>' + sharesChart() + '</div>';
   html += '<div class="news"><h3>News</h3>' + (S.news.length ? S.news.slice(0, 40).map(n => '<p><i>' + dateStr(n.d) + '</i>' + esc(n.t) + '</p>').join('') : '<p class="muted">Nothing yet.</p>') + '</div></div>';
   x.innerHTML = html; }
-G.emitHtml = ev => (G.hooks['html:' + ev] || []).map(fn => fn()).join('');
+G.emitHtml = (ev, ...a) => (G.hooks['html:' + ev] || []).map(fn => fn(...a)).join('');
 function sharesChart(){ const h = G.S.priceHist, w = 280, hh = 70, mx = Math.max(...h) * 1.1, mn = Math.min(...h)*0.9; const pts = h.map((v, i) => (i/(Math.max(1, h.length - 1))*w).toFixed(1) + ',' + (hh - (v - mn)/(mx - mn || 1)*hh).toFixed(1)).join(' ');
   return '<svg width="' + w + '" height="' + (hh + 14) + '" style="display:block"><polyline points="' + pts + '" fill="none" stroke="#2c5f93" stroke-width="1.5"/><text x="0" y="' + (hh + 12) + '" font-size="10" fill="#6f6a60">' + G.S.shares + 'k shares · CHF ' + G.S.price.toFixed(2) + '</text></svg>'; }
 $('#hdr').addEventListener('click', () => { const x = $('#hdrx'); x.classList.toggle('open'); G.S && (G.S.hdrPause = x.classList.contains('open')); headerX(); header(); });
@@ -96,7 +96,7 @@ $('#hdrx').addEventListener('click', e => { const tr = e.target.closest('tr.clic
 const WINS = new Map();
 G.openWin = (key, def) => { let w = WINS.get(key); if (!w){ const el = document.createElement('div'); el.className = 'win' + (def.wide ? ' wide' : '') + (def.xwide ? ' xwide' : ''); $('#wins').appendChild(el); w = {key, el, def, tab:def.tab || 0, placed:false}; WINS.set(key, w);
     el.addEventListener('pointerdown', e => e.stopPropagation()); el.addEventListener('wheel', e => e.stopPropagation());
-    el.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b && !b.disabled){ const fn = w.acts && w.acts[b.dataset.a]; if (fn){ const r = fn(b.dataset.v, b); if (typeof r === 'string' && r !== 'ok') G.toast(r); G.refresh(); } } const t = e.target.closest('[data-tab]'); if (t){ w.tab = +t.dataset.tab; draw(w); } if (e.target.closest('.x')) G.closeWin(key); });
+    el.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b && !b.disabled){ const fn = (w.acts && w.acts[b.dataset.a]) || (G.globalActs || {})[b.dataset.a]; if (fn){ const r = fn(b.dataset.v, b); if (typeof r === 'string' && r !== 'ok') G.toast(r); G.refresh(); } } const t = e.target.closest('[data-tab]'); if (t){ w.tab = +t.dataset.tab; draw(w); } if (e.target.closest('.x')) G.closeWin(key); });
     dragWin(w); } else w.def = def;
   for (const [k, o] of WINS) if (k !== key && !o.def.keep && !def.keep && WINS.size > 3) G.closeWin(k);
   draw(w); if (!w.placed) placeWin(w); w.el.style.zIndex = ++zTop; return w; };
@@ -158,9 +158,9 @@ G.getTool = () => tool;
 const hint = h => { const e = $('#hint'); if (h){ e.innerHTML = h; e.classList.add('on'); } else e.classList.remove('on'); };
 G.hint = hint;
 let pointer = null;
-const ghostDraw = (g) => { if (!tool || !pointer || !tool.model) return; const p = G.R.pickGround(pointer[0], pointer[1]); if (!p) return; let [x, y] = p; if (tool.snap) [x, y] = tool.snap(x, y); const view = tool.view || 0, m = G.world.model(tool.model) || tool.m;
+const ghostDraw = (g) => { if (!tool || !pointer || !(tool.model || tool.m)) return; const p = G.R.pickGround(pointer[0], pointer[1]); if (!p) return; let [x, y] = p; if (tool.snap) [x, y] = tool.snap(x, y); const view = tool.view || 0, m = tool.model ? G.world.model(tool.model) : tool.m;
   const chk = tool.check(x, y, view), ok = typeof chk !== 'string', e = ART.sprite(m, view, G.R.lv().S, {noPad:true}), z = G.R.zf(), [sx, sy] = G.R.toScreen(x, y, G.world.hb(x, y));
-  const [w, d] = tool.size ? tool.size(view) : G.footprint(tool.model, view), cs = [[-w/2, -d/2], [w/2, -d/2], [w/2, d/2], [-w/2, d/2]].map(([u, v]) => G.R.toScreen(x + u, y + v, G.world.hb(x + u, y + v)));
+  const [w, d] = tool.size ? tool.size(view) : G.footprint(tool.model, view), ca = Math.cos(tool.ang || 0), sa = Math.sin(tool.ang || 0), cs = [[-w/2, -d/2], [w/2, -d/2], [w/2, d/2], [-w/2, d/2]].map(([u, v]) => { const px = x + u*ca - v*sa, py = y + u*sa + v*ca; return G.R.toScreen(px, py, G.world.hb(px, py)); });
   g.save(); g.beginPath(); cs.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.fillStyle = ok ? 'rgba(80,160,90,.25)' : 'rgba(190,60,50,.25)'; g.fill(); g.strokeStyle = ok ? '#3d7a4a' : '#b8322a'; g.lineWidth = 2; g.stroke();
   g.globalAlpha = 0.6; g.imageSmoothingEnabled = false; g.drawImage(ART.spriteCanvas(e), Math.round(sx - e.ax*z), Math.round(sy - e.ay*z), e.w*z, e.h*z); g.restore();
   if (tool.extra) tool.extra(g, x, y, view, ok);
@@ -197,9 +197,11 @@ const drawMarks = (g) => { G.markHits = []; for (const m of G.S.marks){ const at
     g.fillStyle = k; g.font = '700 12px Silkscreen, monospace'; g.textAlign = 'center'; g.fillText(m.kind, sx, sy - 9); g.textAlign = 'left'; G.markHits.push({sx, sy:sy - 14, open:() => G.emit('mark', m)}); } };
 // ---- the loop: real time becomes days; the map is drawn every frame, tiles are drawn while there is time
 let last = 0, dayAcc = 0;
+const advance = dd => { const S = G.S, d0 = Math.floor(S.day); S.day += dd; moveVehicles(dd); G.emit('tick', dd); for (let d = d0 + 1; d <= Math.floor(S.day); d++){ G.emit('day', d); if (d % CFG.DAYS === 0) closeMonth(); } };
+// fast-forward (for testing): days of game time at once, in quarter days
+G.ff = days => { for (let i = 0; i < days*4 && !G.S.over; i++) advance(0.25); G.refresh(); };
 function loop(now){ requestAnimationFrame(loop); const S = G.S; if (!S || !G.R) return; const dt = Math.min(0.1, (now - (last || now))/1000); last = now;
-  const paused = S.speed === 0 || S.hdrPause || G.overlayPause || S.over; if (!paused){ const dd = dt*S.speed*CFG.DAYS/CFG.MONTH_SEC; const d0 = Math.floor(S.day); S.day += dd; moveVehicles(dd); G.emit('tick', dd);
-    for (let d = d0 + 1; d <= Math.floor(S.day); d++){ G.emit('day', d); if (d % CFG.DAYS === 0) closeMonth(); } if (Math.floor(S.day) !== d0){ dayAcc++; if (dayAcc % 2 === 0) G.refresh(); else header(); } }
+  const paused = S.speed === 0 || S.hdrPause || G.overlayPause || S.over; if (!paused){ const d0 = Math.floor(S.day); advance(dt*S.speed*CFG.DAYS/CFG.MONTH_SEC); if (Math.floor(S.day) !== d0){ dayAcc++; if (dayAcc % 2 === 0) G.refresh(); else header(); } }
   // what moves on the map
   const R = G.R; R.dyn.length = 0; for (const c of S.company) if (c.dyn) R.dyn.push(c.dyn);
   for (const v of S.vehicles){ const [x, y, dx, dy] = along(v.pts, v.s); R.dyn.push({m:G.world.model(v.model), view:G.world.view16(dx, dy), x, y, z:G.world.hb(x, y) + 0.05, pickable:true, ref:v, pickR:2}); }
@@ -237,7 +239,7 @@ function begin(seed){ closeOverlay(); busy(true); setTimeout(() => { G.S = newSt
   const car = G.vehicle('Company car (old 911)', end, inner, {kind:'car', keep:true, done:'carStop'}); car.name = 'Company car'; car.tag = 'car'; G.S.car = car.id;
   G.R.cam.step = 3; G.R.centreOn(inner[0], inner[1]); setSpeed(1); busy(false); hint('The Company car drives into the valley. Click a road where the Bureau should stand: the car drives there.'); G.emit('begin'); save(); }, 30); }
 function makeWorld(){ const S = G.S; G.world = World.create(S.seed); const c = $('#map'); G.R = Render.create(G.world, c); G.R.canvas = c.getContext('2d'); resize();
-  for (const ch of S.changes){ if (ch.t === 'site') G.world.addSite(ch.cx, ch.cy, ch.w, ch.d, ch.a, {company:ch.company, ...(ch.extra || {})}); if (ch.t === 'road') G.world.addRoad(ch.pts, ch.w); }
+  for (const ch of S.changes){ if (ch.t === 'site') G.world.addSite(ch.cx, ch.cy, ch.w, ch.d, ch.a, {company:ch.company, ...(ch.extra || {})}); if (ch.t === 'road') G.world.addRoad(ch.pts, ch.w); if (ch.t === 'model'){ const b = G.world.buildings.find(q => q.id === ch.id); if (b) b.name = ch.name; } }
   for (const c2 of S.company) showCompany(c2); G.emit('world'); }
 function startFrom(saved){ closeOverlay(); busy(true); setTimeout(() => { G.S = saved; makeWorld(); setSpeed(saved.speed || 1); const b = G.company('bureau') || G.S.company[0]; if (b) G.R.centreOn(b.cx, b.cy); G.R.cam.step = 3; busy(false); G.emit('load'); if (G.S.phase === 'drive') hint('Click a road where the Bureau should stand: the car drives there.'); }, 30); }
 // the car: it drives to where the player clicks; once it stands, its window offers to build the Bureau there
