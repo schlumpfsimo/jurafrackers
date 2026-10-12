@@ -361,6 +361,12 @@ const woodpileModel = () => makeModel('woodpile', 2.4, 0.7, ({B}) => B(0, 0, 0, 
 const SPRITES = new Map();
 // people are drawn a little bigger than life, so they read among the buildings
 const BIGGER = {p:1.2, l:1.18, c:1.12};
+// where a sprite would sit and how big it is, without drawing it (the map indexes everything, but draws only what is seen)
+const BOXES = new Map();
+function spriteBox(model, view, S, o){ o = o || {}; const key = model.n + '|' + view + '|' + S + '|' + (o.key || '') + (o.noPad ? '|n' : ''); const had = SPRITES.get(key) || BOXES.get(key); if (had) return had; S = S*(BIGGER[model.cat] || 1);
+  const th = view*Math.PI/8, ca = Math.cos(th), sa = Math.sin(th), cx = model.W/2, cy = model.D/2, rc = o.recol ? (c => o.recol[c] || c) : (c => c), {out} = prims(model, S, rc, o.noPad, o.skip);
+  let sx0 = 1e9, sx1 = -1e9, sy0 = 1e9, sy1 = -1e9; for (const p of out){ const [x0, x1, y0, y1, z0, z1] = p.box; for (const x of [x0, x1]) for (const y of [y0, y1]){ const X = cx + ca*(x - cx) - sa*(y - cy), Y = cy + sa*(x - cx) + ca*(y - cy); for (const z of [z0, z1]){ const px = (X - Y)*S, py = (X + Y)*S/2 - z*S; if (px < sx0) sx0 = px; if (px > sx1) sx1 = px; if (py < sy0) sy0 = py; if (py > sy1) sy1 = py; } } }
+  const e = !out.length ? {w:1, h:1, ax:0, ay:0} : (sx0 = Math.floor(sx0) - 1, sy0 = Math.floor(sy0) - 1, {w:Math.ceil(sx1) - sx0 + 2, h:Math.ceil(sy1) - sy0 + 2, ax:(cx - cy)*S - sx0, ay:(cx + cy)*S/2 - sy0}); BOXES.set(key, e); return e; }
 function sprite(model, view, S, o){ o = o || {}; const key = model.n + '|' + view + '|' + S + '|' + (o.key || '') + (o.noPad ? '|n' : ''); const had = SPRITES.get(key); if (had) return had; S = S*(BIGGER[model.cat] || 1);
   const th = view*Math.PI/8, ca = Math.cos(th), sa = Math.sin(th), cx = model.W/2, cy = model.D/2, rc = o.recol ? (c => o.recol[c] || c) : (c => c);
   const {out, texts} = prims(model, S, rc, o.noPad, o.skip); const toW = (x, y) => [cx + ca*(x - cx) - sa*(y - cy), cy + sa*(x - cx) + ca*(y - cy)];
@@ -1373,5 +1379,5 @@ for (let i = 0; i < 4; i++){ const r = rng(900 + i*31), ax = i % 2 ? 'y' : 'x', 
 // composing scenes from the locked assets: a kit of the building blocks used above
 const KIT = {M, VARS, place:placeModel, figure:figure3, turned, PROT, VILL, BLOC, GOON, RIOT, POSE, cowM, sheepFn, chickFn, horseFn, dogAt, bikeAt, bench, barricade, beech, spruce, fruitTree, bareBeech, snowy, sway, at, firstOf, flame, grass, f35At, rng, pick, hsh, cell, leafy};
 const compose = (W, D, fn) => ({cat:'s', n:'scene', W, D, parts:build(H => fn(H, KIT))});
-globalThis.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose, plates:PLATES, plateText, texts:TEXTS, wallText, sprite, spriteCanvas, spriteTexts, sprites:SPRITES, makeModel, treeModel, bridgeModel, fenceModel, siteFenceModel, lampModel, washingModel, woodpileModel, flagModel, springModel, markerModel, bannerModel, poleModel, TREE_H, VARS, KIT};
+globalThis.ART = {models:M, draw, outline, PAL, logos:LOGOS, compose, plates:PLATES, plateText, texts:TEXTS, wallText, sprite, spriteBox, spriteCanvas, spriteTexts, sprites:SPRITES, makeModel, treeModel, bridgeModel, fenceModel, siteFenceModel, lampModel, washingModel, woodpileModel, flagModel, springModel, markerModel, bannerModel, poleModel, TREE_H, VARS, KIT};
 })();

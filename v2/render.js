@@ -22,34 +22,42 @@ function create(world, canvas, opts){ opts = opts || {};
     for (const p of world.props) out.push({kind:'p', ref:p, m:p.m, x:p.x, y:p.y, z:p.z, view:p.view, noPad:true});
     for (const e of extra) out.push(e); return out; };
   const spriteOf = (o, S) => ART.sprite(o.m, o.view || 0, S, {noPad:o.noPad !== false, recol:o.recol, key:(o.key || '') + (o.noRails ? 'nr' : ''), skip:o.noRails ? (p => p.t === 'ln' && p.pts.every(q => q[2] < 0.3)) : null});
-  const index = L => { const objs = statics(), byTile = new Map(); for (const o of objs){ const e = spriteOf(o, L.S), [px, py] = proj(L, o.x, o.y, o.z), x0 = Math.round(px - e.ax), y0 = Math.round(py - e.ay); o.r = o.r || {}; o.r[L.li] = [x0, y0, e.w, e.h];
+  const boxOf = (o, S) => ART.spriteBox(o.m, o.view || 0, S, {noPad:o.noPad !== false, recol:o.recol, key:(o.key || '') + (o.noRails ? 'nr' : ''), skip:o.noRails ? (p => p.t === 'ln' && p.pts.every(q => q[2] < 0.3)) : null});
+  const index = L => { const objs = statics(), byTile = new Map(); for (const o of objs){ const e = boxOf(o, L.S), [px, py] = proj(L, o.x, o.y, o.z), x0 = Math.round(px - e.ax), y0 = Math.round(py - e.ay); o.r = o.r || {}; o.r[L.li] = [x0, y0, e.w, e.h];
       o.depth = o.x + o.y + (o.kind === 't' ? 0.3 : 0) + (o.flat ? -50 : 0); for (let i = Math.max(0, Math.floor(x0/T)); i <= Math.min(L.tw - 1, Math.floor((x0 + e.w)/T)); i++) for (let j = Math.max(0, Math.floor(y0/T)); j <= Math.min(L.th - 1, Math.floor((y0 + e.h)/T)); j++){ const k = i*1000 + j; if (!byTile.has(k)) byTile.set(k, []); byTile.get(k).push(o); } }
     for (const v of byTile.values()) v.sort((a, b) => a.depth - b.depth); L.objs = byTile; L.list = objs; L.ver = objVersion; };
   // ---- one tile: the ground from the front of each column backwards, then the things on it
   const earthAt = (z, face) => { const f = (0.82 + 0.1*((Math.floor(z*1.2) % 2 + 2) % 2))*(face ? 0.86 : 1); return [Math.round(138*f), Math.round(116*f), Math.round(88*f)]; };
-  const renderTile = (L, i, j, lod) => { const c = document.createElement('canvas'); c.width = T; c.height = T; const gg = c.getContext('2d'), img = gg.createImageData(T, T), d = img.data, S = L.S, x0 = i*T, y0 = j*T, zb = world.zmin - BASE;
-    for (let col = 0; col < T; col++){ const a = (x0 + col + 0.5 - L.OX)/S, umin = Math.max(-a, a), umax = Math.min(2*W - a, 2*D + a); if (umax < umin) continue;
+  // drawn a few columns at a time (a generator), so one tile never holds up a frame
+  function* renderTile(L, i, j, lod){ const c = document.createElement('canvas'); c.width = T; c.height = T; const gg = c.getContext('2d'), img = gg.createImageData(T, T), d = img.data, S = L.S, x0 = i*T, y0 = j*T, zb = world.zmin - BASE;
+    for (let col = 0; col < T; col++){ if (col % 16 === 15) yield; const a = (x0 + col + 0.5 - L.OX)/S, umin = Math.max(-a, a), umax = Math.min(2*W - a, 2*D + a); if (umax < umin) continue;
       let ybuf = T; const du = 1/S;
       // the cut face of the block under the front edge
       { const u = umax, x = (u + a)/2, y = (u - a)/2, h = world.hb(clamp(x, 0, W), clamp(y, 0, D)), top = (u/2 - h)*S + L.OY - y0, bot = (u/2 - zb)*S + L.OY - y0, face = (2*W - a) < (2*D + a);
         for (let row = Math.max(0, Math.ceil(top)); row < Math.min(T, Math.ceil(bot)); row++){ const z = u/2 - (row + y0 + 0.5 - L.OY)/S, cc = earthAt(z, face), o = (row*T + col)*4; d[o] = cc[0]; d[o + 1] = cc[1]; d[o + 2] = cc[2]; d[o + 3] = 255; }
         ybuf = Math.min(T, Math.max(0, Math.ceil(top))); }
-      for (let u = umax; u >= umin && ybuf > 0; u -= du){ const x = (u + a)/2, y = (u - a)/2, h = world.hb(x, y), sy = (u/2 - h)*S + L.OY - y0; if (sy >= ybuf) continue;
+      // only the samples that can land in this tile: below it nothing shows, above it the column is done
+      const uTop = Math.min(umax, 2*((T + y0 - L.OY)/S + world.zmax) + 2*du), uBot = Math.max(umin, 2*((y0 - L.OY)/S + world.zmin) - 2*du);
+      for (let u = uTop; u >= uBot && ybuf > 0; u -= du){ const x = (u + a)/2, y = (u - a)/2, h = world.hb(x, y), sy = (u/2 - h)*S + L.OY - y0; if (sy >= ybuf) continue;
         const r0 = Math.max(0, Math.ceil(sy - 0.5)); if (r0 >= ybuf) continue; const cc = world.colourAt(x, y, lod, S);
         for (let row = r0; row < ybuf; row++){ const o = (row*T + col)*4; d[o] = cc[0]; d[o + 1] = cc[1]; d[o + 2] = cc[2]; d[o + 3] = 255; } ybuf = r0; } }
     gg.putImageData(img, 0, 0);
     if (!L.objs || L.ver !== objVersion) index(L);
-    for (const o of L.objs.get(i*1000 + j) || []){ const e = spriteOf(o, S), [rx, ry] = o.r[L.li]; gg.drawImage(ART.spriteCanvas(e), rx - x0, ry - y0); }
-    return c; };
+    for (const o of L.objs.get(i*1000 + j) || []){ const n0 = ART.sprites.size, e = spriteOf(o, S), [rx, ry] = o.r[L.li]; gg.drawImage(ART.spriteCanvas(e), rx - x0, ry - y0); if (ART.sprites.size !== n0) yield; }   // a new sprite took its time
+    return c; }
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   // ---- the tile cache and a queue: tiles are drawn a few per frame, nearest the middle of the screen first
   const tileKey = (L, i, j, lod) => i*1000 + j + lod*1e7;
   const queue = new Set();
-  const getTile = (L, i, j, lod) => { const k = tileKey(L, i, j, lod), t = L.tiles.get(k); if (t && !t.dirty) return t.c; if (!queue.has(L.li + ':' + k)) queue.add(L.li + ':' + k); return t ? t.c : null; };
+  const getTile = (L, i, j, lod) => { const k = tileKey(L, i, j, lod), t = L.tiles.get(k); if (t && !t.dirty) return t.c; const q = L.li + ':' + k; if (!queue.has(q) && !(job && job.it.q === q)) queue.add(q); return t ? t.c : null; };
+  let job = null;   // the tile being drawn: {it, gen}
   const work = budget => { const t0 = performance.now(); const items = [...queue].map(q => { const [li, k] = q.split(':').map(Number), L = LEVELS[li], i = Math.floor((k % 1e7)/1000), j = k % 1000, lod = Math.floor(k/1e7); return {q, L, i, j, lod, k}; });
-    const V = viewRect(); items.sort((p, q) => dist(p, V) - dist(q, V));
-    for (const it of items){ if (performance.now() - t0 > budget) break; queue.delete(it.q); if (it.L !== lv()) continue; const c = renderTile(it.L, it.i, it.j, it.lod); it.L.tiles.set(it.k, {c}); } return queue.size; };
-  const dist = (it, V) => { const cx = (it.i + 0.5)*T, cy = (it.j + 0.5)*T; return Math.hypot(cx - V.cx, cy - V.cy) + (it.L === lv() ? 0 : 1e9); };
+    const V = viewRect(); items.sort((p, q) => dist(p, V) - dist(q, V)); let n = 0;
+    while (performance.now() - t0 < budget){
+      if (!job){ const it = items[n++]; if (!it) break; queue.delete(it.q); if (it.L !== lv() && it.L !== LEVELS[0]) continue; job = {it, gen:renderTile(it.L, it.i, it.j, it.lod)}; }
+      const r = job.gen.next(); if (r.done){ job.it.L.tiles.set(job.it.k, {c:r.value}); job = null; } }
+    return queue.size + (job ? 1 : 0); };
+  const dist = (it, V) => { if (it.L !== lv()) return it.L === LEVELS[0] ? -1e9 : 1e9; const cx = (it.i + 0.5)*T, cy = (it.j + 0.5)*T; return Math.hypot(cx - V.cx, cy - V.cy); };   // the coarse preview first: it is cheap
   // what part of the current level is on screen (level pixels)
   const viewRect = () => { const L = lv(), z = zf(), [cx, cy] = proj(L, cam.x, cam.y, world.hb(clamp(cam.x, 0, W), clamp(cam.y, 0, D))); return {L, z, cx:Math.round(cx), cy:Math.round(cy), x0:Math.round(cx) - canvas.width/2/z, y0:Math.round(cy) - canvas.height/2/z, x1:Math.round(cx) + canvas.width/2/z, y1:Math.round(cy) + canvas.height/2/z}; };
   // world point → screen, and screen → level pixel
@@ -61,12 +69,13 @@ function create(world, canvas, opts){ opts = opts || {};
   // ---- the frame: tiles, then moving things with whatever stands in front of them drawn again, then signs and marks
   const dyn = [];    // {m, view, x, y, z, recol, flat (drawn under), draw (custom), depth}
   const overlays = []; // functions (g, V) drawn last
-  const frame = () => { const V = viewRect(), L = V.L, lod = lodOf(scr()), z = V.z; g.imageSmoothingEnabled = false;
+  let blank = 0;   // tiles on screen with nothing to show yet (not even a coarser one)
+  const frame = () => { const V = viewRect(), L = V.L, lod = lodOf(scr()), z = V.z; g.imageSmoothingEnabled = false; blank = 0;
     const sky = g.createLinearGradient(0, 0, 0, canvas.height); sky.addColorStop(0, '#dfe6ec'); sky.addColorStop(1, '#eef0ea'); g.fillStyle = sky; g.fillRect(0, 0, canvas.width, canvas.height);
     if (!L.objs || L.ver !== objVersion) index(L);
     for (let i = Math.max(0, Math.floor(V.x0/T)); i <= Math.min(L.tw - 1, Math.floor(V.x1/T)); i++) for (let j = Math.max(0, Math.floor(V.y0/T)); j <= Math.min(L.th - 1, Math.floor(V.y1/T)); j++){
       const c = getTile(L, i, j, lod), dx = (i*T - V.x0)*z, dy = (j*T - V.y0)*z;
-      if (c) g.drawImage(c, Math.round(dx), Math.round(dy), T*z, T*z); else { const lower = fallback(L, i, j); if (lower) g.drawImage(lower.c, lower.sx, lower.sy, lower.sw, lower.sh, Math.round(dx), Math.round(dy), T*z, T*z); } }
+      if (c) g.drawImage(c, Math.round(dx), Math.round(dy), T*z, T*z); else { const lower = fallback(L, i, j); if (lower) g.drawImage(lower.c, lower.sx, lower.sy, lower.sw, lower.sh, Math.round(dx), Math.round(dy), T*z, T*z); else { blank++; if (L.li > 0){ const M = LEVELS[0], k = L.S/M.S; getTile(M, Math.floor(i*T/k/T), Math.floor(j*T/k/T), 1); } } } }
     // moving things, back to front; what stands in front of each is drawn again over it
     const items = dyn.filter(o => !o.hidden).map(o => { const e = o.draw ? null : ART.sprite(o.m, o.view || 0, L.S, {noPad:true, recol:o.recol, key:o.key || ''}), [px, py] = proj(L, o.x, o.y, o.z ?? world.hb(clamp(o.x, 0, W), clamp(o.y, 0, D))); return {o, e, px, py, depth:o.depth ?? (o.x + o.y)}; });
     const lift = o => o.flat ? -1e6 : o.sky ? 1e6 : 0; items.sort((a, b) => lift(a.o) + a.depth - (lift(b.o) + b.depth));   // flat things first, things in the sky last
@@ -101,6 +110,6 @@ function create(world, canvas, opts){ opts = opts || {};
     const a = dpx/L.S, b = 2*dpy/L.S; cam.x = clamp(cam.x + (a + b)/2, -40, W + 40); cam.y = clamp(cam.y + (b - a)/2, -40, D + 40); };
   const centreOn = (x, y) => { cam.x = x; cam.y = y; };
   return {cam, steps:STEPS, levels:LEVELS, frame, work, pick, pickGround, toScreen, toLevel, setStep, panBy, centreOn, dyn, overlays, addStatic, removeStatic, scr, lv, zf, proj, queue,
-    resize:(w, h) => { canvas.width = w; canvas.height = h; }, invalidateAll:() => { objVersion++; for (const L of LEVELS) for (const t of L.tiles.values()) t.dirty = true; }}; }
+    get blank(){ return blank; }, resize:(w, h) => { canvas.width = w; canvas.height = h; }, invalidateAll:() => { objVersion++; for (const L of LEVELS) for (const t of L.tiles.values()) t.dirty = true; }}; }
 globalThis.Render = {create, STEPS};
 })();

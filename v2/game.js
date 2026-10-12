@@ -74,10 +74,10 @@ function header(){ const S = G.S, h = $('#hdr'); if (!S){ h.innerHTML = ''; retu
   h.innerHTML = '<div class="logo"></div>' +
     f('Cash', fmt(S.cash), S.cash < 0 ? 'neg' : '') + f('Share price', 'CHF ' + S.price.toFixed(2), '', 'opt') + f('Market value', fmt(mv), '', 'opt') + f('Debt', fmt(S.debt), '', 'opt') +
     '<div class="f live"><span>This month</span><b class="' + (net < 0 ? 'neg' : 'pos') + '">' + (net < 0 ? '−' : '+') + 'CHF ' + fmtNum(Math.abs(net)*1000) + '</b></div>' +
-    f('Heat · power', Math.round(S.heat) + ' · ' + Math.round(S.power) + ' MWh', '', 'opt') + f(dateStr(S.day), G.monthsLeft() + ' months to the vote') +
+    f('Heat · power', Math.round(S.heat) + ' · ' + Math.round(S.power) + ' MWh', '', 'opt') + f(dateStr(S.day), G.monthsLeft() + (innerWidth < 520 ? ' mo. left' : ' months to the vote')) +
     '<div class="f opt"><span>Vote forecast</span><div class="band"><i style="left:' + fc[0] + '%;right:' + (100 - fc[1]) + '%"></i><em></em></div></div>' +
     '<div class="f grow"></div><div class="more">' + ($('#hdrx').classList.contains('open') ? '▲ close' : '▼ details') + '</div>';
-  h.firstChild.appendChild(hdrLogo); hdrLogo.style.height = '26px'; hdrLogo.style.width = 'auto'; }
+  h.firstChild.appendChild(hdrLogo); hdrLogo.style.height = innerWidth < 520 ? '16px' : '26px'; hdrLogo.style.width = 'auto'; }
 const f = (lab, val, cls, opt) => '<div class="f ' + (opt || '') + '"><span>' + lab + '</span><b class="' + (cls || '') + '">' + val + '</b></div>';
 function headerX(){ const S = G.S, x = $('#hdrx'); if (!x.classList.contains('open')) return;
   const lines = monthlyLines(), cur = S.ledger.cur, last = S.ledger.last;
@@ -126,7 +126,7 @@ const DESCR = {house:'Somebody lives here. They will have an opinion.', farm:'Co
   station:'Trains to the capital every hour, to the other villages twice a day.', substation:'Transformers humming behind a fence. Power from a plant would join the grid here.', church:'The bells ring on the hour.', school:'Children, a playground, a headteacher with views.'};
 G.DESCR = DESCR;
 // ---- vehicles: drive along the roads (then across the fields to the last point); speed in metres per day
-const VSPEED = {car:135, pickup:120, lorry:90, lowloader:55, bus:105, van:120, vibro:45, offroad:40};
+const VSPEED = {car:45, pickup:40, lorry:30, lowloader:18, bus:35, van:40, vibro:45, offroad:40};   // metres per game day: a car at 1x is a brisk drive, not a dart
 G.vehicle = (model, from, to, o) => { o = o || {}; const W = G.world, road = W.route(from, to, !!o.tracks); let pts = road ? road.slice() : [from.slice(0, 2), to.slice(0, 2)];
   if (road){ if (Math.hypot(pts[0][0] - from[0], pts[0][1] - from[1]) > 1) pts.unshift(from.slice(0, 2)); if (Math.hypot(pts[pts.length - 1][0] - to[0], pts[pts.length - 1][1] - to[1]) > 1) pts.push(to.slice(0, 2)); }
   const v = {id:++G.S.vehN, model, pts, s:0, speed:o.speed || VSPEED[o.kind || 'car'] || 70, kind:o.kind || 'car', done:o.done || null, arg:o.arg ?? null, name:o.name || null, keep:!!o.keep, tag:o.tag || null}; v.len = pathLen(pts); G.S.vehicles.push(v); return v; };
@@ -274,7 +274,8 @@ G.flattenCost = flattenCost;
 const accessCost = (x, y) => { const r = G.world.nearestRoad(x, y); return r && r.d > 14 ? Math.round((r.d - 10)*1.0) : 0; };
 G.accessCost = accessCost;
 // a gravel road from a new building to the nearest road (only if it is not right by one)
-const accessRoad = (x, y, R) => { const r = G.world.nearestRoad(x, y); if (!r || r.d < 14) return null; const dx = r.x - x, dy = r.y - y, L = Math.hypot(dx, dy), sx = x + dx/L*(R*0.6), sy = y + dy/L*(R*0.6), pts = [[sx, sy], [r.x, r.y]];
+const accessRoad = (x, y, R) => { const r = G.world.nearestRoad(x, y); if (!r || r.d < 14) return null; const dx = r.x - x, dy = r.y - y, L = Math.hypot(dx, dy), sx = x + dx/L*(R*0.6), sy = y + dy/L*(R*0.6);
+  const pts = G.world.planRoad(x, y, (px, py) => G.world.inSite(px, py, 3) && Math.hypot(px - x, py - y) < R + 12) || [[sx, sy], [r.x, r.y]];   // round what stands in the way
   G.world.addRoad(pts, 2.4); G.S.changes.push({t:'road', pts, w:2.4}); return pts; };
 G.accessRoad = accessRoad;
 const nearestHome = (x, y) => { const W = G.world; if (W.inTown(x, y) || Math.hypot(x - W.town[0], y - W.town[1]) < 120) return 'town'; let best = 0; W.villages.forEach((v, i) => { if (Math.hypot(x - v[0], y - v[1]) < Math.hypot(x - W.villages[best][0], y - W.villages[best][1])) best = i; }); return best; };
