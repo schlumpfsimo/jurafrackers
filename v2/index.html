@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Jurafrackers 2.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f8f6f0;--card:#fffdf8;--line:#ddd6c8;--line2:#cbc2b0;--ink:#2a2d33;--muted:#6f6a60;--soft:#efeadf;--accent:#2c5f93;--warm:#e07a2c;--bad:#b8322a;--good:#3d7a4a;--pix:"Silkscreen",monospace;--body:"Helvetica Neue",Helvetica,Arial,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#e6e9e4;color:var(--ink);font:14px/1.45 var(--body);-webkit-user-select:none;user-select:none;touch-action:none}
+canvas#map{position:fixed;left:0;top:0;display:block;image-rendering:pixelated;cursor:grab}
+canvas#map.drag{cursor:grabbing}canvas#map.tool{cursor:crosshair}
+/* the header: information only */
+#hdr{position:fixed;left:0;right:0;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line2);box-shadow:0 1px 6px rgba(40,36,28,.08);display:flex;align-items:stretch;height:46px;cursor:pointer}
+#hdr .logo{display:flex;align-items:center;padding:0 10px 0 8px;border-right:1px solid var(--line)}
+#hdr .logo canvas{display:block;image-rendering:pixelated}
+#hdr .f{display:flex;flex-direction:column;justify-content:center;padding:0 12px;border-right:1px solid var(--line);min-width:0;white-space:nowrap}
+#hdr .f b{font:700 12px/1.1 var(--pix);letter-spacing:.2px}
+#hdr .f span{font:9px/1.2 var(--pix);color:var(--muted);text-transform:uppercase}
+#hdr .f.live b{font-variant-numeric:tabular-nums}
+#hdr .f.live b.neg{color:var(--bad)}#hdr .f.live b.pos{color:var(--good)}
+#hdr .grow{flex:1;border-right:0}
+#hdr .band{position:relative;width:90px;height:8px;border:1px solid var(--line2);background:var(--soft);margin-top:3px}
+#hdr .band i{position:absolute;top:0;bottom:0;background:#9fb98a}#hdr .band em{position:absolute;top:-2px;bottom:-2px;left:50%;width:1px;background:var(--ink)}
+#hdr .more{font:9px var(--pix);color:var(--muted);padding:0 12px;display:flex;align-items:center}
+#hdrx{position:fixed;left:0;right:0;top:46px;z-index:19;background:var(--paper);border-bottom:1px solid var(--line2);box-shadow:0 8px 24px rgba(40,36,28,.18);max-height:calc(100vh - 60px);overflow:auto;padding:14px 18px 18px;display:none}
+#hdrx.open{display:block}
+#hdrx .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+#hdrx h3,.win h3{font:700 11px var(--pix);text-transform:uppercase;margin:0 0 6px;color:var(--ink);letter-spacing:.3px}
+#hdrx .paused{font:10px var(--pix);color:var(--bad);margin-bottom:8px}
+table.lines{width:100%;border-collapse:collapse;font-size:13px}
+table.lines td{padding:3px 4px;border-bottom:1px solid var(--soft)}table.lines td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.lines tr.click{cursor:pointer}table.lines tr.click:hover td{background:var(--soft)}
+table.lines tr.tot td{font-weight:700;border-top:1px solid var(--line2)}
+.neg{color:var(--bad)}.pos{color:var(--good)}.muted{color:var(--muted)}
+.news p{margin:0 0 6px;font-size:13px}.news p i{font:9px var(--pix);color:var(--muted);font-style:normal;margin-right:6px}
+/* pop-up windows at buildings */
+#wins{position:fixed;inset:0;pointer-events:none;z-index:15}
+.win{position:absolute;pointer-events:auto;width:340px;max-width:calc(100vw - 16px);max-height:calc(100vh - 70px);display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line2);border-radius:3px;box-shadow:0 6px 20px rgba(40,36,28,.2)}
+.win.wide{width:520px}.win.xwide{width:760px}
+.win .tb{display:flex;align-items:center;gap:8px;padding:8px 10px 6px;border-bottom:1px solid var(--line);cursor:move}
+.win .tb .t{font:700 12px var(--pix);flex:1;line-height:1.2}
+.win .tb .t small{display:block;font:9px var(--pix);color:var(--muted);font-weight:400;margin-top:2px}
+.win .tb .x{border:0;background:none;font:14px var(--pix);color:var(--muted);cursor:pointer;padding:0 2px}
+.win .bd{padding:10px 12px 12px;overflow:auto}
+.win .bd p{margin:0 0 8px}
+.win .sec{margin:10px 0 0;padding-top:8px;border-top:1px solid var(--soft)}
+.win .tip{background:#f4efe2;border-left:3px solid var(--warm);padding:6px 8px;margin:0 0 8px;font-size:13px}
+.win .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:-4px 0 8px}
+.win .tabs b{font:10px var(--pix);padding:5px 8px;cursor:pointer;color:var(--muted);border:1px solid transparent;border-bottom:0;border-radius:3px 3px 0 0}
+.win .tabs b.on{color:var(--ink);background:var(--paper);border-color:var(--line)}
+.btn{font:11px var(--pix);background:var(--paper);border:1px solid var(--line2);border-radius:2px;padding:6px 10px;cursor:pointer;color:var(--ink);margin:2px 4px 2px 0}
+.btn:hover{background:#fff;border-color:var(--ink)}.btn.main{background:var(--accent);color:#fff;border-color:var(--accent)}.btn.main:hover{background:#244e7a}
+.btn:disabled{opacity:.45;cursor:default}.btn.small{font-size:9px;padding:3px 6px}
+.row{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--soft)}.row .grow{flex:1}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13px}.kv b{font-weight:600}
+/* overlay screens: title, concession, slides, the end */
+#ovl{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:rgba(232,229,220,.86)}
+#ovl.on{display:flex}
+#ovl .paper{background:var(--card);border:1px solid var(--line2);box-shadow:0 10px 40px rgba(40,36,28,.25);max-width:720px;width:calc(100vw - 24px);max-height:calc(100vh - 24px);overflow:auto;padding:26px 30px}
+#ovl h1{font:700 18px var(--pix);margin:0 0 4px}#ovl .sub{font:10px var(--pix);color:var(--muted);margin-bottom:14px}
+#ovl ol{padding-left:20px}#ovl li{margin-bottom:6px}
+#ovl .stamp{display:inline-block;font:700 12px var(--pix);color:var(--bad);border:2px solid var(--bad);padding:4px 10px;transform:rotate(-4deg);margin:6px 0 10px;opacity:.85}
+#ovl .acts{margin-top:14px}
+#title{text-align:center;background:transparent!important;border:0!important;box-shadow:none!important}
+#title canvas{image-rendering:pixelated;max-width:100%}
+#title .blurb{font:11px var(--pix);color:var(--muted);margin:14px 0 18px}
+.slide{text-align:center}.slide canvas{image-rendering:pixelated;margin:6px auto 10px;display:block;max-width:100%}
+.slide p{text-align:left}
+.dots{text-align:center;margin-top:8px}.dots i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--line2);margin:0 3px}.dots i.on{background:var(--ink)}
+/* speed and zoom, bottom right */
+#ctl{position:fixed;right:10px;bottom:10px;z-index:18;display:flex;gap:4px;align-items:center}
+#ctl button{font:11px var(--pix);width:34px;height:30px;background:var(--card);border:1px solid var(--line2);border-radius:2px;cursor:pointer;color:var(--ink)}
+#ctl button.on{background:var(--ink);color:#fff}
+#hint{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:17;background:var(--card);border:1px solid var(--line2);border-radius:3px;padding:8px 12px;box-shadow:0 4px 14px rgba(40,36,28,.15);max-width:min(560px,calc(100vw - 140px));font-size:13px;display:none}
+#hint.on{display:block}
+#toast{position:fixed;left:50%;top:58px;transform:translateX(-50%);z-index:30;background:var(--ink);color:#fff;font:11px var(--pix);padding:6px 10px;border-radius:2px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:80vw}
+#toast.on{opacity:.92}
+#busy{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;font:12px var(--pix);color:var(--muted);background:#e6e9e4}
+#busy.on{display:flex}
+@media (max-width:700px){#hdr .f.opt{display:none}#hdr .f{padding:0 7px}.win{width:calc(100vw - 16px)!important}}
+</style>
+</head>
+<body>
+<canvas id="map"></canvas>
+<div id="hdr"></div>
+<div id="hdrx"></div>
+<div id="wins"></div>
+<div id="hint"></div>
+<div id="ctl"><button data-s="0" title="Pause (space)">❚❚</button><button data-s="1" title="Normal (1)">▶</button><button data-s="2" title="Faster (2)">▶▶</button><button data-s="4" title="Fastest (3)">▶▶▶</button><button data-z="-1" title="Zoom out">−</button><button data-z="1" title="Zoom in">+</button></div>
+<div id="toast"></div>
+<div id="ovl"></div>
+<div id="busy">Surveying the valley…</div>
+<script src="art.js"></script>
+<script src="world.js"></script>
+<script src="render.js"></script>
+<script src="geo.js"></script>
+<script src="game.js"></script>
+<script src="drill.js"></script>
+<script src="reservoir.js"></script>
+<script src="valley.js"></script>
+<script src="oppo.js"></script>
+<script src="assoc.js"></script>
+<script src="life.js"></script>
+<script src="finance.js"></script>
+<script src="endings.js"></script>
+</body>
+</html>
