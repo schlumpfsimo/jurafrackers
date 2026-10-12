@@ -7,8 +7,8 @@
 const T = 256, PAD = 24, BASE = 8;
 const STEPS = [{li:0, z:1}, {li:1, z:1}, {li:2, z:1}, {li:3, z:1}, {li:3, z:2}, {li:3, z:3}, {li:3, z:4}];
 function create(world, canvas, opts){ opts = opts || {};
-  const ART = globalThis.ART, W = world.W, D = world.D, FINE = opts.fine || 7;
-  const LEVELS = [1.2, 2.4, 4.8, FINE].map((S, li) => { const top = world.zmax + 26, OX = D*S + PAD, OY = top*S + PAD, w = Math.ceil((W + D)*S + 2*PAD), h = Math.ceil(((W + D)/2 + top - world.zmin + BASE)*S + 2*PAD);
+  const ART = globalThis.ART, W = world.W, D = world.D, FINE = opts.fine || 6;
+  const LEVELS = [1.2, 2.4, 4, FINE].map((S, li) => { const top = world.zmax + 26, OX = D*S + PAD, OY = top*S + PAD, w = Math.ceil((W + D)*S + 2*PAD), h = Math.ceil(((W + D)/2 + top - world.zmin + BASE)*S + 2*PAD);
     return {li, S, OX, OY, w, h, tiles:new Map(), objs:null, tw:Math.ceil(w/T), th:Math.ceil(h/T)}; });
   const lodOf = scr => scr >= 20 ? 3 : scr >= 6 ? 2 : 1;
   const g = canvas.getContext('2d');

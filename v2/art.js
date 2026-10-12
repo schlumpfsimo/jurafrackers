@@ -359,7 +359,9 @@ const washingModel = () => makeModel('washing line', 3.6, 0.3, ({B, L}) => { for
   [['#f4f2ec', 0.4], ['#c63a2c', 1.1], ['#2c5f93', 1.7], ['#e8b730', 2.4], ['#f4f2ec', 2.9]].forEach(([c, x]) => B(x, 0.13, 1.2, 0.45, 0.04, 0.55, c)); });
 const woodpileModel = () => makeModel('woodpile', 2.4, 0.7, ({B}) => B(0, 0, 0, 2.4, 0.7, 1.1, '#a87a4c', {top:'#6a4a32'}));
 const SPRITES = new Map();
-function sprite(model, view, S, o){ o = o || {}; const key = model.n + '|' + view + '|' + S + '|' + (o.key || '') + (o.noPad ? '|n' : ''); const had = SPRITES.get(key); if (had) return had;
+// people are drawn a little bigger than life, so they read among the buildings
+const BIGGER = {p:1.2, l:1.18, c:1.12};
+function sprite(model, view, S, o){ o = o || {}; const key = model.n + '|' + view + '|' + S + '|' + (o.key || '') + (o.noPad ? '|n' : ''); const had = SPRITES.get(key); if (had) return had; S = S*(BIGGER[model.cat] || 1);
   const th = view*Math.PI/8, ca = Math.cos(th), sa = Math.sin(th), cx = model.W/2, cy = model.D/2, rc = o.recol ? (c => o.recol[c] || c) : (c => c);
   const {out, texts} = prims(model, S, rc, o.noPad, o.skip); const toW = (x, y) => [cx + ca*(x - cx) - sa*(y - cy), cy + sa*(x - cx) + ca*(y - cy)];
   let sx0 = 1e9, sx1 = -1e9, sy0 = 1e9, sy1 = -1e9, zTop = 0; const sb = out.map(p => { const [x0, x1, y0, y1, z0, z1] = p.box; let a0 = 1e9, a1 = -1e9, b0 = 1e9, b1 = -1e9; zTop = Math.max(zTop, z1);
