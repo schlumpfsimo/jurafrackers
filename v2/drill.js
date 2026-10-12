@@ -6,8 +6,8 @@
 'use strict';
 const G = globalThis.G, {fmt, esc, clamp, lerp} = G;
 const RIGS = G.RIGS = {
-  light:{n:'Light rig', model:'Light rig on its pad', lease:800, idle:250, day:20, buy:6000, keep:60, dayOwn:8, crew:3, maxD:2200, pad:[20, 20]},
-  deep:{n:'Deep rig', model:'Deep rig on its pad', lease:1800, idle:300, day:40, buy:15000, keep:90, dayOwn:16, crew:5, maxD:5000, pad:[28, 28], need:'centre'}};
+  light:{n:'Light rig', model:'Light rig on its pad', lease:800, idle:250, day:16, buy:6000, keep:60, dayOwn:8, crew:3, maxD:2200, pad:[20, 20]},
+  deep:{n:'Deep rig', model:'Deep rig on its pad', lease:1800, idle:300, day:32, buy:15000, keep:90, dayOwn:16, crew:5, maxD:5000, pad:[28, 28], need:'centre'}};
 const OPT = G.OPT = {
   clean:{n:'Clean top hole', c:180, h:'protects groundwater in the karst', top:1},
   heavy:{n:'Heavy mud', c:0, h:'holds back gas (coal, faults); slower and dearer per metre'},
@@ -16,7 +16,7 @@ const OPT = G.OPT = {
   cbl:{n:'Cement bond log', c:150, h:'proves the casing is sealed', cased:1}};
 const COST = G.COST = {casing:110, flowTest:400, plug:250, survey:40, pass2:120, roadM:1.0, pad:120, container:120, sealed:200, squeeze:200, stage:300, circ:200, bleed:100, station:3000, plant:15000, archive:60};
 let GEO = null; const K = () => GEO.K;
-G.on('world', () => { GEO = G.geo = Geo.create(G.S.seed, G.world); const S = G.S; if (!S.geo) S.geo = {lines:[], flags:[], sites:[], wells:[], rigs:[], archive:false, sup:0, supLvl:800, contr:{survey:{free:0, jobs:[]}, road:{free:0, jobs:[]}, build:{free:0, jobs:[]}}, micro:[], quakes:[], swell:[], n:0};
+G.on('world', () => { GEO = G.geo = Geo.create(G.S.seed, G.world); const S = G.S; if (!S.geo) S.geo = {lines:[], flags:[], sites:[], wells:[], rigs:[], archive:false, sup:0, supLvl:1500, contr:{survey:{free:0, jobs:[]}, road:{free:0, jobs:[]}, build:{free:0, jobs:[]}}, micro:[], quakes:[], swell:[], n:0};
   for (const f of S.geo.flags) showFlag(f); for (const s of S.geo.sites) showSite(s); for (const l of S.geo.lines) if (l.done) showStation(l); for (const sp of GEO.springs) G.R.addStatic({kind:'p', m:ART.springModel(), x:sp.x, y:sp.y, z:G.world.hb(sp.x, sp.y), view:0, noPad:true, pickable:true, ref:{open:() => openSpring(sp)}}); });
 const nid = G.nid = p => p + (++G.S.geo.n);
 const byId = id => { const g = G.S.geo; return g.sites.find(q => q.id === id) || g.wells.find(q => q.id === id) || g.lines.find(q => q.id === id) || g.flags.find(q => q.id === id) || g.rigs.find(q => q.id === id); };
@@ -101,8 +101,9 @@ const showStation = l => { const [x, y] = stationAt(l), m = G.world.model('Surve
   Object.defineProperty(l, 'stat', {value:st, enumerable:false, writable:true, configurable:true}); };
 G.on('mark', m => { if (m.id && m.id.startsWith('ml')){ const l = byId(m.ref); if (l) openStation(l); } });
 // one cautious hint per section: the strongest reflector, named with a "probably"
-function firstHint(l){ const g = lineGeom(l), u = g.len/2, X = g.ax + g.ex*u, Y = g.ay + g.ey*u, st = GEO.strata(X, Y);
-  return 'a strong reflector at about ' + (Math.round(st.marl/100)/10).toFixed(1) + ' km, probably the top of the Muschelkalk' + (st.gran - st.sand > 300 ? '; something bright and patchy deeper down, perhaps coal' : '') + '.'; }
+function firstHint(l){ const g = lineGeom(l), u = g.len/2, X = g.ax + g.ex*u, Y = g.ay + g.ey*u, st = GEO.strata(X, Y), n = 12, por = [];
+  for (let i = 0; i < n; i++){ const uu = g.len*(i + 0.5)/n; por.push(GEO.strata(g.ax + g.ex*uu, g.ay + g.ey*uu).aqHere); } const k = por.filter(Boolean).length, where = k === 0 ? null : k === n ? 'all along the line' : por.slice(0, n/3).filter(Boolean).length >= 3 ? 'towards the start of the line' : por.slice(-n/3).filter(Boolean).length >= 3 ? 'towards its end' : 'in the middle stretch';
+  return 'a reflector at about ' + (Math.round(st.marl/100)/10).toFixed(1) + ' km, probably the top of the Muschelkalk' + (where ? '; it turns dim ' + where + ', as porous, water-bearing rock would make it' : '; bright all along: tight rock, probably') + (st.gran - st.sand > 300 ? '; something bright and patchy deeper down, perhaps coal' : '') + '.'; }
 function openStation(l){ G.S.marks = G.S.marks.filter(m => m.id !== 'ml' + l.id); const job2 = G.S.geo.contr.survey.jobs.find(j => j.line === l.id && j.pass2);
   G.openWin('st' + l.id, {title:'Survey station ' + l.name, sub:(l.pass >= 2 ? 'second pass' : 'first pass') + ' · ' + l.km.toFixed(1) + ' km', at:() => stationAt(l), body:A => {
     let h = '<p>The recorder, the antenna, the section in a drawer.</p><button class="btn main" data-a="' + A('sec', () => openSection(l, lineGeom(l).len/2)) + '">Open the section</button>';
@@ -143,8 +144,9 @@ function paintSection(w, sec, l, g, draw){ const cv = w.el.querySelector('.secc'
   cv.onclick = e => { if (!draw) return; const r = cv.getBoundingClientRect(), x = (e.clientX - r.left)/r.width*sec.W, y = (e.clientY - r.top)/r.height*sec.H; const res = draw.add(sec.uOf(x), sec.dOf(y)); if (typeof res === 'string') G.toast(res); G.refresh(); }; }
 // ---- sites: projected on a line, the pad turned along it; a container, a mairie permit, an access road
 function siteTool(l, u){ if (!G.company('bureau')) return 'The Bureau comes first.'; const g = lineGeom(l), view = (Math.round(Math.atan2(g.ey, g.ex)/(Math.PI/8)) % 16 + 16) % 16, [w, d] = RIGS.light.pad;
-  const snap = (x, y) => { const X = x*K(), Y = y*K(), uu = clamp((X - g.ax)*g.ex + (Y - g.ay)*g.ey, 60, g.len - 60); return [(g.ax + g.ex*uu)/K(), (g.ay + g.ey*uu)/K()]; };
-  const a = view*Math.PI/8; G.tool({m:G.world.model('Site container'), model:null, view, ang:a, zones:true, snap, hint:'Slide the pad along the line and click. Esc cancels.', size:() => [w + 8, d + 4],
+  // the pad slides along the line and may stand up to 25 m beside it (the well is drawn where it projects onto the section)
+  const snap = (x, y) => { const X = x*K(), Y = y*K(), uu = clamp((X - g.ax)*g.ex + (Y - g.ay)*g.ey, 60, g.len - 60), vv = clamp((X - g.ax)*(-g.ey) + (Y - g.ay)*g.ex, -25*K(), 25*K()); return [(g.ax + g.ex*uu - g.ey*vv)/K(), (g.ay + g.ey*uu + g.ex*vv)/K()]; };
+  const a = view*Math.PI/8; G.tool({m:G.world.model('Site container'), model:null, view, ang:a, zones:true, snap, hint:'Slide the pad along the line (it may stand a little beside it) and click. Esc cancels.', size:() => [w + 8, d + 4],
     check:(x, y) => { const z = GEO.zoneAt(x, y); if (z === 2) return 'Inside a spring’s protection zone: no drilling.'; const r = G.world.canBuild(x, y, w + 8, d + 4, a); if (typeof r === 'string') return r; r.zone = z; return r; },
     label:(x, y, v, chk) => 'Pad ' + fmt(COST.pad + COST.container + G.flattenCost(chk) + (chk.zone ? COST.sealed : 0)) + (chk.zone ? ' (sealed)' : '') + ' · road ' + fmt(G.accessCost(x, y)),
     place:(x, y) => { const chk = G.getTool().check(x, y); if (typeof chk === 'string') return chk; const cost = COST.pad + COST.container + G.flattenCost(chk) + (chk.zone ? COST.sealed : 0); if (!G.pay(cost, 'Sites: pads and containers', 'Sites')) return 'The pad costs ' + fmt(cost) + '.';
@@ -192,10 +194,11 @@ function sendCrew(s, tr){ const p = G.S.staff.find(q => q.tr === tr && q.st === 
 G.vehicleDone.crewIn = id => { const p = G.S.staff.find(q => q.id === id); if (p && p.st === 'travel') p.st = 'site'; };
 function recallCrew(s, tr){ const p = crewAt(s, tr)[0]; if (!p) return 'Nobody to call back.'; const b = G.company('bureau'); p.st = 'travel'; G.vehicle('Post bus', [s.x, s.y], [b.cx, b.cy], {kind:'bus', done:'backHome', arg:p.id}); return 'ok'; }
 // ---- supplies: one stock at the depot (casing, mud, bits, cement); lorries take it to the sites; the depot reorders by itself
-G.on('day', d => { const S = G.S; if (!S.geo || !G.company('depot')) return; const g = S.geo; if (d % 5 === 0 && g.sup + (g.supComing || 0) < g.supLvl && S.cash > 600){ const n = g.supLvl - g.sup - (g.supComing || 0); G.book('Supplies bought', -n, 'Depot'); g.supComing = (g.supComing || 0) + n; const dp = G.company('depot'); G.vehicle('Supply lorry', G.world.roads[0][0], [dp.cx, dp.cy], {kind:'lorry', done:'supIn', arg:n}); }
-  if (d % 3 === 0) for (const s of g.sites){ const need = s.wells.some(id => { const w = byId(id); return w && (w.going || w.next); }); if (!need || s.sup >= 250 || s.supComing || g.sup < 50) continue; const n = Math.min(400 - s.sup, g.sup); g.sup -= n; s.supComing = n; const dp = G.company('depot'); G.vehicle('Supply lorry', [dp.cx, dp.cy], [s.x, s.y], {kind:'lorry', done:'supSite', arg:{s:s.id, n}}); } });
+G.on('day', d => { const S = G.S; if (!S.geo || !G.company('depot')) return; const g = S.geo; if (d % 3 === 0 && g.sup + (g.supComing || 0) < g.supLvl && S.cash > 600){ const n = g.supLvl - g.sup - (g.supComing || 0); G.book('Supplies bought', -n, 'Depot'); g.supComing = (g.supComing || 0) + n; const dp = G.company('depot'); G.vehicle('Supply lorry', G.world.roads[0][0], [dp.cx, dp.cy], {kind:'lorry', done:'supIn', arg:n}); }
+  for (const s of g.sites){ const need = s.wells.some(id => { const w = byId(id); return w && (w.going || (w.phases && !w.done && w.phases.some(p => p.st === 'plan'))); }); if (!need || g.sup < 50) continue; const coming = s.supComing || 0; if (s.sup + coming >= 1200 || (s.lorries || 0) >= 2) continue;
+    const n = Math.min(500, 1200 - s.sup - coming, g.sup); g.sup -= n; s.supComing = coming + n; s.lorries = (s.lorries || 0) + 1; const dp = G.company('depot'); G.vehicle('Supply lorry', [dp.cx, dp.cy], [s.x, s.y], {kind:'lorry', done:'supSite', arg:{s:s.id, n}}); } });
 G.vehicleDone.supIn = n => { G.S.geo.sup += n; G.S.geo.supComing = Math.max(0, (G.S.geo.supComing || 0) - n); };
-G.vehicleDone.supSite = a => { const s = byId(a.s); if (s){ s.sup += a.n; s.supComing = 0; } };
+G.vehicleDone.supSite = a => { const s = byId(a.s); if (s){ s.sup += a.n; s.supComing = Math.max(0, (s.supComing || 0) - a.n); s.lorries = Math.max(0, (s.lorries || 0) - 1); } };
 // ---- permits: the mairie (months, unless it is the first site), the canton for deep wells, stimulation and plants
 G.on('day', () => { const S = G.S; if (!S.geo) return; for (const s of S.geo.sites){ if (s.permit.mairie === 'wait' && S.day >= s.permitAt){ const mood = G.moodOf ? G.moodOf(s.home) : 50; if (mood < 25 && Math.random() < 0.5){ s.permit.mairie = 'no'; G.news('The mairie of ' + G.placeName(s.home) + ' refuses the permit for ' + s.name + '. The village is against it.'); } else { s.permit.mairie = 'ok'; G.news('The mairie of ' + G.placeName(s.home) + ' signs the permit for ' + s.name + '.'); } }
     if (s.permit.canton === 'wait' && S.day >= s.cantonAt){ s.permit.canton = 'ok'; G.news('The canton grants the permit for deep drilling at ' + s.name + '.'); } } });
@@ -216,7 +219,7 @@ function drawWell(s, wl){ const l = lineOf(s), rig = byId(s.rig), maxD = rig ? R
 const drawPanel = (A, draw) => { const est = draw.pts.length > 1 ? estimate(draw.pts) : null; return '<div class="row"><span class="grow">' + (est ? 'About ' + M(est.len) + ' of hole, ' + Math.round(est.days) + ' days at the bit, ' + fmt(est.cost) + ' with casing (typical rock: the section cannot name it).' : 'Click down the section from the pad to draw the well' + (maxBend() ? ' (bends up to 30°).' : ' (straight down: bending needs the Atelier).')) + '</span></div>' +
   '<button class="btn main" data-a="' + A('ok', () => draw.commit()) + '">Plan this well</button><button class="btn" data-a="' + A('undo', () => draw.undo()) + '">Undo a point</button>'; };
 const typical = d => d < 450 ? 1 : d < 950 ? 3 : d < 1250 ? 5 : d < 1650 ? 9 : d < 2200 ? 10 : 7;
-function estimate(pts, rigKind){ let len = 0, days = 0, cons = 0; for (let i = 1; i < pts.length; i++){ const L = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); for (let s = 0; s < L; s += 25){ const d = lerp(pts[i - 1][1], pts[i][1], s/L), t = typical(d); days += 25/(GEO.RSPEED[t]/30); cons += GEO.PERM[t]/100*25*(1 + d/1600); } len += L; }
+function estimate(pts, rigKind){ let len = 0, days = 0, cons = 0; for (let i = 1; i < pts.length; i++){ const L = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); for (let s = 0; s < L; s += 25){ const d = lerp(pts[i - 1][1], pts[i][1], s/L), t = typical(d); days += 25/(GEO.RSPEED[t]/30); cons += GEO.PERM[t]/100*25*(1 + d/3000); } len += L; }
   const deepest = pts[pts.length - 1][1], rate = deepest > 2200 ? RIGS.deep.day : RIGS.light.day; return {len, days, cost:Math.round(cons + days*rate + deepest*0.7*COST.casing/100)}; }
 // phases: top hole below the karst, intermediate above the target, reservoir open
 function planPhases(wl){ const D = wl.plan[wl.plan.length - 1][1], top = Math.min(D - 50, 650), mid = D > 1300 ? D - 250 : null, out = [{n:'Top hole', to:top, opts:{clean:true}, st:'plan'}];
@@ -243,7 +246,7 @@ function drillDay(wl){ const S = G.S, s = byId(wl.site), rig = s && byId(s.rig),
   const day = rig.own ? RIGS[rig.kind].dayOwn : RIGS[rig.kind].day; G.book('Rig day rates', -day, s.name); wl.cost += day; rig.drillingMonth = true;
   const pts = wl.plan, total = pathLen(pts), stop = Math.min(total, sAtDepth(pts, ph.to)); let s0 = wl.drilled, budget = 1;
   while (budget > 0 && wl.drilled < stop - 0.01){ const [u, d] = pathPt(pts, wl.drilled), t = rockAtWell(s, u, d), sp = GEO.RSPEED[t]/30*(ph.opts.heavy ? 0.9 : 1), step = Math.min(10, budget*sp, stop - wl.drilled);
-    const c = GEO.PERM[t]/100*step*(1 + d/1600)*(ph.opts.heavy ? 1.3 : 1); if (s.sup < c){ if (!wl.noSup){ wl.noSup = true; G.news('The rig at ' + s.name + ' waits for supplies from the depot.'); } break; } wl.noSup = false; s.sup -= c; wl.cost += c;
+    const c = GEO.PERM[t]/100*step*(1 + d/3000)*(ph.opts.heavy ? 1.3 : 1); if (s.sup < c){ if (!wl.noSup){ wl.noSup = true; G.news('The rig at ' + s.name + ' waits for supplies from the depot.'); } break; } wl.noSup = false; s.sup -= c; wl.cost += c;
     wl.drilled += step; budget -= step/sp; const [u2, d2] = pathPt(pts, wl.drilled); wl.path = pathUpTo(pts, wl.drilled); const t2 = rockAtWell(s, u2, d2);
     if (!(t2 in wl.hits)){ wl.hits[t2] = d2; wl.tops[t2] = d2; onRock(s, wl, t2, d2); }
     if (G.crewAt(s, 'geologist').length) lookAhead(s, wl, u2, d2);

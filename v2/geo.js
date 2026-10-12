@@ -11,7 +11,7 @@ const RSHORT = ['soil', 'Malm', 'karst', 'marl', 'dolomite', 'Muschelkalk', 'fau
 const IMP = [2, 6, 3, 3, 8, 5, 2, 9, 7.5, 5, 3];               // acoustic impedance: what reflection seismic responds to
 const RCOL = ['#7a5a3a', '#c9b48a', '#4f86b8', '#8f8a6a', '#9a9ca2', '#5f97c9', '#8b4a41', '#c49a96', '#e4e0d8', '#c27b4f', '#4a4a50'];
 const RSPEED = [1200, 1100, 800, 1200, 550, 1000, 500, 600, 800, 900, 700];   // metres a month at the bit
-const PERM = [45, 60, 70, 45, 110, 70, 90, 130, 80, 80, 90];                 // bits, mud and cuttings per 100 m (k CHF), by rock
+const PERM = [45, 60, 70, 45, 110, 70, 90, 100, 80, 80, 90];                 // bits, mud and cuttings per 100 m (k CHF), by rock
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v, sm = t => t*t*(3 - 2*t);
 const ih = (a, b, c) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(c | 0, 1274126177); h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0)/4294967296; };
 function create(seed, world){

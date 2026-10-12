@@ -45,6 +45,7 @@ G.monthly.push(() => { const by = {}; for (const p of G.S.staff) if (p.st !== 'l
 G.monthly.push(() => G.S.started ? [{line:'Membership', who:ASSOC, k:-(G.S.tierFee || 5), at:'maison'}, {line:'The CEO', who:'Bureau', k:-22, at:'bureau'}] : []);
 function closeMonth(){ const S = G.S; for (const l of monthlyLines()) G.book(l.line, l.k, l.who);
   S.ledger.last = S.ledger.cur; S.ledger.hist.push({m:month() - 1, lines:S.ledger.cur, cash:S.cash}); if (S.ledger.hist.length > 24) S.ledger.hist.shift(); S.ledger.cur = {};
+  const gone = S.staff.filter(p => p.st === 'leaving'); if (gone.length){ S.staff = S.staff.filter(p => p.st !== 'leaving'); G.moodAll && G.moodAll(-0.2*gone.length, 'Jobs lost at the Company', 'le'); }
   G.emit('month', month()); save(); }
 const liveNet = () => { const S = G.S, frac = (S.day % CFG.DAYS)/CFG.DAYS, oneOff = Object.values(S.ledger.cur).reduce((a, b) => a + b, 0), rate = monthlyLines().reduce((a, l) => a + l.k, 0); return oneOff + rate*frac; };
 // ---- staff
@@ -125,7 +126,7 @@ const DESCR = {house:'Somebody lives here. They will have an opinion.', farm:'Co
   station:'Trains to the capital every hour, to the other villages twice a day.', substation:'Transformers humming behind a fence. Power from a plant would join the grid here.', church:'The bells ring on the hour.', school:'Children, a playground, a headteacher with views.'};
 G.DESCR = DESCR;
 // ---- vehicles: drive along the roads (then across the fields to the last point); speed in metres per day
-const VSPEED = {car:90, pickup:80, lorry:60, lowloader:35, bus:70, van:80, vibro:30, offroad:25};
+const VSPEED = {car:135, pickup:120, lorry:90, lowloader:55, bus:105, van:120, vibro:45, offroad:40};
 G.vehicle = (model, from, to, o) => { o = o || {}; const W = G.world, road = W.route(from, to, !!o.tracks); let pts = road ? road.slice() : [from.slice(0, 2), to.slice(0, 2)];
   if (road){ if (Math.hypot(pts[0][0] - from[0], pts[0][1] - from[1]) > 1) pts.unshift(from.slice(0, 2)); if (Math.hypot(pts[pts.length - 1][0] - to[0], pts[pts.length - 1][1] - to[1]) > 1) pts.push(to.slice(0, 2)); }
   const v = {id:++G.S.vehN, model, pts, s:0, speed:o.speed || VSPEED[o.kind || 'car'] || 70, kind:o.kind || 'car', done:o.done || null, arg:o.arg ?? null, name:o.name || null, keep:!!o.keep, tag:o.tag || null}; v.len = pathLen(pts); G.S.vehicles.push(v); return v; };
@@ -290,14 +291,14 @@ G.on('day', () => { const S = G.S; for (const c of S.company) if (!c.done && S.d
 G.openCompany = c => { const fn = G.windows['company:' + c.kind] || G.windows['company:default']; G.openWin(c.id, Object.assign({title:c.title, sub:c.done ? COMPANY : 'being built, ready in about ' + G.dur(c.ready - G.S.day), at:() => [c.cx, c.cy, c.z + 8]}, fn(c))); };
 G.windows['company:default'] = c => ({body:() => c.done ? '<p>' + esc(c.title) + '.</p>' : '<p>The builders are at work. Ready in about ' + G.dur(c.ready - G.S.day) + '.</p>'});
 G.windows['company:bureau'] = c => ({wide:true, tabs:['Staff', 'Company'], body:(A, w) => { if (!c.done) return '<p>The builders are at work. Ready in about ' + G.dur(c.ready - G.S.day) + '.</p><p>Meanwhile the staff wait in the café.</p>';
-  if (w.tab === 0){ const S = G.S; let h = '<h3>Staff</h3>'; for (const p of S.staff) h += '<div class="row"><span class="grow"><b>' + esc(p.name) + '</b> · ' + TRADES[p.tr].n.toLowerCase() + '</span><span class="muted">' + staffWhere(p) + '</span></div>';
+  if (w.tab === 0){ const S = G.S; let h = '<h3>Staff</h3>'; for (const p of S.staff) h += '<div class="row"><span class="grow"><b>' + esc(p.name) + '</b> · ' + TRADES[p.tr].n.toLowerCase() + '</span><span class="muted">' + staffWhere(p) + '</span>' + (p.st === 'idle' ? '<button class="btn small" data-a="' + A('go_' + p.id, () => { p.st = 'leaving'; G.news(p.name + ' leaves the Company at the end of the month.', {quiet:true}); return 'ok'; }) + '">Let go</button>' : p.st === 'leaving' ? '<button class="btn small" data-a="' + A('stay_' + p.id, () => { p.st = 'idle'; return 'ok'; }) + '">Keep</button>' : '') + '</div>';
     h += '<div class="sec"><h3>Hire</h3>' + Object.keys(TRADES).filter(tr => !TRADES[tr].req || G.company(TRADES[tr].req) || G.S.flags[TRADES[tr].req]).map(tr => '<button class="btn small" data-a="' + A('hire_' + tr, () => { G.hire(tr); }) + '" title="' + esc(TRADES[tr].h) + '">' + TRADES[tr].n + ' · ' + fmt(TRADES[tr].wage) + '/mo</button>').join('') + '</div>';
     h += '<div class="sec"><h3>The CEO</h3><p class="muted">Travels in the company car for things done in person: debates, interviews, crises at the newspaper or a mairie.</p></div>'; return h + G.emitHtml('bureau:staff'); }
   let h = '<h3>Company buildings</h3>'; for (const k of ['maison', 'centre', 'atelier']){ const def = CB[k], ex = G.companyAny(k); h += '<div class="row"><span class="grow"><b>' + def.title + '</b><br><span class="muted">' + esc(CBH[k]) + '</span></span>' + (ex ? '<span class="muted">' + (ex.done ? 'stands' : 'ready in ' + G.dur(ex.ready - G.S.day)) + '</span>' : '<button class="btn small" data-a="' + A('build_' + k, () => placeCampus(k)) + '">' + fmt(def.cost) + '</button>') + '</div>'; }
   return h + G.emitHtml('bureau:company'); }});
 const CBH = {maison:'The association on campus: membership tiers, courses, suits, polls, the congress.', centre:'Deep rigs and deep drilling, stimulation, the second survey pass, the traffic-light plan.', atelier:'Directional drilling, owned rigs and their maintenance.'};
 G.CBH = CBH;
-const staffWhere = p => p.st === 'idle' ? 'at the Bureau' : p.st === 'site' ? 'on site' : p.st === 'travel' ? 'on the road' : p.st === 'course' ? 'on a course' : p.st === 'visit' ? 'on a visit' : p.st;
+const staffWhere = p => p.st === 'leaving' ? 'leaving at the end of the month' : p.st === 'idle' ? 'at the Bureau' : p.st === 'site' ? 'on site' : p.st === 'travel' ? 'on the road' : p.st === 'course' ? 'on a course' : p.st === 'visit' ? 'on a visit' : p.st;
 G.staffWhere = staffWhere;
 function placeCampus(k){ const b = G.company('bureau'); if (!b) return 'The Bureau comes first.'; const def = CB[k]; G.closeAll();
   G.tool({model:def.model, view:b.view, turn:4, hint:'Place the ' + def.title + ' next to the Bureau. Arrow keys turn it; Esc cancels.',

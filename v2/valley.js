@@ -25,16 +25,20 @@ G.on('world', () => { POP = null; const S = G.S; let k = 0; for (const b of G.wo
     for (const h of homes()){ const t = h === 'town', m = {he:(t ? 56 : 51) + r()*8 - 4, le:(t ? 50 : 48) + r()*8 - 4, fa:(t ? 41 : 45) + r()*8 - 4}; v.mood[h] = m; v.base[h] = Object.assign({}, m); v.why[h] = []; v.eng[h] = 0; v.noise[h] = 0; v.mayors[h] = G.personName(r() < 0.5); } }
   for (const g of V().gifts) showGift(g); updFc(); });
 // ---- moods: per home and group, 0..100; the log of what people talk about
-G.mood = (h, d, why, grp) => { if (h === null || h === undefined) return G.moodAll(d, why, grp); const v = V(); if (!v || !v.mood[h]) return; const m = v.mood[h];
-  for (const g of GR){ const k = grp ? (typeof grp === 'string' ? (g === grp ? 1 : 0) : (grp[g] || 0)) : 1; if (k) m[g] = clamp(m[g] + d*k, 0, 100); }
+// goodwill has a ceiling until the Company delivers: heat in the village lifts it, power in the grid a little; favours wear thin when they pile up
+const ceiling = h => 58 + ((G.S.geo && G.S.geo.doublets) || []).some(d => d.station === 'heat' && (d.pipes || []).includes(h))*14 + ((G.S.power || 0) > 0)*4;
+G.ceiling = ceiling;
+G.mood = (h, d, why, grp) => { if (h === null || h === undefined) return G.moodAll(d, why, grp); const v = V(); if (!v || !v.mood[h]) return; const m = v.mood[h], cap = ceiling(h);
+  if (d > 0){ v.recent = v.recent || {}; d /= 1 + (v.recent[h] || 0)/5; v.recent[h] = (v.recent[h] || 0) + d; }
+  for (const g of GR){ const k = grp ? (typeof grp === 'string' ? (g === grp ? 1 : 0) : (grp[g] || 0)) : 1; if (!k) continue; m[g] = d > 0 ? (m[g] >= cap ? m[g] : Math.min(cap, m[g] + d*k)) : clamp(m[g] + d*k, 0, 100); }
   if (why){ const w = v.why[h], last = w.find(q => q.t === why && G.S.day - q.day < 45); if (last){ last.d = Math.round((last.d + d)*10)/10; last.day = Math.round(G.S.day); } else { w.unshift({t:why, d:Math.round(d*10)/10, day:Math.round(G.S.day)}); if (w.length > 6) w.pop(); } } };
 G.moodAll = (d, why, grp) => { for (const h of homes()) G.mood(h, d, why, grp); };
 G.moodOf = h => { const v = V(); if (!v || !v.mood[h]) return 50; const m = v.mood[h], sh = SHARE(h); return GR.reduce((t, g) => t + m[g]*sh[g], 0); };
-const yesOf = m => 1/(1 + Math.exp(-(m - 50)/12));
+const yesOf = m => 1/(1 + Math.exp(-(m - 50)/14));
 const forecast = () => { let y = 0, t = 0; for (const h of homes()){ const P = pop(h), sh = SHARE(h), m = V().mood[h]; for (const g of GR){ y += P*sh[g]*yesOf(m[g]); t += P*sh[g]; } } return 100*y/t; };
 const updFc = () => { const y = forecast(), w = (V().poll > G.S.day ? 2.5 : 6) + 6*G.monthsLeft()/120; V().yes = y; G.S.fc = [Math.round(clamp(y - w, 0, 100)), Math.round(clamp(y + w, 0, 100))]; };
 G.forecast = forecast; G.updFc = updFc; G.homes = homes; G.SHARE = SHARE; G.homeCentre = centre;
-G.on('month', () => { const v = V(); if (!v) return; for (const h of homes()){ const m = v.mood[h], b = v.base[h]; for (const g of GR) m[g] += (b[g] - m[g])*0.04; if (v.eng[h] <= -2) G.mood(h, -0.3, 'Nobody from the Company listens'); v.noise[h] = 0; }
+G.on('month', () => { const v = V(); if (!v) return; for (const h in v.recent || {}) v.recent[h] *= 0.6; for (const h of homes()){ const m = v.mood[h], b = v.base[h]; for (const g of GR) m[g] += (b[g] - m[g])*0.04; if (v.eng[h] <= -2) G.mood(h, -0.3, 'Nobody from the Company listens'); v.noise[h] = 0; }
   const n = G.S.staff.length; if (n) G.moodAll(Math.min(0.8, n*0.04), 'Jobs at the Company', 'le'); if (v.local) G.moodAll(0.3, 'Crews buy in the village shops', {le:1, fa:0.5}); updFc(); });
 G.monthly.push(() => V() && V().local ? [{line:'Local suppliers', who:'Village shops', k:-15}] : []);
 // what the work does to the villages: heavy lorries through them, rigs working through the night nearby
